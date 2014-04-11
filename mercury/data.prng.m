@@ -128,7 +128,7 @@ getSeed(random(Seed)) = getValueSeed(Seed).
 getValueSeed(clock) = 123709.
 getValueSeed(value(Result)) = Result.
 
-:- func setSeed(supplyType, supplyParameter, int) = maybe_error(supplyParameter).
+:- func setSeed(supplyType, supplyParameter, int) = setResult(supplyParameter).
 
 setSeed(st_mt, _, Value) = ok(mt(value(Value))).
 setSeed(st_random, _, Value) = ok(random(value(Value))).

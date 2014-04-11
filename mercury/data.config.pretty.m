@@ -17,6 +17,7 @@
 :- implementation.
 
 :- import_module ebea.population.site, ebea.population.site.parameters.
+:- import_module game.
 
 :- import_module fraction.
 :- import_module float.
@@ -96,6 +97,12 @@ mu:                          %f\n",
 		Config^selectedGame = centipede,
 		print_centipede(Stream, plain, Config, Config^centipede, !IO)
 		;
+		Config^selectedGame = givetake,
+		print_givetake(Stream, plain, Config, Config^givetake, !IO)
+		;
+		Config^selectedGame = investment,
+		print_investment(Stream, plain, Config, Config^investment, !IO)
+		;
 		Config^selectedGame = pgp,
 		print_pgp(Stream, plain, Config, Config^pgp, !IO)
 		;
@@ -109,10 +116,21 @@ mu:                          %f\n",
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of private predicates and functions
 
+
+% :- pred printGame(io.output_stream, G, io.state, io.state) <= (game(G,_)).
+% :- mode printGame(in, in, di, uo) is det.
+
+% printGame(Stream, Game, !IO) :-
+% 	io.format(Stream, "maximum payoff: %f\nminimum payoff: %f\nPareto payoff: %f\n",
+% 		[f(highestPayoff(Game)), f(minimumPayoff(Game)), f(paretoPayoff(Game))],
+% 				 !IO).
+
+
 :- pred print_2x2(io.output_stream, format, config, config_2x2, io.state, io.state).
 :- mode print_2x2(in, in, in, in, di, uo) is det.
 
 print_2x2(Stream, plain, _AllConfig, GameConfig, !IO) :-
+	
 	io.format(Stream, "      C     D
     ------------
 C  | 1.0   %4.1f |
@@ -141,12 +159,13 @@ D  | %3.1f    0.0 |\n", [f(GameConfig^game^sucker), f(GameConfig^game^temptation
 	else
 		io.print(Stream, "Snowdrift\n", !IO)
 	),
+	io.format(Stream, "-- geometry --\n%s\n", [s(string(GameConfig^initialPopulation^geometry))], !IO),
 	list.foldl(printSite(Stream, plain), GameConfig^initialPopulation^sites, !IO).
 
 :- pred print_battlesexes(io.output_stream, format, config, config_battlesexes, io.state, io.state).
 :- mode print_battlesexes(in, in, in, in, di, uo) is det.
 
-print_battlesexes(Stream, plain, AllConfig, GameConfig, !IO) :-
+print_battlesexes(Stream, plain, _AllConfig, GameConfig, !IO) :-
 	io.format(Stream, "         male payoff      female payoff
         opera | tennis               opera | tennis
 opera   %5.1f | %6.1f                %5.1f | %6.1f
@@ -161,12 +180,29 @@ tennis  %5.1f | %6.1f                %5.1f | %6.1f\n",
 		 f(float(GameConfig^game^payoffDiffPlace)),
 		 f(float(GameConfig^game^payoffSamePlaceDislike))
 		], !IO),
+	io.format(Stream, "-- geometry --\n%s\n", [s(string(GameConfig^initialPopulation^geometry))], !IO),
 	list.foldl(printSite(Stream, plain), GameConfig^initialPopulation^sites, !IO).
 
 :- pred print_centipede(io.output_stream, format, config, config_centipede, io.state, io.state).
 :- mode print_centipede(in, in, in, in, di, uo) is det.
 
-print_centipede(Stream, plain, AllConfig, GameConfig, !IO).
+print_centipede(_Stream, plain, _AllConfig, _GameConfig, !IO).
+
+:- pred print_givetake(io.output_stream, format, config, config_givetake, io.state, io.state).
+:- mode print_givetake(in, in, in, in, di, uo) is det.
+
+print_givetake(Stream, plain, _AllConfig, GameConfig, !IO) :-
+	io.format(Stream, "give bonus:           %f\n", [f(GameConfig^game^bg)], !IO),
+	io.format(Stream, "take performer cost:  %f\n", [f(GameConfig^game^cpt)], !IO),
+	io.format(Stream, "take subject cost:    %f\n", [f(GameConfig^game^cst)], !IO),
+	io.format(Stream, "number of stages:     %s\n", [s(string(GameConfig^game^numberStages))], !IO),
+	io.format(Stream, "-- geometry --\n%s\n", [s(string(GameConfig^initialPopulation^geometry))], !IO),
+	list.foldl(printSite(Stream, plain), GameConfig^initialPopulation^sites, !IO).
+
+:- pred print_investment(io.output_stream, format, config, config_investment, io.state, io.state).
+:- mode print_investment(in, in, in, in, di, uo) is det.
+
+print_investment(_Stream, plain, _AllConfig, _GameConfig, !IO).
 
 :- pred print_pgp(io.output_stream, format, config, config_pgp, io.state, io.state).
 :- mode print_pgp(in, in, in, in, di, uo) is det.
@@ -175,22 +211,24 @@ print_pgp(Stream, plain, _AllConfig, GameConfig, !IO) :-
 	io.format(Stream, "number of players:  %d\n", [i(GameConfig^game^players)], !IO),
 	io.format(Stream, "good values:        %f\n", [f(GameConfig^game^good)], !IO),
 	io.format(Stream, "provision cost:     %f\n", [f(GameConfig^game^provisionCost)], !IO),
+	io.format(Stream, "-- geometry --\n%s\n", [s(string(GameConfig^initialPopulation^geometry))], !IO),
 	list.foldl(printSite(Stream, plain), GameConfig^initialPopulation^sites, !IO).
 
 :- pred 'print_pgp+pa'(io.output_stream, format, config, 'config_pgp+pa', io.state, io.state).
 :- mode 'print_pgp+pa'(in, in, in, in, di, uo) is det.
 
-'print_pgp+pa'(Stream, plain, AllConfig, GameConfig, !IO).
+'print_pgp+pa'(_Stream, plain, _AllConfig, _GameConfig, !IO).
 
 :- pred print_ultimatum(io.output_stream, format, config, config_ultimatum, io.state, io.state).
 :- mode print_ultimatum(in, in, in, in, di, uo) is det.
 
-print_ultimatum(Stream, plain, AllConfig, GameConfig, !IO) :-
+print_ultimatum(Stream, plain, _AllConfig, GameConfig, !IO) :-
 	io.format(Stream, "Standard deviation of
   Gaussian distribution
   used to mutate
   strategy parameters:   %f\n", [f(GameConfig^parameters^stdev)], !IO),
 	io.format(Stream, "Cake size:  %d\n", [i(GameConfig^game^cakeSize)], !IO),
+	io.format(Stream, "-- geometry --\n%s\n", [s(string(GameConfig^initialPopulation^geometry))], !IO),
 	list.foldl(printSite(Stream, plain), GameConfig^initialPopulation^sites, !IO).
 
 

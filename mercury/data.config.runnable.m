@@ -9,37 +9,37 @@
 
 :- interface.
 
-/**
- * Represents the data needed to perform a run of the Energy Based
- * Evolutionary Algorithm.  An instance of this type can be used to obtain
- * the input parameters for predicates and function {@code
- * ebea.streams.openOutputStreams/4}, {@code ebea.population.init/5},
- * {@code ebea.core.init/3}.  The result of these predicates and function
- * is needed for predicate {@code ebea.core.run/8}.
+% /**
+%  * Represents the data needed to perform a run of the Energy Based
+%  * Evolutionary Algorithm.  An instance of this type can be used to obtain
+%  * the input parameters for predicates and function {@code
+%  * ebea.streams.openOutputStreams/4}, {@code ebea.population.init/5},
+%  * {@code ebea.core.init/3}.  The result of these predicates and function
+%  * is needed for predicate {@code ebea.core.run/8}.
   
- */
-:- type config --->
-	some [R, G, CS, P, T, A]
-	(cfg(config(R, G, CS, P))
-	=> (
-		ePRNG(R),
-		game(G, CS),
-		chromosome(CS, T, P),
-		foldable(CS, A),
-		printable(CS),
-		printable(T),
-		printable(A))
-	).
+%  */
+% :- type config --->
+% 	some [R, G, CS, P, T, A]
+% 	(cfg(config(R, G, CS, P))
+% 	=> (
+% 		ePRNG(R),
+% 		game(G, CS),
+% 		chromosome(CS, T, P),
+% 		foldable(CS, A),
+% 		printable(CS),
+% 		printable(T),
+% 		printable(A))
+% 	).
 
-:- type config(R, G, CS, P) --->
-	config(
-		random            :: R,
-		numberRuns        :: int,
-		game              :: G,
-		parameters        :: ebea.population.parameters(P),
-		initialPopulation :: list({int, ebea.player.chromosome(CS)}),
-		streams           :: ebea.streams.outStreams
-	).
+% :- type config(R, G, CS, P) --->
+% 	config(
+% 		random            :: R,
+% 		numberRuns        :: int,
+% 		game              :: G,
+% 		parameters        :: ebea.population.parameters(P),
+% 		initialPopulation :: list({int, ebea.player.chromosome(CS)}),
+% 		streams           :: ebea.streams.outStreams
+% 	).
 
 
 :- implementation.

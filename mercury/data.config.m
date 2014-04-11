@@ -11,7 +11,8 @@
 
 :- interface.
 
-:- include_module runnable, io, pretty.
+:- include_module %runnable,
+	io, pretty.
 :- import_module gl.
 
 :- import_module gl.'2x2',       gl.'2x2'.game,       gl.'2x2'.strategy,       gl.'2x2'.parameters.
@@ -25,6 +26,8 @@
 
 :- import_module ebea, ebea.core, ebea.player, ebea.population, ebea.population.parameters, ebea.streams, ebea.player.age, ebea.player.energy, ebea.player.selection.
 :- import_module data.prng.
+:- import_module chromosome, game.
+:- import_module foldable, printable.
 :- import_module probability, userInterface.
 :- import_module bool, io, list, unit.
 
@@ -49,6 +52,8 @@
 		cfg_2x2              :: config_2x2,
 		battlesexes          :: config_battlesexes,
 		centipede            :: config_centipede,
+		givetake             :: config_givetake,
+		investment           :: config_investment,
 		pgp                  :: config_pgp,
 		'pgp+pa'             :: 'config_pgp+pa',
 		ultimatum            :: config_ultimatum
@@ -69,6 +74,16 @@
 		processPred(     gl.centipede.strategy.strategy,   unit) ,
 		interactivePred( gl.centipede.strategy.strategy,   unit) ,
 		processPred(     gl.centipede.strategy.strategy,   unit)
+	) ;
+	givetake(
+		processPred(     gl.givetake.strategy.strategy,   unit) ,
+		interactivePred( gl.givetake.strategy.strategy,   unit) ,
+		processPred(     gl.givetake.strategy.strategy,   unit)
+	) ;
+	investment(
+		processPred(     gl.investment.strategy.strategy,   unit) ,
+		interactivePred( gl.investment.strategy.strategy,   unit) ,
+		processPred(     gl.investment.strategy.strategy,   unit)
 	) ;
 %	investment(  processPred(gl.investment.strategy.strategy,  unit) ) ;
 	pgp(
@@ -100,6 +115,8 @@
 		'2x2'(       processPred, interactivePred, processPred ) ;
 		battlesexes( processPred, interactivePred, processPred ) ;
 		centipede(   processPred, interactivePred, processPred ) ;
+		givetake(    processPred, interactivePred, processPred ) ;
+		investment(  processPred, interactivePred, processPred ) ;
 		pgp(         processPred, interactivePred, processPred ) ;
 		'pgp+pa'(    processPred, interactivePred, processPred ) ;
 		ultimatum(   processPred, interactivePred, processPred )
@@ -124,22 +141,35 @@
 
 
 
-:- type config(G, CS, P) --->
-	config(
+:- type gameConfig(G, CS, P) --->
+	gameConfig(
 		game              :: G,
 		parameters        :: P,
 		initialPopulation :: ebea.population.parameters.parameters(CS)
 	).
 
 
-:- type config_2x2          == config(gl.'2x2'.game.game,       gl.'2x2'.strategy.strategy,       gl.'2x2'.parameters.parameters).
-:- type config_battlesexes  == config(gl.battlesexes.game.game, gl.battlesexes.strategy.strategy, gl.battlesexes.parameters.parameters).
-:- type config_centipede    == config(gl.centipede.game.game,   gl.centipede.strategy.strategy,   gl.centipede.parameters.parameters).
-:- type config_givetake     == config(gl.givetake.game.game,    gl.givetake.strategy.strategy,    gl.givetake.parameters.parameters).
-:- type config_investment   == config(gl.investment.game.game,  gl.investment.strategy.strategy,  gl.investment.parameter.parameter).
-:- type config_pgp          == config(gl.pgp.game.game,         gl.pgp.strategy.strategy,         gl.pgp.parameters.parameters).
-:- type 'config_pgp+pa'     == config(gl.'pgp+pa'.game.game,    gl.'pgp+pa'.strategy.strategy,    gl.'pgp+pa'.parameters.parameters).
-:- type config_ultimatum    == config(gl.ultimatum.game.game,   gl.ultimatum.strategy.strategy,   gl.ultimatum.parameters.parameters).
+:- type config_2x2          == gameConfig(gl.'2x2'.game.game,       gl.'2x2'.strategy.strategy,       gl.'2x2'.parameters.parameters).
+:- type config_battlesexes  == gameConfig(gl.battlesexes.game.game, gl.battlesexes.strategy.strategy, gl.battlesexes.parameters.parameters).
+:- type config_centipede    == gameConfig(gl.centipede.game.game,   gl.centipede.strategy.strategy,   gl.centipede.parameters.parameters).
+:- type config_givetake     == gameConfig(gl.givetake.game.game,    gl.givetake.strategy.strategy,    gl.givetake.parameters.parameters).
+:- type config_investment   == gameConfig(gl.investment.game.game,  gl.investment.strategy.strategy,  gl.investment.parameter.parameter).
+:- type config_pgp          == gameConfig(gl.pgp.game.game,         gl.pgp.strategy.strategy,         gl.pgp.parameters.parameters).
+:- type 'config_pgp+pa'     == gameConfig(gl.'pgp+pa'.game.game,    gl.'pgp+pa'.strategy.strategy,    gl.'pgp+pa'.parameters.parameters).
+:- type config_ultimatum    == gameConfig(gl.ultimatum.game.game,   gl.ultimatum.strategy.strategy,   gl.ultimatum.parameters.parameters).
+
+/*
+:- type gameConfig --->
+	some [G, CS, T, P, A] (gameConfig(gameConfig(G, CS, P))
+	=> (
+		asymmetricGame(G, CS),
+			chromosome(CS, T, P),
+			foldable(CS, A),
+			parseable(CS),
+			printable(CS),
+			printable(T),
+			printable(A))).
+*/
 
 % :- func initSelectedGamePred(config, interactivePred(C, T)) = selectedGamePred.
 % :- mode initSelectedGamePred(in, in(interactivePred)) = out(selectedGamePred) is det.
@@ -159,10 +189,8 @@
 
 :- implementation.
 
-:- import_module chromosome, game.
 :- import_module rng, rng.distribution.
-:- import_module foldable, printable.
-:- import_module bool, int, maybe, string.
+:- import_module bool, exception, int, maybe, string.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Definition of exported types
@@ -177,7 +205,7 @@ default = config(
 	mt(clock),
 	30,
 	100000,
-	detailed,
+	detailedTxt,
 	birthPlusDeath,
 	probability.init(0.1),
 	probability.init(0.1),
@@ -185,32 +213,42 @@ default = config(
 	ebea.player.energy.defaultParameters,
 	ebea.player.selection.defaultParameters,
 	pgp,
-	config(
+	gameConfig(
 		gl.'2x2'.game.default,
 		gl.'2x2'.parameters.default,
 		ebea.population.parameters.default(gl.'2x2'.strategy.default)
 		),
-	config(
+	gameConfig(
 		gl.battlesexes.game.default,
 		gl.battlesexes.parameters.default,
 		ebea.population.parameters.default(gl.battlesexes.strategy.default)
 		),
-	config(
+	gameConfig(
 		gl.centipede.game.default,
 		gl.centipede.parameters.default,
 		ebea.population.parameters.default(gl.centipede.strategy.default)
 		),
-	config(
+	gameConfig(
+		gl.givetake.game.default,
+		gl.givetake.parameters.default,
+		ebea.population.parameters.default(gl.givetake.strategy.default)
+		),
+	gameConfig(
+		gl.investment.game.default,
+		gl.investment.parameter.default,
+		ebea.population.parameters.default(gl.investment.strategy.default)
+		),
+	gameConfig(
 		gl.pgp.game.default,
 		gl.pgp.parameters.default,
 		ebea.population.parameters.default(gl.pgp.strategy.default)
 		),
-	config(
+	gameConfig(
 		gl.'pgp+pa'.game.default,
 		gl.'pgp+pa'.parameters.default,
 		ebea.population.parameters.default(gl.'pgp+pa'.strategy.default)
 		),
-	config(
+	gameConfig(
 		gl.ultimatum.game.default,
 		gl.ultimatum.parameters.default,
 		ebea.population.parameters.default(gl.ultimatum.strategy.default)
@@ -222,12 +260,7 @@ dialog =
 	di(label("pseudo-random number generator"),  'new editField'(  get_random,               set(set_random), data.prng.dialog)),
 	di(label("number runs"),                     updateFieldInt(   get_numberRuns,           checkInt(   "number runs",           bounded(10, yes),  unbound, set_numberRuns))),
 	di(label("number iterations"),               updateFieldInt(   get_numberIterations,     checkInt(   "number iterations",     bounded(100, yes), unbound, set_numberIterations))),
-	di(label("data to store"),                   'new editField'(  get_level,                set(set_level),
- 		[
-		di(label("everything"),                newValue(detailed)),
- 		di(label("population dynamics"),       newValue(dynamics)),
- 		di(label("summary"),                   newValue(summary))
- 		])),
+	di(label("data to store"),                   'new editField'(  get_level,                set(set_level), ebea.streams.dialog)),
 	di(label("population parameters"),           subdialog(
 		[
 		di(label("birth death sequence"),   'new editField'( get_dynamic, set(set_dynamic),
@@ -245,15 +278,20 @@ dialog =
 		di(label("energy parameters"),     'new editField'(  get_energyParameters,     set(set_energyParameters),    ebea.player.energy.dialogParameters)),
 		di(label("selection parameters"),  'new editField'(  get_selectionParameters,  set(set_selectionParameters), ebea.player.selection.dialogParameters))
 		])),
-	di(label("game"),    selectOneOf(options(getSelectedGameIndex,
+	di(label("game"),    'new selectOneOf'(
+		getCurrentChoice,
+		setChoice,
+		setData,
 		[
-		 ci(label("2 player 2 action"),  'selectedGame :='(default, '2x2'),        [di(label("next"), 'new editField'( get_cfg_2x2,      set(set_cfg_2x2),     dialog_2x2))]),
-		 ci(label("battle of sexes"),    'selectedGame :='(default, battlesexes),  [di(label("next"), 'new editField'( get_battlesexes,  set(set_battlesexes), dialog_battlesexes))]),
-		 ci(label("centipede"),          'selectedGame :='(default, centipede),    [di(label("next"), 'new editField'( get_centipede,    set(set_centipede),   dialog_centipede))]),
-		 ci(label("pgp"),                'selectedGame :='(default, pgp),          [di(label("next"), 'new editField'( get_pgp,          set(set_pgp),         dialog_pgp))]),
-		 ci(label("pgp+pa"),             'selectedGame :='(default, 'pgp+pa'),     [di(label("next"), 'new editField'( 'get_pgp+pa',     set('set_pgp+pa'),    'dialog_pgp+pa'))]),
-		 ci(label("ultimatum"),          'selectedGame :='(default, ultimatum),    [di(label("next"), 'new editField'( get_ultimatum,    set(set_ultimatum),   dialog_ultimatum))])
-		])))
+		 ci(label("2 player 2 action"),  [di(label("next"), 'new editField'( get_cfg_2x2,      set(set_cfg_2x2),     dialog_2x2))]),
+		 ci(label("battle of sexes"),    [di(label("next"), 'new editField'( get_battlesexes,  set(set_battlesexes), dialog_battlesexes))]),
+		 ci(label("centipede"),          [di(label("next"), 'new editField'( get_centipede,    set(set_centipede),   dialog_centipede))]),
+		 ci(label("givetake"),           [di(label("next"), 'new editField'( get_givetake,     set(set_givetake),    dialog_givetake))]),
+		 ci(label("investment"),         [di(label("next"), 'new editField'( get_investment,   set(set_investment),  dialog_investment))]),
+		 ci(label("pgp"),                [di(label("next"), 'new editField'( get_pgp,          set(set_pgp),         dialog_pgp))]),
+		 ci(label("pgp+pa"),             [di(label("next"), 'new editField'( 'get_pgp+pa',     set('set_pgp+pa'),    'dialog_pgp+pa'))]),
+		 ci(label("ultimatum"),          [di(label("next"), 'new editField'( get_ultimatum,    set(set_ultimatum),   dialog_ultimatum))])
+		]))
 	% di(label("2 player 2 action"),    'new editField'(  get_cfg_2x2,              set(set_cfg_2x2),   dialog_2x2)),
 	% di(label("battle of sexes"),      'new editField'(  get_battlesexes,          set(set_battlesexes), dialog_battlesexes)),
 	% di(label("centipede"),            'new editField'(  get_centipede,            set(set_centipede), dialog_centipede)),
@@ -261,7 +299,6 @@ dialog =
 	% di(label("pgp+pa"),               'new editField'(  'get_pgp+pa',             set('set_pgp+pa'),  'dialog_pgp+pa')),
 	% di(label("ultimatum"),            'new editField'(  get_ultimatum,            set(set_ultimatum), dialog_ultimatum))
 	].
-
 
 errors(Config, Errors) :-
 	fail
@@ -303,6 +340,12 @@ runBackground(Config, !IO) :-
 	Config^selectedGame = centipede,
 	run_s1(background, Config, Config^centipede, !IO)
 	;
+	Config^selectedGame = givetake,
+	run_s1(background, Config, Config^givetake, !IO)
+	;
+	Config^selectedGame = investment,
+	run_s1(background, Config, Config^investment, !IO)
+	;
 	Config^selectedGame = pgp,
 	run_s1(background, Config, Config^pgp, !IO)
 	;
@@ -323,6 +366,12 @@ runInteractively(SelectedGamePred, Config, !IO) :-
 	;
 	SelectedGamePred = centipede(FirstPred, IteraPred, FinalPred),
 	run_s1(interactively(FirstPred, IteraPred, FinalPred), Config, Config^centipede, !IO)
+	;
+	SelectedGamePred = givetake(FirstPred, IteraPred, FinalPred),
+	run_s1(interactively(FirstPred, IteraPred, FinalPred), Config, Config^givetake, !IO)
+	;
+	SelectedGamePred = investment(FirstPred, IteraPred, FinalPred),
+	run_s1(interactively(FirstPred, IteraPred, FinalPred), Config, Config^investment, !IO)
 	;
 	SelectedGamePred = pgp(FirstPred, IteraPred, FinalPred),
 	run_s1(interactively(FirstPred, IteraPred, FinalPred), Config, Config^pgp, !IO)
@@ -362,13 +411,51 @@ runInteractively(SelectedGamePred, Config, !IO) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of private predicates and functions
 
+:- func getCurrentChoice(config) = maybe(currentChoice(config)).
+
+getCurrentChoice(Config) = Result :-
+	selectedGameIndex(Config^selectedGame, Index),
+	Result = yes(cc(Index, Config))
+	.
+
+:- pred selectedGameIndex(games, int).
+:- mode selectedGameIndex(in, out) is det.
+:- mode selectedGameIndex(out, in) is semidet.
+
+selectedGameIndex('2x2',       0).
+selectedGameIndex(battlesexes, 1).
+selectedGameIndex(centipede,   2).
+selectedGameIndex(givetake,    3).
+selectedGameIndex(investment,  4).
+selectedGameIndex(pgp,         5).
+selectedGameIndex('pgp+pa',    6).
+selectedGameIndex(ultimatum,   7).
+
+:- func setChoice(config, int) = setResult(selectChoice(config, config)).
+
+setChoice(Config, Index) = ok(sc(NextConfig, NextConfig)) :-
+	(if
+		selectedGameIndex(Games, Index)
+	then
+		NextConfig = 'selectedGame :='(Config, Games)
+	else
+		throw("setChoice/2: Invalid index")
+	).
+
+:- func setData(config, config) = setResult(config).
+
+setData(_, Config) = ok(Config).
+
+
+
+
 /**
  * The first step of an EBEA run is to initialise the pseudo-random number
  * generator.  The initialisation may fail because of an invalid seed.
  */
 
-:- pred run_s1(ebea.core.runMode(CS, T), config, config(G, CS, P), io.state, io.state)
-	<= (game(G, CS), chromosome(CS, T, P), foldable(CS, A), printable(CS), printable(T), printable(A)).
+:- pred run_s1(ebea.core.runMode(CS, T), config, gameConfig(G, CS, P), io.state, io.state)
+	<= (asymmetricGame(G, CS), chromosome(CS, T, P), foldable(CS, A), parseable(CS), printable(CS), printable(T), printable(A)).
 :- mode run_s1(in(runMode), in, in, di, uo) is det.
 
 run_s1(RunMode, AllConfig, GameConfig, !IO) :-
@@ -391,11 +478,12 @@ run_s1(RunMode, AllConfig, GameConfig, !IO) :-
  * given run index.
  */
 
-:- pred run_s2(ebea.core.runMode(CS, T), config, config(G, CS, P), int, R, R, io.state, io.state)
+:- pred run_s2(ebea.core.runMode(CS, T), config, gameConfig(G, CS, P), int, R, R, io.state, io.state)
 	<= (
-		game(G, CS),
+		asymmetricGame(G, CS),
 		chromosome(CS, T, P),
 		foldable(CS, A),
+		parseable(CS),
 		printable(CS),
 		printable(T),
 		printable(A),
@@ -427,8 +515,8 @@ run_s2(RunMode, AllConfig, ConfigGame, RunIndex, !Random, !IO) :-
  * The third and last step we call predicate {@code ebea.core.run/12}.
  */
 
-:- pred run_s3(ebea.core.runMode(CS, T), config, config(G, CS, P), ebea.streams.outStreams, R, R, io.state, io.state)
-	<= (ePRNG(R), game(G, CS), chromosome(CS, T, P), foldable(CS, A), printable(CS), printable(T), printable(A)).
+:- pred run_s3(ebea.core.runMode(CS, T), config, gameConfig(G, CS, P), ebea.streams.outStreams, R, R, io.state, io.state)
+	<= (ePRNG(R), asymmetricGame(G, CS), chromosome(CS, T, P), foldable(CS, A), parseable(CS), printable(CS), printable(T), printable(A)).
 :- mode run_s3(in(runMode), in, in, in,  in, out, di, uo) is det.
 
 run_s3(RunMode, AllConfig, GameConfig, Streams, !Random, !IO) :-
@@ -618,7 +706,7 @@ run_s3(RunMode, AllConfig, GameConfig, Streams, !Random, !IO) :-
 % 	).
 
 
-:- func dialog(list(dialogItem(G)), list(dialogItem(P)), list(dialogItem(CS)), CS) = list(dialogItem(config(G, CS, P))).
+:- func dialog(list(dialogItem(G)), list(dialogItem(P)), list(dialogItem(CS)), CS) = list(dialogItem(gameConfig(G, CS, P))).
 
 dialog(DialogGame, DialogParameters, DialogStrategyChromosome, DefaultStrategyChromosome) =
 	[
@@ -704,48 +792,50 @@ dialog_ultimatum = dialog(
 
                                                           % getters and setters for config/3
 
-:- func get_game(config(G, CS, P)) = G.
+:- func get_game(gameConfig(G, CS, P)) = G.
 
 get_game(Config) = Config^game.
 
-:- func set_game(config(G, CS, P), G) = maybe_error(config(G, CS, P)).
+:- func set_game(gameConfig(G, CS, P), G) = setResult(gameConfig(G, CS, P)).
 
 set_game(Config, Game) = ok('game :='(Config, Game)).
 
-:- func get_parameters(config(G, CS, P)) = P.
+:- func get_parameters(gameConfig(G, CS, P)) = P.
 
 get_parameters(Config) = Config^parameters.
 
-:- func set_parameters(config(G, CS, P), P) = maybe_error(config(G, CS, P)).
+:- func set_parameters(gameConfig(G, CS, P), P) = setResult(gameConfig(G, CS, P)).
 
 set_parameters(Config, Parameters) = ok('parameters :='(Config, Parameters)).
 
-:- func get_initialPopulation(config(G, CS, P)) = ebea.population.parameters.parameters(CS).
+:- func get_initialPopulation(gameConfig(G, CS, P)) = ebea.population.parameters.parameters(CS).
 
 get_initialPopulation(Config) = Config^initialPopulation.
 
-:- func set_initialPopulation(config(G, CS, P), ebea.population.parameters.parameters(CS)) = maybe_error(config(G, CS, P)).
+:- func set_initialPopulation(gameConfig(G, CS, P), ebea.population.parameters.parameters(CS)) = setResult(gameConfig(G, CS, P)).
 
 set_initialPopulation(Config, InitialPopulation) = ok('initialPopulation :='(Config, InitialPopulation)).
 
 
 
-:- func getSelectedGameIndex(data.config.config) = maybe(int).
+% :- func getSelectedGameIndex(data.config.config) = maybe(int).
 
-getSelectedGameIndex(Config) = yes(Index) :-
-	selectedGameIndex(Config^selectedGame, Index).
+% getSelectedGameIndex(Config) = yes(Index) :-
+% 	selectedGameIndex(Config^selectedGame, Index).
 
-:- pred selectedGameIndex(games, int).
-:- mode selectedGameIndex(in, out) is det.
-:- mode selectedGameIndex(out, in) is semidet.
+% :- pred selectedGameIndex(games, int).
+% :- mode selectedGameIndex(in, out) is det.
+% :- mode selectedGameIndex(out, in) is semidet.
 
 
-selectedGameIndex('2x2', 0).
-selectedGameIndex(battlesexes, 1).
-selectedGameIndex(centipede, 2).
-selectedGameIndex(pgp, 3).
-selectedGameIndex('pgp+pa', 4).
-selectedGameIndex(ultimatum, 5).
+% selectedGameIndex('2x2', 0).
+% selectedGameIndex(battlesexes, 1).
+% selectedGameIndex(centipede, 2).
+% selectedGameIndex(givetake, 3).
+% selectedGameIndex(investment, 4).
+% selectedGameIndex(pgp, 5).
+% selectedGameIndex('pgp+pa', 6).
+% selectedGameIndex(ultimatum, 7).
 
                                                           % getters and setters for config
 
@@ -887,6 +977,29 @@ get_centipede(P) = P^centipede.
 :- func set_centipede(config, config_centipede) = config.
 
 set_centipede(P, V) = 'centipede :='('selectedGame :='(P, centipede), V).
+
+
+
+:- func get_givetake(config) = config_givetake.
+
+get_givetake(P) = P^givetake.
+
+
+:- func set_givetake(config, config_givetake) = config.
+
+set_givetake(P, V) = 'givetake :='('selectedGame :='(P, givetake), V).
+
+
+
+:- func get_investment(config) = config_investment.
+
+get_investment(P) = P^investment.
+
+
+:- func set_investment(config, config_investment) = config.
+
+set_investment(P, V) = 'investment :='('selectedGame :='(P, investment), V).
+
 
 
 

@@ -9,18 +9,21 @@
 :- interface.
 
 :- include_module config, prng.
+:- include_module util.
 
 :- type games --->
 	'2x2' ;
 	battlesexes ;
 	centipede ;
-%	investment ;
+	givetake ;
+	investment ;
 	pgp ;
 	'pgp+pa' ;
 	ultimatum.
 
 :- implementation.
 
+:- import_module parseable.
 :- import_module list.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -36,7 +39,7 @@
 % Implementation of private predicates and functions
 
 
-:- pred parseGames(games, list(int), list(int)).
+:- pred parseGames(games, parseable.state, parseable.state).
 :- mode parseGames(in, out, in) is det.
 :- mode parseGames(out, in, out) is semidet.
 
@@ -46,6 +49,8 @@ parseGames(centipede)   --> [2].
 parseGames(pgp)         --> [3].
 parseGames('pgp+pa')    --> [4].
 parseGames(ultimatum)   --> [5].
+parseGames(givetake)    --> [6].
+parseGames(investment)  --> [7].
 
 :- end_module data.
 
