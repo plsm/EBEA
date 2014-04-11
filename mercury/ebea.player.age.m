@@ -64,12 +64,16 @@
 
 :- pred parseChromosome(ebea.player.age.chromosome, list(int), list(int)).
 :- mode parseChromosome(in, out, in) is det.
-:- mode parseChromosome(out, in, out) is semidet.
+:- mode parseChromosome(out, in, out) is det.
 
 
 :- pred parseParameters(ebea.player.age.parameters, list(int), list(int)).
 :- mode parseParameters(in, out, in) is det.
 :- mode parseParameters(out, in, out) is semidet.
+
+:- pred parseTrait(ebea.player.age.trait, list(int), list(int)).
+:- mode parseTrait(in, out, in) is det.
+:- mode parseTrait(out, in, out) is semidet.
 
 
 :- instance chromosome(ebea.player.age.chromosome, ebea.player.age.trait, ebea.player.age.parameters).
@@ -175,6 +179,9 @@ parseParameters(P) -->
 	[1],
 	parseable.int32(P^oldAge),
 	parseable.float32(P^deathSuaveness).
+
+parseTrait(Age) -->
+	parseable.int32(Age).
 
 stepClockTick(Player) = Result :-
 	Result = 'traits :='(

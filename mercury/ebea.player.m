@@ -9,7 +9,7 @@
 :- interface.
 
 :- include_module age, energy, selection.
-:- import_module ebea.player.age, ebea.player.energy, ebea.player.selection.
+:- import_module ebea.player.age, ebea.player.energy, ebea.player.selection, ebea.player.selection.chromosome.
 :- import_module chromosome, rng, rng.distribution.
 :- import_module foldable, parseable, printable.
 :- import_module userInterface.
@@ -28,7 +28,7 @@
 	chromosome(
 		ageGenes       :: ebea.player.age.chromosome,
 		energyGenes    :: ebea.player.energy.chromosome,
-		selectionGenes :: ebea.player.selection.chromosome,
+		selectionGenes :: ebea.player.selection.chromosome.chromosome,
 		strategyGenes  :: S
 	).
 
@@ -77,7 +77,14 @@
 /**
  * Accumulator used to reduce the genomes of a collection of players.
  */
-:- type ac(A).
+%:- type ac(A).
+:- type ac(A) --->
+	ac(
+		ebea.player.age.ac,
+		ebea.player.energy.ac,
+		ebea.player.selection.ac,
+		A
+	).
 
 :- instance printable(ac(A)) <= printable(A).
 
@@ -154,7 +161,8 @@
  * Update the accumulator with the new player info.
  */
 :- func foldChromosome(player(C, T), ac(A)) = ac(A)
-	<= (chromosome(C, T, P), foldable(C, A)).
+	<= foldable(C, A).
+%	<= (chromosome(C, T, P), foldable(C, A)).
 
 /**
  * Print a player to the given stream.
@@ -164,14 +172,15 @@
 :- mode print(in, in, di, uo) is det.
 
 :- pred printChromosome(io.output_stream, player(C, T), io, io)
-	<= (chromosome(C, T, P), printable(C)).
+	<= printable(C).
+%	<= (chromosome(C, T, P), printable(C)).
 :- mode printChromosome(in, in, di, uo) is det.
 
 :- pred printTraits(io.output_stream, player(C, T), io, io)
 	<= (chromosome(C, T, P)).
 :- mode printTraits(in, in, di, uo) is det.
 
-:- pred parseChromosome(chromosome(C), list(int), list(int))
+:- pred parseChromosome(chromosome(C), parseable.state, parseable.state)
 	<= parseable(C).
 :- mode parseChromosome(in, out, in) is det.
 :- mode parseChromosome(out, in, out) is semidet.
@@ -183,13 +192,13 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Definition of exported types
 
-:- type ac(A) --->
-	ac(
-		ebea.player.age.ac,
-		ebea.player.energy.ac,
-		ebea.player.selection.ac,
-		A
-	).
+% :- type ac(A) --->
+% 	ac(
+% 		ebea.player.age.ac,
+% 		ebea.player.energy.ac,
+% 		ebea.player.selection.ac,
+% 		A
+% 	).
 
 :- instance printable(ac(A)) <= printable(A)
 	where
@@ -210,7 +219,7 @@ defaultChromosome(StrategyChromosome) =
 	chromosome(
 		ebea.player.age.defaultChromosome,
 		ebea.player.energy.defaultChromosome,
-		ebea.player.selection.defaultChromosome,
+		ebea.player.selection.chromosome.default,
 		StrategyChromosome
 	).
 
@@ -229,7 +238,8 @@ dialog(DialogStrategyGenes) =
 	[
 %	di(label("age genes"),        'new editField'(  get_ageGenes,        set(set_ageGenes),       ebea.player.age.dialogChromosome)),
 %	di(label("energy genes"),     'new editField'(  get_energyGenes,     set(set_energyGenes),    ebea.player.energy.dialogChromosome)),
-	di(label("selection genes"),  'new selectOneOf'(  get_selectionGenes,  set(set_selectionGenes), ebea.player.selection.dialogChromosome)),
+%	di(label("selection genes"),  'new editField'(  get_selectionGenes,  set(set_selectionGenes), [di(label("selection"), ebea.player.selection.dialogChromosome)])),
+	di(label("selection genes"),  'new editField'(  get_selectionGenes,  set(set_selectionGenes), ebea.player.selection.chromosome.dialog)),
 	di(label("strategy genes"),   'new editField'(  get_strategyGenes,   set(set_strategyGenes),  DialogStrategyGenes))
 	].
 
@@ -350,7 +360,7 @@ printTraits(Stream, Player, !IO) :-
 parseChromosome(C) -->
 	ebea.player.age.parseChromosome(C^ageGenes),
 	ebea.player.energy.parseChromosome(C^energyGenes),
-	ebea.player.selection.parseChromosome(C^selectionGenes),
+	ebea.player.selection.chromosome.parse(C^selectionGenes),
 	parseable.parse(C^strategyGenes).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -482,12 +492,12 @@ set_energyGenes(P, V) = 'energyGenes :='(P, V).
 
 
 
-:- func get_selectionGenes(ebea.player.chromosome(CS)) = ebea.player.selection.chromosome.
+:- func get_selectionGenes(ebea.player.chromosome(CS)) = ebea.player.selection.chromosome.chromosome.
 
 get_selectionGenes(P) = P^selectionGenes.
 
 
-:- func set_selectionGenes(ebea.player.chromosome(CS), ebea.player.selection.chromosome) = ebea.player.chromosome(CS).
+:- func set_selectionGenes(ebea.player.chromosome(CS), ebea.player.selection.chromosome.chromosome) = ebea.player.chromosome(CS).
 
 set_selectionGenes(P, V) = 'selectionGenes :='(P, V).
 

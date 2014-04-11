@@ -124,11 +124,11 @@
 :- pred stepPlayGame(
 	ebea.player.energy.parameters, G,
 	player(C, T), list(player(C, T)),
-	array(float),
+	maybe(array(float)),
 	population(C, T), population(C, T),
 	list(list(int)), list(list(int)),
 	R, R)
-	<= (game(G, C), ePRNG(R)).
+	<= (asymmetricGame(G, C), ePRNG(R)).
 :- mode stepPlayGame(in, in, in, in, out, in, out, in, out, in, out) is det.
 
 /**
@@ -148,17 +148,20 @@
  * Compute the scaled payoff in the given game context.
  */
 :- func scalePayoff(G, energyScaling, float) = float
-	<= game(G, C).
+	<= abstractGame(G).
 
 
 :- pred parseChromosome(ebea.player.energy.chromosome, list(int), list(int)).
 :- mode parseChromosome(in, out, in) is det.
-:- mode parseChromosome(out, in, out) is semidet.
+:- mode parseChromosome(out, in, out) is det.
 
 :- pred parseParameters(ebea.player.energy.parameters, list(int), list(int)).
 :- mode parseParameters(in, out, in) is det.
 :- mode parseParameters(out, in, out) is semidet.
 
+:- pred parseTrait(ebea.player.energy.trait, list(int), list(int)).
+:- mode parseTrait(in, out, in) is det.
+:- mode parseTrait(out, in, out) is semidet.
 
 :- pred test(io.state, io.state).
 :- mode test(di, uo) is det.
@@ -254,7 +257,7 @@ canReproduce(Player, Parameters, NextTraits) :-
 	.
 
 stepPlayGame(
-	EnergyParameters, Game, ForPlayer, Partners, Payoffs,
+	EnergyParameters, Game, ForPlayer, Partners, MPayoffs,
 	!NextRoundPopulation,
 	!PlayerProfiles,
 	!Random) :-
@@ -275,20 +278,25 @@ stepPlayGame(
 	Profile = array.generate(NumberPlayers, InitProfile),
 	PlayerProfile = [ForPlayer^id | list.map(ebea.player.'ID', Partners)],
 	!:PlayerProfiles = [PlayerProfile | !.PlayerProfiles],
-	game.play(Game, Profile, !Random, Payoffs),
-	UpdateEnergies =
-	(pred(Player::in, Payoff::in, NRPin::in, NRPout::out) is det :-
-		ebea.population.update(
-			Player^id,
-			ebea.player.energy.updateEnergy(
-				EnergyParameters^energyScaling,
-				Game,
-				Payoff
-			),
-			NRPin
-		) = NRPout
-	),
-	list.foldl_corresponding(UpdateEnergies, [ForPlayer | Partners], array.to_list(Payoffs), !NextRoundPopulation).
+	game.playAsymmetric(Game, Profile, !Random, MPayoffs),
+	(
+		MPayoffs = yes(Payoffs),
+		UpdateEnergies =
+		(pred(Player::in, Payoff::in, NRPin::in, NRPout::out) is det :-
+			ebea.population.update(
+				Player^id,
+				ebea.player.energy.updateEnergy(
+					EnergyParameters^energyScaling,
+					Game,
+					Payoff
+				),
+				NRPin
+			) = NRPout
+		),
+		list.foldl_corresponding(UpdateEnergies, [ForPlayer | Partners], array.to_list(Payoffs), !NextRoundPopulation)
+		;
+		MPayoffs = no
+	).
 
 
 stepSurvive(Parameters, Player, !Random, Death) :-
@@ -339,6 +347,8 @@ parseParameters(P) -->
 	parseable.float32(P^energyLostBirth),
 	parseable.float32(P^coefficient).
 
+parseTrait(Energy) -->
+	parseable.float32(Energy).
 
 test(!IO) :-
 	io.print("Enter energy reproduce, energy newborn (as % e_R), energy lost birth (as % e_R) and coefficient:\n", !IO),
@@ -417,7 +427,7 @@ energyLostGivingBirth(Parameters, Age) =
   
  */
 :- func updateEnergy(energyScaling, G, float, ebea.player.player(C, T)) = ebea.player.player(C, T)
-	<= game(G, C).
+	<= abstractGame(G).
 
 updateEnergy(unscaled, _, Payoff, Player) = Result :-
 	Result = 'traits :='(
@@ -584,7 +594,7 @@ set_energyReproduce(P, V) = 'energyReproduce :='(P, V).
 get_energyNewborn(P) = P^energyNewborn.
 
 
-:- func set_energyNewborn(ebea.player.energy.parameters, float) = maybe_error(ebea.player.energy.parameters).
+:- func set_energyNewborn(ebea.player.energy.parameters, float) = setResult(ebea.player.energy.parameters).
 
 set_energyNewborn(P, V) =
 	(if
@@ -603,7 +613,7 @@ set_energyNewborn(P, V) =
 get_energyLostBirth(P) = P^energyLostBirth.
 
 
-:- func set_energyLostBirth(ebea.player.energy.parameters, float) = maybe_error(ebea.player.energy.parameters).
+:- func set_energyLostBirth(ebea.player.energy.parameters, float) = setResult(ebea.player.energy.parameters).
 
 set_energyLostBirth(P, V) =
 	(if
