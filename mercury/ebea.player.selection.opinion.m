@@ -18,6 +18,11 @@
 
 :- inst opinion == bound(opinion(ground, ground)).
 
+/**
+ * Succeeds if the partner profile is composed of opinion players and the
+ * overlap between player and partner is greater than the partner
+ * uncertainty.
+ */
 
 :- pred checkPartnerOpinion(ebea.player.selection.traits, list(player(C, T))).
 :- mode checkPartnerOpinion(in(opinion), in) is semidet.
@@ -36,7 +41,7 @@
  * After the players have played the game, they update the opinions they have.
  */
 :- pred updateOpinions(G, ebea.player.parameters(P), list(player(C, T)), array(float), population(C, T), population(C, T))
-	<= game(G, C).
+	<= abstractGame(G).
 :- mode updateOpinions(in, in, in, in, in, out) is det.
 
 :- func increaseUncertainty(ebea.player.selection.parameters, player(C, T)) = player(C, T).
@@ -66,11 +71,11 @@ checkPartnerOpinion(TraitPlayer, Profile) :-
 	.
 
 selectPartners(TraitPlayer, NumberPartners, Neighbours, Partners, !Random) :-
-	list.foldl3(selectPartner(TraitPlayer), 1..NumberPartners, [], Partners, Neighbours, _, !Random).
+	list.foldl3(selectAPartner(TraitPlayer), 1..NumberPartners, [], Partners, Neighbours, _, !Random).
 
 updateOpinions(Game, Parameters, Players, Payoffs, !NextRoundPopulation) :-
 	Players = [FocalPlayer | SelectedPartners],
-	list.foldl2(updateOpinion(Game, Parameters, Payoffs, FocalPlayer), SelectedPartners, 0, _, !NextRoundPopulation)
+	list.foldl2(updateOpinion(Game, Parameters, Payoffs, FocalPlayer), SelectedPartners, 1, _, !NextRoundPopulation)
 	;
 	Players = [],
 	throw("updateOpinions/6: never reached otherwise there is an invalid game")
@@ -140,7 +145,7 @@ debugStep([S | Rest], [SM | RestM]) :-
 		S = opinion(_, _)
 	then
 		Parameters = 'mu :='(ebea.player.selection.defaultParameters, 0.1),
-		updateTrait(Parameters, opinion(0.0, 0.8), S) = SM
+		updateTrait(yes, Parameters, opinion(0.0, 0.8), S) = SM
 	else
 		throw("Exception")
 	).
@@ -173,7 +178,7 @@ weight(TraitPlayer, TraitPartner) = Result :-
 	Result = 1.0
 	;
 	TraitPartner = opinion(_, _),
-	Result = 2.0 - float.abs(TraitPartner^opinionValue - TraitPlayer^opinionValue) + 1.0
+	Result = 10.0 * (2.0 - float.abs(TraitPartner^opinionValue - TraitPlayer^opinionValue) + 1.0)
 	.
 
 /**
@@ -214,7 +219,7 @@ pickPartner(TraitPlayer, TotalWeight, PickedPartner, Partners, RemainingPartners
 	).
 
 /**
- * selectPartner(TraitPlayer, Index, !AvailablePartners, !Random)
+ * selectAPartner(TraitPlayer, Index, !AvailablePartners, !Random)
 
  * Select the {@code Index}th partner for the given player without
  * replacement.  Partners are selected with a probability that is inversely
@@ -222,13 +227,13 @@ pickPartner(TraitPlayer, TotalWeight, PickedPartner, Partners, RemainingPartners
  * potential partner.
   
  */
-:- pred selectPartner(ebea.player.selection.traits, int, list(player(C, T)), list(player(C, T)),
+:- pred selectAPartner(ebea.player.selection.traits, int, list(player(C, T)), list(player(C, T)),
 	list(player(C, T)), list(player(C, T)),
 	R, R)
 	<= ePRNG(R).
-:- mode selectPartner(in(opinion), in, in, out, in, out, in, out) is det.
+:- mode selectAPartner(in(opinion), in, in, out, in, out, in, out) is det.
 
-selectPartner(TraitPlayer, _, !PickedPartners, !AvailablePartners, !Random) :-
+selectAPartner(TraitPlayer, _, !PickedPartners, !AvailablePartners, !Random) :-
 	rng.nextFloat(Rnd, !Random),
 	Weight = Rnd * computeTotalWeight(TraitPlayer, !.AvailablePartners),
 	pickPartner(TraitPlayer, Weight, PickedPartner, !AvailablePartners),
@@ -243,10 +248,20 @@ selectPartner(TraitPlayer, _, !PickedPartners, !AvailablePartners, !Random) :-
  * payoff.  The focal player may have selected partners that do not have an
  * opinion.  In this case the population remains unchanged.  Otherwise we
  * update the opinion.
+
+ * <p> This predicate is used as a closure to reduce the list of selected
+ * partners.
+
+ * @param FocalPlayer the player that selected partners
+
+ * @param SelectedPartner one of the partners selected by the player
+
+ * @param !Index selected partner index in array {@code Payoffs}.
+
   
  */
 :- pred updateOpinion(G, ebea.player.parameters(P), array(float), player(C, T), player(C, T), int, int, population(C, T), population(C, T))
-	<= game(G, C).
+	<= abstractGame(G).
 :- mode updateOpinion(in, in, in, in, in, in, out, in, out) is det.
 
 updateOpinion(Game, Parameters, Payoffs, FocalPlayer, SelectedPartner, Index, Index + 1, !Population) :-
@@ -254,26 +269,29 @@ updateOpinion(Game, Parameters, Payoffs, FocalPlayer, SelectedPartner, Index, In
 	SelectionTrait_SP = SelectedPartner^traits^selectionTrait,
 	(if
 		SelectionTrait_FP = opinion(_, _),
-		FocalPlayer^chromosome^selectionGenes = opinion(PayoffThreshold_FP, _),
+%		FocalPlayer^chromosome^selectionGenes = opinion(PayoffThreshold_FP, _),
 		SelectionTrait_SP = opinion(_, _),
-		SelectedPartner^chromosome^selectionGenes = opinion(PayoffThreshold_SP, _),
+%		SelectedPartner^chromosome^selectionGenes = opinion(PayoffThreshold_SP, _),
 		SelectionTrait_FP \= SelectionTrait_SP
 	then
+		PayoffThreshold = paretoPayoff(Game),
 		(if
-			scaledPayoffToThreshold(Game, Parameters^energyPar^energyScaling, array.lookup(Payoffs, 0)) > PayoffThreshold_FP
+			scaledPayoffToThreshold(Game, Parameters^energyPar^energyScaling, array.lookup(Payoffs, 0)) >= PayoffThreshold
 		then
-			NextOpinion_FP = updateTrait(Parameters^selectionPar, SelectionTrait_SP, SelectionTrait_FP),
+			NextOpinion_FP = updateTrait(yes, Parameters^selectionPar, SelectionTrait_SP, SelectionTrait_FP),
 			ebea.population.update(FocalPlayer^id, updatePlayerOpinion(NextOpinion_FP), !Population)
 		else
-			true
+			NextOpinion_FP = updateTrait(no, Parameters^selectionPar, SelectionTrait_SP, SelectionTrait_FP),
+			ebea.population.update(FocalPlayer^id, updatePlayerOpinion(NextOpinion_FP), !Population)
 		),
 		(if
-			scaledPayoffToThreshold(Game, Parameters^energyPar^energyScaling, array.lookup(Payoffs, Index)) > PayoffThreshold_SP
+			scaledPayoffToThreshold(Game, Parameters^energyPar^energyScaling, array.lookup(Payoffs, Index)) >= PayoffThreshold
 		then
-			NextOpinion_SP = updateTrait(Parameters^selectionPar, SelectionTrait_FP, SelectionTrait_SP),
+			NextOpinion_SP = updateTrait(yes, Parameters^selectionPar, SelectionTrait_FP, SelectionTrait_SP),
 			ebea.population.update(SelectedPartner^id, updatePlayerOpinion(NextOpinion_SP), !Population)
 		else
-			true
+			NextOpinion_SP = updateTrait(no, Parameters^selectionPar, SelectionTrait_FP, SelectionTrait_SP),
+			ebea.population.update(SelectedPartner^id, updatePlayerOpinion(NextOpinion_SP), !Population)
 		)
 	else
 		true
@@ -358,10 +376,10 @@ relativeAgreement(Trait1, Trait2) =
  * Updates the opinion of player two after interacting with player one.
  */
 
-:- func updateTrait(ebea.player.selection.parameters, ebea.player.selection.traits, ebea.player.selection.traits) = ebea.player.selection.traits.
-:- mode updateTrait(in, in(opinion), in(opinion)) = out(opinion) is det.
+:- func updateTrait(bool, ebea.player.selection.parameters, ebea.player.selection.traits, ebea.player.selection.traits) = ebea.player.selection.traits.
+:- mode updateTrait(in, in, in(opinion), in(opinion)) = out(opinion) is det.
 
-updateTrait(Parameters, Trait1, Trait2) = Result :-
+updateTrait(yes, Parameters, Trait1, Trait2) = Result :-
 	(if
 		overlap(Trait1, Trait2) > Trait1^uncertainty
 	then
@@ -375,6 +393,26 @@ updateTrait(Parameters, Trait1, Trait2) = Result :-
 			+ Parameters^mu
 				* relativeAgreement(Trait1, Trait2)
 				* (Trait1^uncertainty - Trait2^uncertainty)
+	else
+		Result = Trait2
+	)
+	.
+	
+updateTrait(no, Parameters, Trait1, Trait2) = Result :-
+	(if
+		overlap(Trait1, Trait2) > Trait1^uncertainty
+	then
+		Result^opinionValue =
+			float.max(-1.0,
+				float.min(1.0,
+					Trait2^opinionValue
+					- Parameters^mu
+						* relativeAgreement(Trait1, Trait2)
+						* (Trait1^opinionValue - Trait2^opinionValue)
+				)
+			),
+		Result^uncertainty =
+			Trait2^uncertainty
 	else
 		Result = Trait2
 	)

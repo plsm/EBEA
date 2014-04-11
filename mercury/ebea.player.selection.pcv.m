@@ -9,6 +9,17 @@
 
 :- interface.
 
+:- type probabilityCombinationVector == array(slot).
+
+:- type slot --->
+	slot(
+		probability :: int,
+		combination :: combination
+	).
+
+:- type combination == list(int).
+
+
 /**
  * initProbabilityCombinationVector(Quotient, Remainder, Index) = Result
   
@@ -72,12 +83,12 @@
  */
 :- pred updateProbCombVectors(
 	G, energyScaling,
-	int, ebea.player.selection.chromosome, list(int), list(player(C, T)),
+	int, ebea.player.selection.chromosome.chromosome, list(int), list(player(C, T)),
 	int, float,
 	R, R,
 	probabilityCombinationVector, probabilityCombinationVector
 	)
-	<= (game(G, C), ePRNG(R)).
+	<= (abstractGame(G), ePRNG(R)).
 :- mode updateProbCombVectors(in, in, in, in(bound(partnerSelection(ground,ground,ground,ground))), in, in, in, in, in, out, in, out) is det.
 %:- mode updateProbCombVectors(in, in, in, in(bound(partnerSelection(ground,ground,ground,ground))), in, in, in, in, in, out, di, uo) is det.
 %:- mode update(in, in(pred(di, uo, out) is det), in, in, di, uo, di, uo) is det.
@@ -115,6 +126,14 @@
 	<= ePRNG(R).
 :- mode checkForDeadPlayers(in, in, in, in, out, in, out) is det.
 
+
+/**
+ * probability(ProbCombVectors, Index, Value)
+
+ * Return the raw probability of selecting the {@code Index} combination.
+ */
+:- pred probability(probabilityCombinationVector, int, int).
+:- mode probability(in, in, out) is det.
 
 :- pred parse(probabilityCombinationVector, list(int), list(int)).
 :- mode parse(in, out, in) is det.
@@ -275,6 +294,18 @@ checkForDeadPlayers(NumberPartners, Neighbours, DeadPlayerIDs, !Slot, !Random) :
 		true
 	).
 
+probability(ProbCombVectors, Index, Value) :-
+	(if
+		Index = 0
+	then
+		array.lookup(ProbCombVectors, Index, Slot),
+		Value = Slot^probability
+	else
+		array.lookup(ProbCombVectors, Index - 1, SlotP),
+		array.lookup(ProbCombVectors, Index, SlotI),
+		Value = SlotI^probability - SlotP^probability
+	).
+
 :- pragma promise_pure(parse/3).
 
 parse(PCV::in, ListOut::out, ListIn::in) :-
@@ -340,26 +371,6 @@ search(Low, High, SelectedProbability, ProbCombVectors, SelectedSlot, Combinatio
 		else
 			search(Low, Middle, SelectedProbability, ProbCombVectors, SelectedSlot, Combination)
 		)
-	).
-
-/**
- * probability(ProbCombVectors, Index, Value)
-
- * Return the raw probability of selecting the {@code Index} combination.
- */
-:- pred probability(probabilityCombinationVector, int, int).
-:- mode probability(in, in, out) is det.
-
-probability(ProbCombVectors, Index, Value) :-
-	(if
-		Index = 0
-	then
-		array.lookup(ProbCombVectors, Index, Slot),
-		Value = Slot^probability
-	else
-		array.lookup(ProbCombVectors, Index - 1, SlotP),
-		array.lookup(ProbCombVectors, Index, SlotI),
-		Value = SlotI^probability - SlotP^probability
 	).
 
 
