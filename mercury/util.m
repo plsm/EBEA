@@ -60,6 +60,12 @@
 
 :- func rangeInt(int, int, int) = list(int).
 
+/**
+ * Call the command and handle the output of executing it.
+ */
+:- pred callSystem(string, io, io).
+:- mode callSystem(in, di, uo) is det.
+
 :- implementation.
 
 :- import_module int.
@@ -203,6 +209,23 @@ rangeInt(Min, Step, Max) = Result :-
 		Result = []
 	else
 		Result = [Min | rangeInt(Min + Step, Step, Max)]
+	).
+
+
+callSystem(Command, !IO) :-
+	io.call_system(Command, IResult, !IO),
+	(
+		IResult = ok(ExitStatus),
+		(if
+			ExitStatus \= 0
+		then
+			io.format("Exit status is %d\n", [i(ExitStatus)], !IO)
+		else
+			true
+		)
+		;
+		IResult = error(Error),
+		io.format("Calling command `%s` resulted in the following error:\n%s\n", [s(Command), s(io.error_message(Error))], !IO)
 	).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
