@@ -63,7 +63,7 @@ dialog =
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of private predicates and functions
 
-:- func setVTemptation(factory, list(float)) = maybe_error(factory).
+:- func setVTemptation(factory, list(float)) = setResult(factory).
 
 setVTemptation(Factory, VTemptation) = Result :-
 	(if
@@ -80,7 +80,7 @@ setVTemptation(Factory, VTemptation) = Result :-
 		Result = error("Temptation payoff must be between zero and two")
 	).
 
-:- func setVSucker(factory, list(float)) = maybe_error(factory).
+:- func setVSucker(factory, list(float)) = setResult(factory).
 
 setVSucker(Factory, VSucker) = Result :-
 	(if
@@ -97,7 +97,7 @@ setVSucker(Factory, VSucker) = Result :-
 		Result = error("Sucker payoff must be between minus one and one")
 	).
 
-:- func setVFractionFirstYes(factory, list(float)) = maybe_error(factory).
+:- func setVFractionFirstYes(factory, list(float)) = setResult(factory).
 
 setVFractionFirstYes(Factory, VFractionFirstYes) = Result :-
 	(if

@@ -27,7 +27,9 @@
 :- mode value(in, out, out, out, out) is nondet.
 
 
-:- instance game(game, strategy).
+:- instance abstractGame(game).
+:- instance symmetricGame(game, strategy).
+:- instance asymmetricGame(game, strategy).
 
 :- instance chromosome(strategy, unit, parameters).
 
@@ -57,13 +59,23 @@
 		prob::float
 	).
 
-:- instance game(game, strategy) where
-  [
+:- instance abstractGame(game) where
+[
 	func(lowestPayoff/1)  is gl.'2x2'.game.lowestPayoff,
 	func(highestPayoff/1) is gl.'2x2'.game.highestPayoff,
 	func(paretoPayoff/1)  is gl.'2x2'.game.paretoPayoff,
-	func(numberPlayers/1) is gl.'2x2'.game.numberPlayers,
-	pred(play/5)          is gl.'2x2'.play
+	func(numberPlayers/1) is gl.'2x2'.game.numberPlayers
+].
+
+:- instance symmetricGame(game, strategy) where
+[
+	pred(playSymmetric/5) is gl.'2x2'.play
+].
+
+:- instance asymmetricGame(game, strategy) where
+[
+	func(numberRoles/1)    is game.singleRole,
+	pred(playAsymmetric/5) is game.playSymmetricBridge
 ].
 
 :- instance chromosome(strategy, unit, parameters)  where
