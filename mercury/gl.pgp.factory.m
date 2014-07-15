@@ -80,7 +80,7 @@ dialog = dialog(
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of private predicates and functions
 
-:- func setVPlayers(factory, list(int)) = maybe_error(factory).
+:- func setVPlayers(factory, list(int)) = setResult(factory).
 
 setVPlayers(Factory, VPlayers) =
 	(if
@@ -95,7 +95,7 @@ setVPlayers(Factory, VPlayers) =
 	).
 
 
-:- func setVProvisionCost(factory, list(float)) = maybe_error(factory).
+:- func setVProvisionCost(factory, list(float)) = setResult(factory).
 
 setVProvisionCost(Factory, VProvisionCost) =
 	(if
@@ -109,7 +109,7 @@ setVProvisionCost(Factory, VProvisionCost) =
 		error("Provision cost must be greater than zero")
 	).
 
-:- func setVCooperateProbability(factory, list(float)) = maybe_error(factory).
+:- func setVCooperateProbability(factory, list(float)) = setResult(factory).
 
 setVCooperateProbability(Factory, VCooperateProbability) =
 	(if
@@ -127,7 +127,7 @@ setVCooperateProbability(Factory, VCooperateProbability) =
 	).
 
 
-:- func setVQty(factory, list(int)) = maybe_error(factory).
+:- func setVQty(factory, list(int)) = setResult(factory).
 
 setVQty(Factory, VQty) =
 	(if
@@ -143,7 +143,7 @@ setVQty(Factory, VQty) =
 
 
 
-:- func setVStddev(factory, list(float)) = maybe_error(factory).
+:- func setVStddev(factory, list(float)) = setResult(factory).
 
 setVStddev(Factory, VStddev) =
 	(if

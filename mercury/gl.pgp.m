@@ -19,10 +19,17 @@
 /**
  * The accumulator used to reduce a collection of PGP strategies.
  */
-:- type pgpAc.
+%:- type pgpAc.
+:- type pgpAc --->
+	ac(qty::int,
+		prob::float,
+		qtyDeteYes :: int,
+		qtyDeteNo  :: int
+	  ).
 
-
-:- instance game(game, strategy).
+:- instance abstractGame(game).
+:- instance symmetricGame(game, strategy).
+:- instance asymmetricGame(game, strategy).
 
 :- instance chromosome(strategy, unit, parameters).
 
@@ -40,20 +47,23 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Definition of exported types
 
-
-:- type pgpAc --->
-	ac(qty::int,
-		prob::float
-	  ).
-
-
-:- instance game(game, strategy) where
+:- instance abstractGame(game) where
 [
 	func(lowestPayoff/1)  is gl.pgp.game.lowestPayoff,
 	func(highestPayoff/1) is gl.pgp.game.highestPayoff,
 	func(paretoPayoff/1)  is gl.pgp.game.paretoPayoff,
-	func(numberPlayers/1) is gl.pgp.game.players,
-	pred(play/5)          is gl.pgp.play
+	func(numberPlayers/1) is gl.pgp.game.players
+].
+
+:- instance symmetricGame(game, strategy) where
+[
+	pred(playSymmetric/5)          is gl.pgp.play
+].
+
+:- instance asymmetricGame(game, strategy) where
+[
+	func(numberRoles/1)    is game.singleRole,
+	pred(playAsymmetric/5) is game.playSymmetricBridge
 ].
 
 :- instance chromosome(strategy, unit, parameters) where
@@ -243,13 +253,19 @@ fold(Strategy, AC) = Result :-
 	Result^qty = AC^qty + 1,
 	(
 		Strategy = prob(ProvideProbability),
-		Result^prob = AC^prob + ProvideProbability
+		Result^prob = AC^prob + ProvideProbability,
+		Result^qtyDeteYes = AC^qtyDeteYes,
+		Result^qtyDeteNo = AC^qtyDeteNo
 		;
 		Strategy = dete(yes),
-		Result^prob = AC^prob + 1.0
+		Result^prob = AC^prob + 1.0,
+		Result^qtyDeteYes = AC^qtyDeteYes + 1,
+		Result^qtyDeteNo = AC^qtyDeteNo
 		;
 		Strategy = dete(no),
-		Result^prob = AC^prob
+		Result^prob = AC^prob,
+		Result^qtyDeteYes = AC^qtyDeteYes,
+		Result^qtyDeteNo = AC^qtyDeteNo + 1
 	).
 
 /**
@@ -263,7 +279,10 @@ fold(Strategy, AC) = Result :-
 
 fold = Result :-
 	Result^qty = 0,
-	Result^prob = 0.0.
+	Result^prob = 0.0,
+	Result^qtyDeteYes = 0,
+	Result^qtyDeteNo = 0
+	.
 
 :- pred writeAc(io.output_stream, pgpAc, io, io).
 :- mode writeAc(in, in, di, uo) is det.

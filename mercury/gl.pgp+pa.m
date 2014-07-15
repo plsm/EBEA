@@ -30,7 +30,9 @@
 
 :- type ac.
 
-:- instance game(game, strategy).
+:- instance abstractGame(game).
+:- instance symmetricGame(game, strategy).
+:- instance asymmetricGame(game, strategy).
 
 :- instance chromosome(strategy, unit, parameters).
 
@@ -56,13 +58,23 @@
 		punisherQty::int
 	  ).
 
-:- instance game(game, strategy) where
+:- instance abstractGame(game) where
 [
 	func(lowestPayoff/1)  is gl.'pgp+pa'.game.lowestPayoff,
 	func(highestPayoff/1) is gl.'pgp+pa'.game.highestPayoff,
 	func(paretoPayoff/1)  is gl.'pgp+pa'.game.paretoPayoff,
-	func(numberPlayers/1) is gl.'pgp+pa'.game.numberPlayers,
-	pred(play/5)          is gl.'pgp+pa'.play
+	func(numberPlayers/1) is gl.'pgp+pa'.game.numberPlayers
+].
+
+:- instance symmetricGame(game, strategy) where
+[
+	pred(playSymmetric/5) is gl.'pgp+pa'.play
+].
+
+:- instance asymmetricGame(game, strategy) where
+[
+	func(numberRoles/1)    is game.singleRole,
+	pred(playAsymmetric/5) is game.playSymmetricBridge
 ].
 
 :- instance chromosome(strategy, unit, parameters) where

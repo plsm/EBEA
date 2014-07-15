@@ -200,7 +200,7 @@ parse(P) -->
 	parseable.float32(PunishSubjectCost)
 	.
 
-:- func check(maybe_error(game)) = maybe_error(game).
+:- func check(setResult(game)) = setResult(game).
 
 check(ok(Game)) =
 	(if
