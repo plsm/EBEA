@@ -106,7 +106,8 @@ highestPayoff(Game) = fraction.float(Game^payoffSamePlaceLike).
 
 :- pragma memo(paretoPayoff/1).
 
-paretoPayoff(Game) = fraction.float(Game^payoffSamePlaceLike + Game^payoffSamePlaceDislike // 2).
+%paretoPayoff(Game) = fraction.float(Game^payoffSamePlaceLike + Game^payoffSamePlaceDislike) / 2.0.
+paretoPayoff(Game) = fraction.float(Game^payoffSamePlaceDislike).
 
 numberPlayers(_Game) = 2.
 
