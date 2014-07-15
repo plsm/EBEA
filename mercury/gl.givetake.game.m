@@ -39,6 +39,40 @@
 
 :- func dialog = list(dialogItem(game)).
 
+/**
+ * The lowest payoff obtained in the Give-and-Take game is either zero or
+ * the value obtained when both players exchange the resource by taking it.
+
+ * <p> Function of the type class {@code game(game,strategy)}.
+ */
+
+:- func lowestPayoff(game) = float.
+
+/**
+ * The highest payoff obtained in the Give-and-Take game is obtained when a
+ * player keeps the resource during all the stages.
+
+ * <p> Function of the type class {@code game(game, strategy)}.
+ */
+:- func highestPayoff(game) = float.
+
+/**
+ * The pareto payoff obtained in the Give-and-Take game is obtained when
+ * both players exchange the resource by giving it every stage.
+
+ * <p> Function of the type class {@code game(game,strategy)}.
+ */
+:- func paretoPayoff(game) = float.
+
+/**
+ * numberPlayers(Game) = Result
+ 
+ * Return the value two.
+
+ * <p> Function of the type class {@code game(game,strategy)}.
+ */
+:- func numberPlayers(game) = int.
+
 :- func bg(game) = float.
 :- func cpt(game) = float.
 :- func cst(game) = float.
@@ -71,6 +105,21 @@ dialog =
 	di(label("cost perform take"), updateFieldFloat( cpt, checkFloat( "cpt",  bounded(0.0, yes), unbound, 'cpt :='))),
 	di(label("cost subject take"), updateFieldFloat( cst, checkFloat( "cst",  bounded(0.0, yes), unbound, 'cst :=')))
 	].
+
+:- pragma memo(lowestPayoff/1).
+
+lowestPayoff(Game) = float.min(0.0, (1.0 - Game^cpt - Game^cst) / 2.0).
+
+:- pragma memo(highestPayoff/1).
+
+highestPayoff(_Game) = 1.0.
+
+:- pragma memo(paretoPayoff/1).
+
+paretoPayoff(Game) = 0.5 + Game^bg / 2.0.
+
+numberPlayers(_Game) = 2.
+
 
 /*
 error(Game, Msg) :-

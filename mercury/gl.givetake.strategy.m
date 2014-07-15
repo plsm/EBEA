@@ -25,11 +25,30 @@
 		nnn :: bool,
 		fg  :: bool,
 		ft  :: bool
+	)
+	.
+
+/**
+ * The accumulator used to reduce a set of strategies.
+ */
+%:- type accumulator.
+:- type accumulator --->
+	ac(
+		sumTimeGive :: int,
+		sumTimeTake :: int,
+		qtyTime     :: float
+%		qtyHistory  :: array(int)
 	).
 
 :- inst history == bound(history(ground,ground,ground,ground,ground,ground,ground,ground,ground,ground)).
 
 :- instance parseable(strategy).
+
+:- instance printable(strategy).
+
+:- instance printable(accumulator).
+
+:- instance foldable(strategy, accumulator).
 
 /**
  * Return a default value of {@code strategy}.
@@ -113,14 +132,41 @@
 
 :- implementation.
 
+:- include_module encodecode.
+:- import_module gl.givetake.strategy.encodecode.
+:- import_module util.
 :- import_module exception, float, int.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Definition of exported types
 
+% :- type accumulator --->
+% 	ac(
+% 		sumTimeGive :: int,
+% 		sumTimeTake :: int,
+% 		qtyTime     :: float,
+% 		qtyHistory  :: array(int)
+% 	).
+
 :- instance parseable(strategy) where
 [
 	pred(parse/3) is gl.givetake.strategy.parse
+].
+
+:- instance printable(strategy) where
+[
+	pred(print/4) is gl.givetake.strategy.printStrategy
+].
+
+:- instance foldable(strategy, accumulator) where
+[
+	func(fold/2)   is gl.givetake.strategy.fold,
+	func(initAC/0) is gl.givetake.strategy.init
+].
+
+:- instance printable(accumulator) where
+[
+	pred(print/4) is gl.givetake.strategy.printAccumulator
 ].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -136,8 +182,8 @@ default = Result :-
 dialog =
 	[
 	di(label("time"),     subdialog( [
-		di(label("time give"),  updateFieldInt(      get_timeGive,  checkInt(   "time give",  bounded(0, yes), unbound, set_timeGive))),
-		di(label("time take"),  updateFieldInt(      get_timeTake,  checkInt(   "time take",  bounded(0, yes), unbound, set_timeTake)))
+		di(label("time give"),  updateFieldInt(      get_timeGive,  checkInt(   "time give",  bounded(1, yes), unbound, set_timeGive))),
+		di(label("time take"),  updateFieldInt(      get_timeTake,  checkInt(   "time take",  bounded(1, yes), unbound, set_timeTake)))
 		])),
 	di(label("history"),  subdialog( [
 		di(label("gt"),   updateFieldBool(     get_gt,   set(set_gt))),
@@ -165,7 +211,7 @@ mutateGene(Parameters, Index, !Distribution, !Random, Strategy, Result) :-
 		distribution.unitGaussian(Perturb0, !Distribution, !Random),
 		NewTime =
 			int.max(
-				0,
+				1,
 				int.min(float.round_to_int(float(Strategy^timeGive) + Perturb0 * Parameters^timeStdDev) \/ 1,
 				Parameters^maxTime)),
 		Result = 'timeGive :='(Strategy, NewTime)
@@ -175,7 +221,7 @@ mutateGene(Parameters, Index, !Distribution, !Random, Strategy, Result) :-
 		distribution.unitGaussian(Perturb0, !Distribution, !Random),
 		NewTime =
 			int.max(
-				0,
+				1,
 				int.min(float.round_to_int(float(Strategy^timeTake) + Perturb0 * Parameters^timeStdDev) \/ 1,
 				Parameters^maxTime)),
 		Result = 'timeTake :='(Strategy, NewTime)
@@ -198,14 +244,9 @@ mutateGene(Parameters, Index, !Distribution, !Random, Strategy, Result) :-
 
 :- pred geneFunc(int, func(strategy) = bool, func(strategy, bool) = strategy).
 :- mode geneFunc(in,  out, out) is semidet.
-%:- mode geneFunc(out, in,  in) is det.
-%:- mode geneFunc(out, out, in) is det.
-%:- mode geneFunc(out, in,  out) is det.
-
-% :- mode geneFunc(in,  out(historyGetFunc), out(historySetFunc)) is semidet.
-% :- mode geneFunc(out, in(historyGetFunc),  in(historySetFunc)) is det.
-% :- mode geneFunc(out, out(historyGetFunc), in(historySetFunc)) is det.
-% :- mode geneFunc(out, in(historyGetFunc),  out(historySetFunc)) is det.
+% :- mode geneFunc(out, in,  in) is det.
+% :- mode geneFunc(out, out, in) is det.
+% :- mode geneFunc(out, in,  out) is det.
 
 geneFunc(0, gt,  'gt :=').
 geneFunc(1, gn,  'gn :=').
@@ -218,13 +259,76 @@ geneFunc(7, nnn, 'nnn :=').
 geneFunc(8, fg,  'fg :=').
 geneFunc(9, ft,  'ft :=').
 
+
+
+/**
+ * fold(Strategy, AC) = Result
+  
+ * Adds the strategy provide probability to the accumulator.  Updates the
+ * number of strategies reduced so far.
+ */
+
+:- func fold(strategy, accumulator) = accumulator.
+
+fold(Strategy, AC) = Result :-
+	Strategy = time(_, _),
+	R1 = 'sumTimeGive :='(AC, AC^sumTimeGive + Strategy^timeGive),
+	R2 = 'sumTimeTake :='(R1, AC^sumTimeTake + Strategy^timeTake),
+	R3 = 'qtyTime :='(    R2, AC^qtyTime + 1.0),
+	Result = R3
+	;
+	Strategy = history(_, _, _, _, _, _, _, _, _, _),
+	Result = AC
+	% encodecodeHist(Strategy, Index),
+	% NewQtyHistory = array.set(AC^qtyHistory, Index, array.lookup(AC^qtyHistory, Index) + 1),
+	% R1 = 'qtyHistory :='(AC, NewQtyHistory),
+	% Result = R1
+	.
+
+:- func init = accumulator.
+
+%init = ac(0, 0, 0.0, array.init(1024, 0)).
+init = ac(0, 0, 0.0).
+
+:- pred printStrategy(io.output_stream, strategy, io.state, io.state).
+:- mode printStrategy(in, in, di, uo) is det.
+
+printStrategy(Stream, Strategy, !IO) :-
+	Strategy = time(TG, TT),
+	io.print(Stream, "t ", !IO),
+	io.print(Stream, TG, !IO),
+	io.print(Stream, ' ', !IO),
+	io.print(Stream, TT, !IO)
+	;
+	Strategy = history(_, _, _, _, _, _, _, _, _, _),
+	io.print(Stream, "h ", !IO),
+	gl.givetake.strategy.encodecode.encodecodeHist(Strategy, Index),
+	io.print(Stream, Index, !IO)
+	.
+
+:- pred printAccumulator(io.output_stream, accumulator, io.state, io.state).
+:- mode printAccumulator(in, in, di, uo) is det.
+
+printAccumulator(Stream, AC, !IO) :-
+	(if
+		AC^qtyTime = 0.0
+	then
+		io.print(Stream, "1/0 1/0", !IO)
+	else
+		io.print(Stream, float(AC^sumTimeGive) / AC^qtyTime, !IO),
+		io.print(Stream, ' ', !IO),
+		io.print(Stream, float(AC^sumTimeTake) / AC^qtyTime, !IO)
+	)
+%	array.foldl(util.spacePrint(Stream), AC^qtyHistory, !IO)
+	.
+
 :- func default_timeGive = int.
 
-default_timeGive = 0.
+default_timeGive = 1.
 
 :- func default_timeTake = int.
 
-default_timeTake = 0.
+default_timeTake = 2.
 
 :- func default_gt = bool.
 
