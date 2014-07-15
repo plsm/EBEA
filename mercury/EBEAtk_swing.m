@@ -20,6 +20,7 @@
 
 :- import_module ui_swing, userInterface.
 :- import_module data, data.config, data.config.io, data.config.pretty.
+:- import_module tools, tools.export_playerProfiles_graphviz, tools.'PCVNetwork'.
 :- import_module int, dir, list, maybe, string, time.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -27,9 +28,11 @@
 
 :- type data --->
 	data(
-		config      :: data.config.config,
-		filename    :: maybe(string),
-		fileChooser :: fileChooser
+		config                   :: data.config.config,
+		parameters_playerProfile :: tools.export_playerProfiles_graphviz.parameters,
+		parameters_PCV           :: tools.'PCVNetwork'.parameters,
+		filename                 :: maybe(string),
+		fileChooser              :: fileChooser
 	).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -60,6 +63,16 @@ menu = m(
 		 mi(label("Save As"),  updateDataIO(saveAsConfiguration)),
 		 mi(label("Print"),    actionDataIO(printConfiguration))
 		])),
+	 mi(label("Tools"), submenu(
+		[mi(label("Player profiles movie"),   submenu(
+			[mi(label("Run"),			actionDataIO(playerProfilesMovie)),
+			 mi(label("Config"),    edit('new dialog'(parameters_playerProfile, set('parameters_playerProfile :='), tools.export_playerProfiles_graphviz.dialog_parameters)))
+			])),
+		 mi(label("Probability combination vectors movie"),   submenu(
+			[mi(label("Run"),			actionDataIO('PCVMovie')),
+			 mi(label("Config"),    edit('new dialog'(parameters_PCV, set('parameters_PCV :='), tools.'PCVNetwork'.dialog_parameters)))
+			]))
+		])),
 	 mi(label("Run background"),       actionDataIO('EBEAtk_swing'.runBackground))
 	]).
 
@@ -70,19 +83,30 @@ initData(Data, !IO) :-
 	dir.current_directory(RDir, !IO),
 	(
 		RDir = ok(Dir),
-		Data = data(data.config.default, no, setCurrentDirectoryFileChooser(Dir, initFileChooser))
+		Data = initData(setCurrentDirectoryFileChooser(Dir, initFileChooser))
 		;
 		RDir = error(Error),
 		io.format(io.stderr_stream, "IO error obtaining current directory: %s", [s(io.error_message(Error))], !IO),
-		Data = data(data.config.default, no, initFileChooser)
+		Data = initData(initFileChooser)
 	).
 
-:- func initData = data.
+:- func initData(fileChooser) = data.
 
-initData = data(data.config.default, no, initFileChooser).
+initData(FileChooser) = data(
+	data.config.default,
+	tools.export_playerProfiles_graphviz.default_parameters,
+	tools.'PCVNetwork'.default_parameters,
+	no,
+	FileChooser).
 
 :- func config(data) = data.config.config.
 :- func 'config :='(data, data.config.config) = data.
+
+:- func parameters_playerProfile(data) = tools.export_playerProfiles_graphviz.parameters.
+:- func 'parameters_playerProfile :='(data, tools.export_playerProfiles_graphviz.parameters) = data.
+
+:- func parameters_PCV(data) = tools.'PCVNetwork'.parameters.
+:- func 'parameters_PCV :='(data, tools.'PCVNetwork'.parameters) = data.
 
 
 
@@ -171,19 +195,42 @@ saveAsConfiguration(!Data, !IO) :-
 	.
 
 
+:- pred playerProfilesMovie(data, io.state, io.state).
+:- mode playerProfilesMovie(in, di, uo) is det.
+
+playerProfilesMovie(Data, !IO) :-
+	% time.time(Time, !IO),
+	% TM = time.localtime(Time),
+	% FilenamePrefix = string.format("movie_%4d-%02d-%02d_%02d:%02d",
+	% 	[i(TM^tm_year + 1900), i(TM^tm_mon + 1), i(TM^tm_mday),
+	% 	 i(TM^tm_hour), i(TM^tm_sec)]),
+	createPlayerProfilesNetworks(Data^config, Data^parameters_playerProfile, Feedback, !IO),
+	io.print(Feedback, !IO),
+	io.nl(!IO)
+	.
+
+:- pred 'PCVMovie'(data, io.state, io.state).
+:- mode 'PCVMovie'(in, di, uo) is det.
+
+'PCVMovie'(Data, !IO) :-
+	tools.'PCVNetwork'.runTool(Data^config, Data^parameters_PCV, Feedback, !IO),
+	io.print(Feedback, !IO),
+	io.nl(!IO)
+	.
+
 :- pred runBackground(data, io.state, io.state).
 :- mode runBackground(in, di, uo) is det.
 
 runBackground(Data, !IO) :-
 	time.time(Time, !IO),
 	TM = time.localtime(Time),
-	Filename = string.format("config-run-%4d/%02d/%02d_%02d:%02d.ebea",
+	Filename = string.format("config_run_%4d-%02d-%02d_%02d:%02d.ebea",
 		[i(TM^tm_year + 1900), i(TM^tm_mon + 1), i(TM^tm_mday),
 		 i(TM^tm_hour), i(TM^tm_sec)]),
 	data.config.io.write(binary, Filename, Data^config, MErrors, !IO),
 	(
-		MErrors = yes(_),
-		io.print(io.stderr_stream, "Could not write configuration run file\n", !IO)
+		MErrors = yes(Msg),
+		io.format(io.stderr_stream, "Could not write configuration run file:\n%s\n", [s(Msg)], !IO)
 		;
 		MErrors = no
 	),

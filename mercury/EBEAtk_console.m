@@ -23,10 +23,14 @@
 :- import_module data, data.config, data.config.io.
 :- import_module data.config.pretty.
 :- import_module ebea, ebea.core, ebea.population, ebea.player.
+:- import_module ebea.player.selection, ebea.player.energy, ebea.player.selection.pcv.
+:- import_module tools, tools.export_playerProfiles_graphviz, tools.'PCVNetwork'.
 
-:- import_module  ebea.player.selection, ebea.player.energy, ebea.player.selection.pcv.
-
-:- import_module bool, char, float, getopt, int, list, map, maybe, string, thread.
+:- import_module gl, gl.battlesexes, gl.battlesexes.strategy.
+:- import_module gl, gl.givetake, gl.givetake.strategy.
+:- import_module gl, gl.pgp, gl.pgp.strategy.
+:- import_module fraction.
+:- import_module array, bool, char, float, getopt, int, list, map, maybe, string, thread, unit.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Definition of exported types
@@ -237,7 +241,9 @@ menu = m(
 	 mi(label("Load configuration"),   updateDataIO(loadConfiguration)),
 	 mi(label("Save configuration"),   updateDataIO(saveConfiguration)),
 	 mi(label("Save As"),              updateDataIO(saveAsConfiguration)),
+	 mi(label("Print"),                actionDataIO(printConfiguration)),
 	 mi(label("Run background"),       actionDataIO('EBEAtk_console'.runBackground)),
+	 mi(label("Flash Talk 2014"),      actionDataIO(run_flashTalk2014)),
 	 mi(label("Run interactively"),    actionDataIO(runInteractively))
 	]).
 
@@ -321,6 +327,14 @@ saveAsConfiguration(!Data, !IO) :-
 	)
 	.
 
+:- pred printConfiguration(data, io.state, io.state).
+:- mode printConfiguration(in, di, uo) is det.
+
+printConfiguration(Data, !IO) :-
+	data.config.pretty.print(io.stdout_stream, plain, Data^config, !IO)
+	.
+
+
 
 :- pred runBackground(data, io.state, io.state).
 :- mode runBackground(in, di, uo) is det.
@@ -335,28 +349,34 @@ runInteractively(Data, !IO) :-
 	(if
 		thread.can_spawn
 	then
-		promise_equivalent_solutions [!:IO] thread.spawn(launchWindow, !IO),
+		promise_equivalent_solutions [!:IO] thread.spawn(launchWindow_PopulationSize, !IO),
 		io.print("Launched window\nPress ENTER to run", !IO),
 		io.read_line_as_string(_, !IO),
 	Config = Data^config,
 	(
 		Config^selectedGame = '2x2',
-		data.config.runInteractively('2x2'(startRun, printPopulationSize, clickToContinue), Config, !IO)
+		data.config.runInteractively('2x2'(startRun, print_PopulationSize, clickToContinue), Config, !IO)
 		;
 		Config^selectedGame = battlesexes,
-		data.config.runInteractively(battlesexes(startRun, printPopulationSize, clickToContinue), Config, !IO)
+		data.config.runInteractively(battlesexes(startRun, print_PopulationSize, clickToContinue), Config, !IO)
 		;
 		Config^selectedGame = centipede,
-		data.config.runInteractively(centipede(startRun, printPopulationSize, clickToContinue), Config, !IO)
+		data.config.runInteractively(centipede(startRun, print_PopulationSize, clickToContinue), Config, !IO)
+		;
+		Config^selectedGame = givetake,
+		data.config.runInteractively(givetake(startRun, print_PopulationSize, clickToContinue), Config, !IO)
+		;
+		Config^selectedGame = investment,
+		data.config.runInteractively(investment(startRun, print_PopulationSize, clickToContinue), Config, !IO)
 		;
 		Config^selectedGame = pgp,
-		data.config.runInteractively(pgp(startRun, printPopulationSize, clickToContinue), Config, !IO)
+		data.config.runInteractively(pgp(startRun, print_PopulationSize, clickToContinue), Config, !IO)
 		;
 		Config^selectedGame = 'pgp+pa',
-		data.config.runInteractively('pgp+pa'(startRun, printPopulationSize, clickToContinue), Config, !IO)
+		data.config.runInteractively('pgp+pa'(startRun, print_PopulationSize, clickToContinue), Config, !IO)
 		;
 		Config^selectedGame = ultimatum,
-		data.config.runInteractively(ultimatum(startRun, printPopulationSize, clickToContinue), Config, !IO)
+		data.config.runInteractively(ultimatum(startRun, print_PopulationSize, clickToContinue), Config, !IO)
 	)
 	else
 		io.print(io.stderr_stream, "Could not launch window\n", !IO)
@@ -370,19 +390,23 @@ runInteractively(Data, !IO) :-
 							 
 ").
 
-:- pred launchWindow(io.state, io.state).
-:- mode launchWindow(di, uo) is cc_multi.
+:- pred launchWindow_PopulationSize(io.state, io.state).
+:- mode launchWindow_PopulationSize(di, uo) is cc_multi.
 
 
 :- pragma foreign_proc(
 	"C",
-	launchWindow(IOdi::di, IOuo::uo),
+	launchWindow_PopulationSize(IOdi::di, IOuo::uo),
 	[will_not_call_mercury, thread_safe, promise_pure],
 	"
 		IOdi = IOuo;
-		initGraphicsWindow ();
+		char *label[] = {""population size"", ""average energy"", ""average age""};
+		unsigned int rangeIndex[] = {0, 1, 2};
+		initGraphicsWindow (3, label, rangeIndex);
 	"
 	).
+
+
 
 :- type plotData --->
 	plotData(
@@ -390,10 +414,10 @@ runInteractively(Data, !IO) :-
 		age    :: int
 	).
 
-:- pred printPopulationSize(population(C, T), bool, io.state, io.state).
-:- mode printPopulationSize(in, out, di, uo) is det.
+:- pred print_PopulationSize(population(C, T), bool, io.state, io.state).
+:- mode print_PopulationSize(in, out, di, uo) is det.
 
-printPopulationSize(Population, no, !IO) :-
+print_PopulationSize(Population, no, !IO) :-
 	Add =
 	(func(P, AC) = R :-
 		R^energy = AC^energy + P^traits^energyTrait,
@@ -403,22 +427,236 @@ printPopulationSize(Population, no, !IO) :-
 	ebea.population.fold(Add, Population, plotData(0.0, 0)) = PlotData,
 	PlotData^energy / PopulationSize = AverageEnergy,
 	float(PlotData^age) / PopulationSize = AverageAge,
-	addPoints(PopulationSize, AverageEnergy, AverageAge, !IO).
+	addPoints_PopulationSize(PopulationSize, AverageEnergy, AverageAge, !IO).
 
 
-:- pred addPoints(float, float, float, io.state, io.state).
-:- mode addPoints(in, in, in, di, uo) is det.
+:- pred addPoints_PopulationSize(float, float, float, io.state, io.state).
+:- mode addPoints_PopulationSize(in, in, in, di, uo) is det.
 
 
 :- pragma foreign_proc(
 	"C",
-	addPoints(PopulationSize::in, AverageEnergy::in, AverageAge::in, IOdi::di, IOuo::uo),
+	addPoints_PopulationSize(PopulationSize::in, AverageEnergy::in, AverageAge::in, IOdi::di, IOuo::uo),
 	[will_not_call_mercury, thread_safe, promise_pure],
 	"
 		IOdi = IOuo;
 		addPoints (PopulationSize, AverageEnergy, AverageAge);
 	"
 	).
+
+
+
+
+
+
+:- pred run_flashTalk2014(data, io.state, io.state).
+:- mode run_flashTalk2014(in, di, uo) is det.
+
+run_flashTalk2014(Data, !IO) :-
+	Config = Data^config,
+	(if
+		thread.can_spawn
+	then
+		Config^selectedGame = '2x2',
+%		data.config.runInteractively('2x2'(startRun, print_PopulationSize, clickToContinue), Config, !IO),
+		true
+		;
+		Config^selectedGame = battlesexes,
+		promise_equivalent_solutions [!:IO] thread.spawn(launchWindow_flashTalk2014_battlesexes, !IO),
+		io.print("Launched window\nPress ENTER to run", !IO),
+		io.read_line_as_string(_, !IO),
+		data.config.runInteractively(battlesexes(startRun, print_flashTalk2014_battlesexes, clickToContinue), Config, !IO)
+		;
+		Config^selectedGame = centipede,
+%		data.config.runInteractively(centipede(startRun, print_PopulationSize, clickToContinue), Config, !IO)
+		true
+		;
+		Config^selectedGame = givetake,
+		promise_equivalent_solutions [!:IO] thread.spawn(launchWindow_flashTalk2014_givetake, !IO),
+		io.print("Launched window\nPress ENTER to run", !IO),
+		io.read_line_as_string(_, !IO),
+		data.config.runInteractively(givetake(startRun, print_flashTalk2014_givetake, clickToContinue), Config, !IO)
+		;
+		Config^selectedGame = investment,
+%		data.config.runInteractively(investment(startRun, print_PopulationSize, clickToContinue), Config, !IO)
+		true
+		;
+		Config^selectedGame = pgp,
+		promise_equivalent_solutions [!:IO] thread.spawn(launchWindow_flashTalk2014_pgp, !IO),
+		io.print("Launched window\nPress ENTER to run", !IO),
+		io.read_line_as_string(_, !IO),
+		data.config.runInteractively(pgp(startRun, print_flashTalk2014_pgp, clickToContinue), Config, !IO)
+		;
+		Config^selectedGame = 'pgp+pa',
+%		data.config.runInteractively('pgp+pa'(startRun, print_PopulationSize, clickToContinue), Config, !IO)
+		true
+		;
+		Config^selectedGame = ultimatum,
+%		data.config.runInteractively(ultimatum(startRun, print_PopulationSize, clickToContinue), Config, !IO)
+		true
+	else
+		io.print(io.stderr_stream, "Could not launch window\n", !IO)
+	).
+
+
+
+
+:- pred launchWindow_flashTalk2014_battlesexes(io.state, io.state).
+:- mode launchWindow_flashTalk2014_battlesexes(di, uo) is cc_multi.
+
+
+:- pragma foreign_proc(
+	"C",
+	launchWindow_flashTalk2014_battlesexes(IOdi::di, IOuo::uo),
+	[will_not_call_mercury, thread_safe, promise_pure],
+	"
+		IOdi = IOuo;
+		char *label[] = {""homem nicho 1 futebol"", ""mulher nicho 1 opera"", ""homem nicho 2 futebol"", ""mulher nicho 2 opera""};
+		unsigned int rangeIndex[] = {0, 0, 0, 0};
+		initGraphicsWindow (4, label, rangeIndex);
+	"
+	).
+
+
+
+
+:- pred print_flashTalk2014_battlesexes(population(gl.battlesexes.strategy.strategy, unit), bool, io.state, io.state).
+:- mode print_flashTalk2014_battlesexes(in, out, di, uo) is det.
+
+print_flashTalk2014_battlesexes(Population, no, !IO) :-
+	ebea.population.fold_sites(ebea.player.foldChromosome, Population, ebea.player.initAc, Data),
+	array.lookup(Data, 0) = ac(_, _, _, AC0),
+	array.lookup(Data, 1) = ac(_, _, _, AC1),
+	% io.print(AC0, !IO),
+	% io.print("\t", !IO),
+	% io.print(AC1, !IO),
+	% io.nl(!IO),
+	(if
+		AC0^qtyMale \= 0
+	then
+		addPoint(0,  AC0^sumProbabilityMaleGoTennis / float(AC0^qtyMale), !IO)
+	else
+		addPoint(0,  0.0, !IO)
+	),
+	(if
+		AC0^qtyFemale \= 0
+	then
+		addPoint(1,  AC0^sumProbabilityFemaleGoOpera / float(AC0^qtyFemale), !IO)
+	else
+		addPoint(1,  0.0, !IO)
+	),
+	(if
+		AC1^qtyMale \= 0
+	then
+		addPoint(2,  AC1^sumProbabilityMaleGoTennis / float(AC1^qtyMale), !IO)
+	else
+		addPoint(2,  0.0, !IO)
+	),
+	(if
+		AC1^qtyFemale \= 0
+	then
+		addPoint(3,  AC1^sumProbabilityFemaleGoOpera / float(AC1^qtyFemale), !IO)
+	else
+		addPoint(3,  0.0, !IO)
+	)
+	.
+
+
+
+
+
+:- pred launchWindow_flashTalk2014_pgp(io.state, io.state).
+:- mode launchWindow_flashTalk2014_pgp(di, uo) is cc_multi.
+
+:- pragma foreign_proc(
+	"C",
+	launchWindow_flashTalk2014_pgp(IOdi::di, IOuo::uo),
+	[will_not_call_mercury, thread_safe, promise_pure],
+	"
+		IOdi = IOuo;
+		char *label[] = {""cooperantes nicho 1"", ""exploradores nicho 1"", ""cooperantes nicho 2"", ""exploradores nicho 2""};
+		unsigned int rangeIndex[] = {0, 0, 0, 0};
+		initGraphicsWindow (4, label, rangeIndex);
+	"
+	).
+
+:- pred print_flashTalk2014_pgp(population(gl.pgp.strategy.strategy, unit), bool, io.state, io.state).
+:- mode print_flashTalk2014_pgp(in, out, di, uo) is det.
+
+print_flashTalk2014_pgp(Population, no, !IO) :-
+	ebea.population.fold_sites(ebea.player.foldChromosome, Population, ebea.player.initAc, Data),
+	array.lookup(Data, 0) = ac(_, _, _, AC0),
+	array.lookup(Data, 1) = ac(_, _, _, AC1),
+	addPoint(0,  float(AC0^qtyDeteYes), !IO),
+	addPoint(1,  float(AC0^qtyDeteNo), !IO),
+	addPoint(2,  float(AC1^qtyDeteYes), !IO),
+	addPoint(3,  float(AC1^qtyDeteNo), !IO)
+	.
+
+
+
+:- pred launchWindow_flashTalk2014_givetake(io.state, io.state).
+:- mode launchWindow_flashTalk2014_givetake(di, uo) is cc_multi.
+
+:- pragma foreign_proc(
+	"C",
+	launchWindow_flashTalk2014_givetake(IOdi::di, IOuo::uo),
+	[will_not_call_mercury, thread_safe, promise_pure],
+	"
+		IOdi = IOuo;
+		char *label[] = {""tempo dar nicho 1"", ""tempo tirar nicho 1"", ""tempo dar nicho 2"", ""tempo tirar nicho 2""};
+		unsigned int rangeIndex[] = {0, 0, 0, 0};
+		initGraphicsWindow (4, label, rangeIndex);
+	"
+	).
+
+:- pred print_flashTalk2014_givetake(population(gl.givetake.strategy.strategy, unit), bool, io.state, io.state).
+:- mode print_flashTalk2014_givetake(in, out, di, uo) is det.
+
+print_flashTalk2014_givetake(Population, no, !IO) :-
+	ebea.population.fold_sites(ebea.player.foldChromosome, Population, ebea.player.initAc, Data),
+	array.lookup(Data, 0) = ac(_, _, _, AC0),
+	array.lookup(Data, 1) = ac(_, _, _, AC1),
+	(if
+		AC0^qtyTime \= 0.0
+	then
+		addPoint(0,  float(AC0^sumTimeGive) / AC0^qtyTime, !IO),
+		addPoint(1,  float(AC0^sumTimeTake) / AC0^qtyTime, !IO)
+	else
+		addPoint(0,  0.0, !IO),
+		addPoint(1,  0.0, !IO)
+	),
+	(if
+		AC1^qtyTime \= 0.0
+	then
+		addPoint(2,  float(AC1^sumTimeGive) / AC1^qtyTime, !IO),
+		addPoint(3,  float(AC1^sumTimeTake) / AC1^qtyTime, !IO)
+	else
+		addPoint(2,  0.0, !IO),
+		addPoint(3,  0.0, !IO)
+	)
+	.
+
+
+
+
+
+
+:- pred addPoint(int, float, io.state, io.state).
+:- mode addPoint(in, in, di, uo) is det.
+
+
+:- pragma foreign_proc(
+	"C",
+	addPoint(Data::in, Value::in, IOdi::di, IOuo::uo),
+	[will_not_call_mercury, thread_safe, promise_pure],
+	"
+		IOdi = IOuo;
+		addPoint (Data, Value);
+	"
+	).
+
+
 
 :- pred startRun(population(C, T), io.state, io.state).
 :- mode startRun(in, di, uo) is det.
