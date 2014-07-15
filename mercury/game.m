@@ -12,7 +12,7 @@
 :- interface.
 
 :- import_module rng.
-:- import_module array.
+:- import_module array, maybe.
 
 % /**
 %  * Type class that defines the interface of a game.  The methods give
@@ -21,18 +21,46 @@
 %  * that plays the game given a strategy profile.
 %  */
 
-:- typeclass game(G, S) <= ((G -> S), (S -> G)) where
+:- typeclass abstractGame(G) where
 [
+	/**
+	 * Return the lowest payoff obtainable in the game.
+	 */
 	func lowestPayoff(G) = float,
+	/**
+	 * Return the highest payoff obtainable in the game.
+	 */
 	func highestPayoff(G) = float,
+	/**
+	 * Return the Pareto payoff which is interpreted as the most social
+	 * favourable payoff.
+	 */
 	func paretoPayoff(G) = float,
-	func numberPlayers(G) = int,
+	/**
+	 * Return the number of players in a game.
+	 */
+	func numberPlayers(G) = int
 
-	pred play(G, profile(S), R, R, payoffVector) <= ePRNG(R),
-	mode play(in, in, in, out, out) is det
+	% pred play(G, profile(S), R, R, payoffVector) <= ePRNG(R),
+	% mode play(in, in, in, out, out) is det
 ].
 
-:- typeclass game(G, S, A) <= (game(G, S), (G -> (S, A))) where
+:- typeclass asymmetricGame(G, S) <= (abstractGame(G), (G -> S)) where
+[
+	func numberRoles(G) = int,
+ 
+	pred playAsymmetric(G, profile(S), R, R, maybe(payoffVector)) <= ePRNG(R),
+	mode playAsymmetric(in, in, in, out, out) is det
+].
+
+:- typeclass symmetricGame(G, S) <= (abstractGame(G), (G -> S)) where
+[
+	pred playSymmetric(G, profile(S), R, R, payoffVector) <= ePRNG(R),
+	mode playSymmetric(in, in, in, out, out) is det
+].
+
+
+:- typeclass game(G, S, A) <= (abstractGame(G), (G -> (S, A))) where
 [
 	pred play(G, profile(S), R, R, payoffVector, actionVector(A)) <=ePRNG(R),
 	mode play(in, in, in, out, out, out) is det
@@ -58,10 +86,22 @@
 
 :- func payoff(payoffVector, int) = float.
 
+/**
+ * This function can be used in instances of {@code asymmetricGame(G,S)}
+ * that are really symmetric games.  This function returns the value one.
+  
+ */
+:- func singleRole(_) = int.
+
+:- pred playSymmetricBridge(G, profile(S), R, R, maybe(payoffVector))
+	<= (symmetricGame(G, S), ePRNG(R)).
+:- mode playSymmetricBridge(in, in, in, out, out) is det.
+
 :- implementation.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Definition of exported types
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Definition of private types
@@ -75,8 +115,13 @@ strategy(Profile, Index) = Result :-
 payoff(PayoffVector, Index) = Result :-
 	array.lookup(PayoffVector, Index) = Result.
 
+singleRole(_) = 1.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of private predicates and functions
+
+playSymmetricBridge(Game, Profile, !Random, yes(Payoff)) :-
+	playSymmetric(Game, Profile, !Random, Payoff).
 
 :- end_module game.
 
