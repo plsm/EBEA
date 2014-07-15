@@ -24,7 +24,8 @@
 :- type ac.
 
 
-:- instance game(game, strategy).
+:- instance abstractGame(game).
+:- instance asymmetricGame(game, strategy).
 
 :- instance chromosome(strategy, unit, parameters).
 
@@ -57,13 +58,19 @@
 	).
 
 
-:- instance game(game, strategy) where
+:- instance abstractGame(game)
+	where
 [
 	func(lowestPayoff/1)  is gl.centipede.game.lowestPayoff,
 	func(highestPayoff/1) is gl.centipede.game.highestPayoff,
 	func(paretoPayoff/1)  is gl.centipede.game.paretoPayoff,
-	func(numberPlayers/1) is gl.centipede.game.numberPlayers,
-	pred(play/5)          is gl.centipede.play
+	func(numberPlayers/1) is gl.centipede.game.numberPlayers
+].
+
+:- instance asymmetricGame(game, strategy) where
+[
+	func(numberRoles/1)    is gl.centipede.numberRoles,
+	pred(playAsymmetric/5) is gl.centipede.play
 ].
 
 :- instance chromosome(strategy, unit, parameters) where
@@ -172,6 +179,10 @@ parseStrategyType("first", first).
 parseStrategyType("second", second).
 
 
+:- func numberRoles(game) = int.
+
+numberRoles(_) = 2.
+
 
 /**
  * play(Game, Profile, !Random, Payoffs)
@@ -183,11 +194,11 @@ parseStrategyType("second", second).
  * players' cake division and division acceptance.
  */
 
-:- pred play(game, array(strategy), R, R, array(float))
+:- pred play(game, array(strategy), R, R, maybe(array(float)))
 	<= ePRNG(R).
 :- mode play(in, in, in, out, out) is det.
 
-play(Game, Profile, !Random, Payoffs) :-
+play(Game, Profile, !Random, MPayoffs) :-
 	array.lookup(Profile, 0) = StrategyA,
 	array.lookup(Profile, 1) = StrategyB,
 	(if
@@ -201,7 +212,8 @@ play(Game, Profile, !Random, Payoffs) :-
 			Payoffs = array([PotSize * Game^potShare,         PotSize * (1.0 - Game^potShare)])
 		else
 			Payoffs = array([PotSize * (1.0 - Game^potShare), PotSize * Game^potShare])
-		)
+		),
+		MPayoffs = yes(Payoffs)
 		;
 		AMovesFirst = no,
 		(if
@@ -210,9 +222,10 @@ play(Game, Profile, !Random, Payoffs) :-
 			Payoffs = array([PotSize * Game^potShare,         PotSize * (1.0 - Game^potShare)])
 		else
 			Payoffs = array([PotSize * (1.0 - Game^potShare), PotSize * Game^potShare])
-		)
+		),
+		MPayoffs = yes(Payoffs)
 	else
-		Payoffs = array([0.0, 0.0])
+		MPayoffs = no
 	).
 /*	
 	(
