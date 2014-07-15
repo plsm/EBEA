@@ -92,7 +92,8 @@ default(DefaultStrategyChromosome) = Result :-
 
 dialog(DefaultStrategyChromosome, DialogStrategyChromosome) =
 	[
-	di(label("geometry"),  'new editField'(  get_geometry,  set(set_geometry),  ebea.population.parameters.dialog_geometry)),
+	 di(label("geometry"), 'new selectOneOf'(selectedGeometry, selectGeometry, set(set_geometry), listGeometryChoices)),
+%	di(label("geometry"),  'new editField'(  get_geometry,  set(set_geometry),  ebea.population.parameters.dialog_geometry)),
 	 di(label("sites"),
 		'new editListFieldAny'(  get_sites,     set(set_sites),
 	 		ebea.population.site.parameters.default(DefaultStrategyChromosome),
@@ -111,12 +112,131 @@ parse(P) -->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of private predicates and functions
 
+
+% :- pred geometries(geometry, int, int, geometry).
+% :- mode geometries(in, out, out, out) is det.
+% :- mode geometries(in, out, in, out) is semidet.
+
+% geometries(wellmixed,           0, 0, wellmixed).
+% geometries(lattice(_, _, _, _), 1, 0, wellmixed).
+% geometries(wellmixed,           0, 1, lattice(default_xSize, default_ySize, default_neighbourhood, default_boundary)).
+% geometries(lattice(X, Y, N, B), 1, 1, lattice(X, Y, N, B)).
+
+
+:- func selectedGeometry(ebea.population.parameters.parameters(CS)) = maybe(currentChoice(geometry)).
+
+selectedGeometry(Parameters) = yes(cc(Index, Parameters^geometry)) :-
+	Parameters^geometry = wellmixed,
+	Index = 0
+	;
+	Parameters^geometry = lattice(_, _, _, _),
+	Index = 1
+	.
+
+:- func selectGeometry(ebea.population.parameters.parameters(CS), int) = setResult(selectChoice(ebea.population.parameters.parameters(CS), geometry)).
+
+selectGeometry(Parameters, Index) = ok(sc(NextParameters, Field)) :-
+	(if
+		Parameters^geometry = wellmixed,
+		Index = 0,
+		NP = Parameters,
+		F = Parameters^geometry
+		;
+		Parameters^geometry = lattice(_, _, _, _),
+		Index = 0,
+		NP = 'geometry :='(Parameters, F),
+		F = wellmixed
+		;
+		Parameters^geometry = wellmixed,
+		Index = 1,
+		NP = 'geometry :='(Parameters, F),
+		F = lattice(default_xSize, default_ySize, default_neighbourhood, default_boundary)
+		;
+		Parameters^geometry = lattice(_, _, _, _),
+		Index = 1,
+		NP = Parameters,
+		F = Parameters^geometry
+	then
+		NextParameters = NP,
+		Field = F
+	else
+		throw("selectGeometry/2: invalid index")
+	).
+
+:- func listGeometryChoices = list(choiceItem(geometry)).
+
+listGeometryChoices =
+	[
+	 ci(label("wellmixed"),  []),
+	 ci(label("lattice"),
+		[
+		 di(label("x size"),          updateFieldInt(      get_xSize,          checkInt(   "x size",          bounded(0, no), unbound, set_xSize))),
+		 di(label("y size"),          updateFieldInt(      get_ySize,          checkInt(   "y size",          bounded(0, no), unbound, set_ySize))),
+		 di(label("neighbourhood"),  'new selectOneOf'( selected_neighbourhood, select_neighbourhood,  set(set_neighbourhood),  listNeighbourhoodChoices)),
+		 di(label("boundary"),       'new selectOneOf'( selected_boundary,      select_boundary,       set(set_boundary),       listBoundaryChoices))
+		])].
+
 /**
  * Return a default value of {@code neighbourhood}.
  */
 :- func default_neighbourhood = neighbourhood.
 
 default_neighbourhood = moore.
+
+:- func selected_neighbourhood(geometry) = maybe(currentChoice(neighbourhood)).
+
+selected_neighbourhood(Geometry) = Result :-
+	Geometry = wellmixed,
+	Result = no
+	;
+	Geometry = lattice(_, _, Neighbourhood, _),
+	Result = yes(cc(Index, Neighbourhood)),
+	(
+		Neighbourhood = moore,
+		Index = 0
+		;
+		Neighbourhood = hexagonal,
+		Index = 1
+		;
+		Neighbourhood = vonNeumann,
+		Index = 2
+	)
+	.
+
+:- func select_neighbourhood(geometry, int) = setResult(selectChoice(geometry, neighbourhood)).
+
+select_neighbourhood(Geometry, Index) = ok(sc(NextGeometry, Neighbourhood)) :-
+	(
+		Geometry = wellmixed,
+		NG = lattice(default_xSize, default_ySize, default_neighbourhood, default_boundary)
+		;
+		Geometry = lattice(_, _, _, _),
+		NG = Geometry
+	),
+	(if
+		Index = 0,
+		N = moore
+		;
+		Index = 1,
+		N = hexagonal
+		;
+		Index = 2,
+		N = vonNeumann
+	then
+		NextGeometry = 'neighbourhood :='(NG, N),
+		Neighbourhood = N
+	else
+		throw("select_neighbourhood/2: Invalid index")
+	).
+
+:- func listNeighbourhoodChoices =  list(choiceItem(neighbourhood)).
+
+listNeighbourhoodChoices =
+	[
+	 ci(label("moore"),       []),
+	 ci(label("hexagonal"),   []),
+	 ci(label("vonNeumann"),  [])
+	].
 
 :- func dialog_neighbourhood = list(dialogItem(neighbourhood)).
 
@@ -155,6 +275,61 @@ dialog_geometry =
 :- func default_boundary = boundary.
 
 default_boundary = torus.
+
+:- func selected_boundary(geometry) = maybe(currentChoice(boundary)).
+
+selected_boundary(Geometry) = Result :-
+	Geometry = wellmixed,
+	Result = no
+	;
+	Geometry = lattice(_, _, _, Boundary),
+	Result = yes(cc(Index, Boundary)),
+	(
+		Boundary = torus,
+		Index = 0
+		;
+		Boundary = ring,
+		Index = 1
+		;
+		Boundary = closed,
+		Index = 2
+	)
+	.
+
+:- func select_boundary(geometry, int) = setResult(selectChoice(geometry, boundary)).
+
+select_boundary(Geometry, Index) = ok(sc(NextGeometry, Boundary)) :-
+	(
+		Geometry = wellmixed,
+		NG = lattice(default_xSize, default_ySize, default_neighbourhood, default_boundary)
+		;
+		Geometry = lattice(_, _, _, _),
+		NG = Geometry
+	),
+	(if
+		Index = 0,
+		B = torus
+		;
+		Index = 1,
+		B = ring
+		;
+		Index = 2,
+		B = closed
+	then
+		NextGeometry = 'boundary :='(NG, B),
+		Boundary = B
+	else
+		throw("select_boundary/2: Invalid index")
+	).
+
+:- func listBoundaryChoices =  list(choiceItem(boundary)).
+
+listBoundaryChoices =
+	[
+	 ci(label("torus"),   []),
+	 ci(label("ring"),    []),
+	 ci(label("closed"),  [])
+	].
 
 :- func dialog_boundary = list(dialogItem(boundary)).
 

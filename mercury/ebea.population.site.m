@@ -150,6 +150,10 @@
 :- mode removePlayers(in, in, out, array_di, array_uo) is det.
 
 
+
+:- func fold_player(population(C, T), site, func(player(C, T), A) = A, A) = A.
+
+
 :- pred debug(io.state, io.state).
 :- mode debug(di, uo) is det.
 
@@ -363,6 +367,14 @@ removePlayers(ListPlayers, !ListPlayersID, !ArraySites) :-
 	ListPlayers = [].
 
 
+fold_player(Population, Site, Func, AC) = Result :-
+	list.foldl(BridgeFunc, Site^playerIDs, AC) = Result,
+	BridgeFunc =
+	(func(I, A) = R :-
+		ebea.population.getPlayer(Population^players, I) = P,
+		R = Func(P, A)
+	).
+
 debug(!IO) :-
 	io.read_line_as_string(ILine, !IO),
 	(if
@@ -435,7 +447,7 @@ makeConnections(Geometry, SiteIndex) = solutions.solutions(neighbour(Geometry, i
 :- mode neighbour(in, in, in, out) is nondet.
 
 % up
-neighbour(lattice(XL, YL, N, B),   X, Y,    X + ((Y + 1) mod YL) * XL) :-
+neighbour(lattice(XL, YL, _N, B),   X, Y,    X + ((Y + 1) mod YL) * XL) :-
 	B = torus
 	;
 	B = closed,
@@ -446,7 +458,7 @@ neighbour(lattice(XL, YL, N, B),   X, Y,    X + ((Y + 1) mod YL) * XL) :-
 	.
 
 % down
-neighbour(lattice(XL, YL, N, B),   X, Y,    X + ((Y - 1) mod YL) * XL) :-
+neighbour(lattice(XL, YL, _N, B),   X, Y,    X + ((Y - 1) mod YL) * XL) :-
 	B = torus
 	;
 	B = closed,
@@ -457,7 +469,7 @@ neighbour(lattice(XL, YL, N, B),   X, Y,    X + ((Y - 1) mod YL) * XL) :-
 	.
 
 % right
-neighbour(lattice(XL, YL, N, B),   X, Y,    (X + 1) mod XL + Y * XL) :-
+neighbour(lattice(XL, _YL, _N, B),   X, Y,    (X + 1) mod XL + Y * XL) :-
 	B = torus
 	;
 	B = closed,
@@ -467,7 +479,7 @@ neighbour(lattice(XL, YL, N, B),   X, Y,    (X + 1) mod XL + Y * XL) :-
 	.
 
 % left
-neighbour(lattice(XL, YL, N, B),   X, Y,    (X - 1) mod XL + Y * XL) :-
+neighbour(lattice(XL, _YL, _N, B),   X, Y,    (X - 1) mod XL + Y * XL) :-
 	B = torus
 	;
 	B = closed,

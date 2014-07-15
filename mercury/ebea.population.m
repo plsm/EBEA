@@ -17,7 +17,7 @@
 
 :- import_module ebea.population.parameters.
 :- import_module chromosome, ebea.player, rng, rng.distribution, parseable.
-:- import_module char, io, list, maybe.
+:- import_module array, char, io, list, maybe.
 
 :- type population(C, T).% == list(player(C, P)).
 
@@ -83,6 +83,8 @@
  */
 :- func lastID(population(C, P)) = int.
 
+
+:- func players(population(C, P)) = list(player(C, P)).
 
 
 
@@ -156,6 +158,12 @@
 :- mode fold(in(pred(in, in, out) is det), in, in, out) is det.
 :- mode fold(in(pred(in, di, uo) is det), in, di, uo) is det.
 
+:- pred fold_sites(func(player(C, P), A) = A, population(C, P), A, array(A)).
+:- mode fold_sites(in, in, in, out) is det.
+
+
+
+
 
 /**
  * Applies the given closure to every players in the population in order to
@@ -165,6 +173,10 @@
 :- pred map_player(func(player(C, P)) = player(C, P), population(C, P), population(C, P)).
 :- mode map_player(in, in, out) is det.
 
+/**
+ * Apply the given closure and transform all the players in the population.
+ */
+:- func transform_player(func(player(C, P)) = T, population(C, P)) = list(T).
 
 % /**
 %  * fold2_Player(Pred, Population, !Accumulator1, !Accumulator2)
@@ -431,9 +443,22 @@ fold(Func, Population, AC) = Result :-
 fold(Pred, Population, !AC) :-
 	list.foldl(Pred, Population^players, !AC).
 
+fold_sites(Func, Population, AC, array.from_list(Result)) :-
+	array.to_list(Population^sites) = LSites,
+	list.map(Apply, LSites) = Result,
+	Apply =
+	(func(S) = R :-
+		ebea.population.site.fold_player(Population, S, Func, AC) = R
+	)
+%	array.init(array.size(Population^sites), AC) = Result
+	.
+
 map_player(Closure, !Population) :-
 	list.map(Closure, !.Population^players) = NextPlayers,
 	!:Population = 'players :='(!.Population, NextPlayers).
+
+transform_player(Closure, Population) = Result :-
+	list.map(Closure, Population^players) = Result.
 
 fold2_PlayerNeighbour(Pred, Population, !Accumulator1, !Accumulator2) :-
 	promise_equivalent_solutions [!:Accumulator1, !:Accumulator2]
