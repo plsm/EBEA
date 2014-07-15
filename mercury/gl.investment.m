@@ -20,11 +20,19 @@
 :- import_module probability.
 :- import_module bool, io, unit.
 
-:- type ac.
+:- type ac --->
+	ac(
+		qtyProb    :: int,
+		sumProb    :: float,
+		qtyDeteYes :: int,
+		qtyDeteNo  :: int
+	).
 
 % :- type factory.
 
-:- instance game(game, strategy).
+:- instance abstractGame(game).
+:- instance symmetricGame(game, strategy).
+:- instance asymmetricGame(game, strategy).
 
 :- instance chromosome(strategy, unit, parameter).
 
@@ -45,13 +53,6 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Definition of exported types
 
-:- type ac --->
-	ac(
-		qtyProb    :: int,
-		sumProb    :: float,
-		qtyDeteYes :: int,
-		qtyDeteNo  :: int
-	).
 
 % :- type factory --->
 % 	factory(
@@ -64,14 +65,25 @@
 % 		vStddev            :: list(float)
 % 	).
 
-:- instance game(game, strategy)
+:- instance abstractGame(game)
 	where
 [
 	func(lowestPayoff/1)   is gl.investment.game.lowestPayoff,
 	func(highestPayoff/1)  is gl.investment.game.highestPayoff,
 	func(paretoPayoff/1)   is gl.investment.game.paretoPayoff,
-	func(numberPlayers/1)  is gl.investment.game.numberPlayers,
-	pred(play/5)           is gl.investment.play
+	func(numberPlayers/1)  is gl.investment.game.numberPlayers
+].
+
+:- instance symmetricGame(game, strategy)
+	where
+[
+	pred(playSymmetric/5)  is gl.investment.play
+].
+
+:- instance asymmetricGame(game, strategy) where
+[
+	func(numberRoles/1)    is game.singleRole,
+	pred(playAsymmetric/5) is game.playSymmetricBridge
 ].
 
 :- instance chromosome(strategy, unit, parameter)
