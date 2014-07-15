@@ -225,7 +225,7 @@ getCakeDivision(d(dictator(CakeDivision))) = CakeDivision.
 
 getCakeDivision(s(_)) = 5.
 
-:- func setCakeDivision(strategy, int) = maybe_error(strategy).
+:- func setCakeDivision(strategy, int) = setResult(strategy).
 
 setCakeDivision(_, CakeDivision) =
 	(if
@@ -245,7 +245,7 @@ getCakeAcceptanceThreshold(s(simple(R))) = R.
 
 getCakeAcceptanceThreshold(s(complete(_))) = 5.
 
-:- func setCakeAcceptanceThreshold(strategy, int) = maybe_error(strategy).
+:- func setCakeAcceptanceThreshold(strategy, int) = setResult(strategy).
 
 setCakeAcceptanceThreshold(_, CakeAcceptanceThreshold) =
 	(if

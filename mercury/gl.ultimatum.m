@@ -20,7 +20,8 @@
 
 :- type ac.
 
-:- instance game(game, strategy).
+:- instance abstractGame(game).
+:- instance asymmetricGame(game, strategy).
 
 :- instance chromosome(strategy, unit, parameters).
 
@@ -46,13 +47,18 @@
 		cakeAcceptanceThresholdSum::int,
 		qtySerfSimple::int).
 
-:- instance game(game, strategy) where
+:- instance abstractGame(game) where
 [
 	func(lowestPayoff/1)  is gl.ultimatum.game.lowestPayoff,
 	func(highestPayoff/1) is gl.ultimatum.game.highestPayoff,
 	func(paretoPayoff/1)  is gl.ultimatum.game.paretoPayoff,
-	func(numberPlayers/1) is gl.ultimatum.game.numberPlayers,
-	pred(play/5)          is gl.ultimatum.play
+	func(numberPlayers/1) is gl.ultimatum.game.numberPlayers
+].
+
+:- instance asymmetricGame(game, strategy) where
+[
+	func(numberRoles/1)    is gl.ultimatum.numberRoles,
+	pred(playAsymmetric/5) is gl.ultimatum.play
 ].
 
 :- instance chromosome(strategy, unit, parameters) where
@@ -126,6 +132,13 @@ printAc(Stream, AC, !IO) :-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % type class {@code game(game)} predicates and functions
+
+
+:- func numberRoles(game) = int.
+
+numberRoles(_) = 2.
+
+
 /**
  * play(Game, Profile, !Random, Payoffs)
   
@@ -136,11 +149,11 @@ printAc(Stream, AC, !IO) :-
  * players' cake division and division acceptance.
  */
 
-:- pred play(game, array(strategy), R, R, array(float))
+:- pred play(game, array(strategy), R, R, maybe(array(float)))
 	<= ePRNG(R).
 :- mode play(in, in, in, out, out) is det.
 
-play(Game, Profile, !Random, Payoffs) :-
+play(Game, Profile, !Random, MPayoffs) :-
 	array.foldl2(cakeSizeDictator, Profile, no, MCakeSizeDictator, !Random),
 	(
 		MCakeSizeDictator = yes(CakeSizeDictator),
@@ -153,16 +166,17 @@ play(Game, Profile, !Random, Payoffs) :-
 				;
 				CakeAcceptance = no,
 				Payoffs = array.init(2, 0.0)
-			)
+			),
+			MPayoffs = yes(Payoffs)
 			;
 			% no serfs in the profile
 			MCakeAcceptance = no,
-			Payoffs = array.init(2, 0.0)
+			MPayoffs = no
 		)
 		;
 		% no dictators in the profile
 		MCakeSizeDictator = no,
-		Payoffs = array.init(2, 0.0)
+		MPayoffs = no
 	).
 
 :- pred cakeSizeDictator(strategy, maybe(int), maybe(int), R, R)
