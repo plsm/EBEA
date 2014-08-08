@@ -1,5 +1,6 @@
 /**
- * 
+ * Provides a type that represents a site initial state.  This is the site
+ * parameters that a user can specify when designing an experiment.
 
  * @author Pedro Mariano
  * @version 1.0 2014/01/20
@@ -8,7 +9,7 @@
 
 :- interface.
 
-:- import_module ebea.player.
+:- import_module ebea.player, ebea.player.chromosome.
 
 :- import_module userInterface.
 
@@ -19,6 +20,8 @@
 /**
  * Represents the initial state of some site.  Each site has a carrying
  * capacity, a number of initial players and a neighbourhood.
+
+ * @param CS the type that represents players' strategies.
  */
 
 :- type parameters(CS) --->
@@ -32,7 +35,7 @@
 :- type initialPlayers(CS) --->
 	initialPlayers(
 		quantity   :: int,
-		chromosome :: ebea.player.chromosome(CS)
+		chromosome :: chromosome(CS)
 	).
 
 :- instance parseable(ebea.population.site.parameters.parameters(CS)) <= parseable(CS).
@@ -44,6 +47,11 @@
 
 :- func dialog(bool, CS, list(dialogItem(CS))) = list(dialogItem(ebea.population.site.parameters.parameters(CS))).
 
+
+/**
+ * Return the initial population size in the given site.
+ */
+:- func populationSize(ebea.population.site.parameters.parameters(_)) = int.
 
 :- implementation.
 
@@ -88,6 +96,12 @@ dialog(NeighbourhoodFlag, DefaultStrategyChromosome, DialogStrategyChromosome) =
 		;
 		NeighbourhoodFlag = no,
 		Neighbourhood = []
+	).
+
+populationSize(Parameters) = list.foldl(Sum, Parameters^chromosomes, 0) :-
+	Sum =
+	(func(IP, AC) = R :-
+		R = AC + IP^quantity
 	).
 
 % /**
@@ -185,12 +199,11 @@ set_neighbourhood(P, V) = 'neighbourhood :='(P, V).
 :- mode parse(in, out, in) is det.
 :- mode parse(out, in, out) is semidet.
 
-parse(P) -->
-	{P = parameters(_, _, _, _)},
-	parseable.int32(P^id),
-	parseable.int32(P^carryingCapacity),
-	parseable.parseList(withLength, P^chromosomes), %{P^chromosomes = throw("TODO implement parsing")},
-	parseable.parseList(normalType, P^neighbourhood) %{P^neighbourhood = throw("TODO implement parsing")}
+parse(parameters(ID, CarryingCapacity, Chromosomes, Neighbourhood)) -->
+	parseable.int32(ID),
+	parseable.int32(CarryingCapacity),
+	parseable.parseList(withLength, Chromosomes),
+	parseable.parseList(normalType, Neighbourhood)
 	.
 
 
@@ -202,7 +215,7 @@ parse(P) -->
 
 default_initialPlayers(DefaultStrategyChromosome) = Result :-
 	Result^quantity = default_quantity,
-	Result^chromosome = ebea.player.defaultChromosome(DefaultStrategyChromosome).
+	Result^chromosome = ebea.player.chromosome.default(DefaultStrategyChromosome).
 
 
 :- func dialog_initialPlayers(list(dialogItem(CS))) = list(dialogItem(initialPlayers(CS))).
@@ -210,7 +223,7 @@ default_initialPlayers(DefaultStrategyChromosome) = Result :-
 dialog_initialPlayers(DialogStrategyChromosome) =
 	[
 	di(label("quantity"),    updateFieldInt(  get_quantity,   checkInt("quantity", bounded(0, no), unbound, set_quantity))),
-	di(label("chromosome"),  'new editField'( get_chromosome, set(set_chromosome), ebea.player.dialog(DialogStrategyChromosome)))
+	di(label("chromosome"),  'new editField'( get_chromosome, set(set_chromosome), ebea.player.chromosome.dialog(DialogStrategyChromosome)))
 	].
 
 :- func default_quantity = int.
@@ -229,12 +242,12 @@ set_quantity(P, V) = 'quantity :='(P, V).
 
 
 
-:- func get_chromosome(initialPlayers(CS)) = ebea.player.chromosome(CS).
+:- func get_chromosome(initialPlayers(CS)) = ebea.player.chromosome.chromosome(CS).
 
 get_chromosome(P) = P^chromosome.
 
 
-:- func set_chromosome(initialPlayers(CS), ebea.player.chromosome(CS)) = initialPlayers(CS).
+:- func set_chromosome(initialPlayers(CS), ebea.player.chromosome.chromosome(CS)) = initialPlayers(CS).
 
 set_chromosome(P, V) = 'chromosome :='(P, V).
 
@@ -243,9 +256,9 @@ set_chromosome(P, V) = 'chromosome :='(P, V).
 :- mode parse_initialPlayers(in, out, in) is det.
 :- mode parse_initialPlayers(out, in, out) is semidet.
 
-parse_initialPlayers(X) -->
-	parseable.int16(X^quantity),
-	ebea.player.parseChromosome(X^chromosome).
+parse_initialPlayers(initialPlayers(Quantity, Chromosome)) -->
+	parseable.int16(Quantity),
+	ebea.player.chromosome.parse(Chromosome).
 
 :- end_module ebea.population.site.parameters.
 

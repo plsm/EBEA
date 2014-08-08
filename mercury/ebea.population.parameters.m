@@ -56,6 +56,10 @@
 :- mode parse(in, out, in) is det.
 :- mode parse(out, in, out) is semidet.
 
+/**
+ * Return the initial population size.
+ */
+:- func populationSize(ebea.population.parameters.parameters(_)) = int.
 
 :- implementation.
 
@@ -109,6 +113,17 @@ parse(P) -->
 	% {P^sites = throw("TODO implement parsing")},
 	parseable.int32(P^defaultCarryingCapacity)
 	.
+
+populationSize(Parameters) = list.foldl(Sum, Parameters^sites, 0) :-
+	Sum =
+	(func(Site, AC) = R :-
+		R = ebea.population.site.parameters.populationSize(Site) + AC
+	).
+/*													 [Site | Rest]) =
+	ebea.population.site.parameters.populationSize(Site)
+	+ ebea.population.parameters.populationSize(Rest)
+*/
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of private predicates and functions
 
