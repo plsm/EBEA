@@ -15,6 +15,6 @@ config.status
 mercury/Mercury/
 mercury/*.err
 mercury/*.mh
+mercury/EBEAtk_console
+mercury/EBEAtk_swing
 
-# files created during instalation
-manifest.mf
