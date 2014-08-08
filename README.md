@@ -23,7 +23,7 @@ The application has an interface where you can specify several parameters
 There are two interfaces: one text based fully functional, a graphical
 interface implemented in Java swing, that is not fully functional.
 
-Instalation Instructions
+Compilation Instructions
 ------------------------
 
 Requirements:
@@ -36,15 +36,14 @@ You need to install the following components:
 * mc4ap  (https://github.com/plsm/mc4ap.git)
 * mercury-utils (https://github.com/plsm/mercury-utils.git)
 
+Run the following commands
 
-Console Version
----------------
+	 ./configure lib_mc4ap=DIR1 lib_mercury_utils=DIR2
+	 make
 
-The text based version of EBEA is fully functional.  You can put all the
-mercury files of every package (EBEA, mc4ap and mercury-utils) in a single
-directory and run the following command to compile
+DIR1 and DIR2 should be replaced by the directories where the components
+mc4ap and mercury-utils were installed.  If you don't specify these
+options, the components are searched in the directory where the mercury
+compiler was installed.
 
-`
-mmc -m EBEAtk_console
 
-`
