@@ -21,11 +21,22 @@
 % 		sumProbabilityFemaleGoOpera :: fraction
 % 	  ).
 :- type ac --->
-	ac(qtyMale                     :: int,
-		sumProbabilityMaleGoTennis   :: float,
+	ac(
+		qtyMale                     :: int,
+		sumProbabilityMaleGoTennis  :: float,
 		qtyFemale                   :: int,
-		sumProbabilityFemaleGoOpera :: float
+		sumProbabilityFemaleGoOpera :: float ,
+%		qtyPureMale                 :: int ,
+%		qtyPureFemale               :: int ,
+		sumFemaleGoTennis           :: int ,
+		sumFemaleGoOpera            :: int ,
+		sumMaleGoOpera              :: int ,
+		sumMaleGoTennis             :: int
 	  ).
+
+:- type role --->
+	male ;
+	female.
 
 :- instance abstractGame(game).
 :- instance asymmetricGame(game, strategy).
@@ -109,12 +120,32 @@ printAc(Stream, AC, !IO) :-
 	io.print(Stream, AC^qtyMale, !IO),
 	io.print(Stream, ' ', !IO),
 %	fraction.print(Stream, AC^sumProbabilityMaleGoTennis // AC^qtyMale, !IO),
-	io.print(Stream, AC^sumProbabilityMaleGoTennis / float(AC^qtyMale), !IO),
+	(if
+		AC^qtyMale = 0
+	then
+		io.print(Stream, "1/0", !IO)
+	else
+		io.print(Stream, AC^sumProbabilityMaleGoTennis / float(AC^qtyMale), !IO)
+	),
 	io.print(Stream, ' ', !IO),
 	io.print(Stream, AC^qtyFemale, !IO),
 	io.print(Stream, ' ', !IO),
 %	fraction.print(Stream, AC^sumProbabilityFemaleGoOpera // AC^qtyFemale, !IO)
-	io.print(Stream, AC^sumProbabilityFemaleGoOpera / float(AC^qtyFemale), !IO)
+	(if
+		AC^qtyFemale = 0
+	then
+		io.print(Stream, "1/0", !IO)
+	else
+		io.print(Stream, AC^sumProbabilityFemaleGoOpera / float(AC^qtyFemale), !IO)
+	),
+	io.print(Stream, ' ', !IO),
+	io.print(Stream, AC^sumFemaleGoTennis, !IO),
+	io.print(Stream, ' ', !IO),
+	io.print(Stream, AC^sumFemaleGoOpera, !IO),
+	io.print(Stream, ' ', !IO),
+	io.print(Stream, AC^sumMaleGoOpera, !IO),
+	io.print(Stream, ' ', !IO),
+	io.print(Stream, AC^sumMaleGoTennis, !IO)
 	.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -139,6 +170,29 @@ numberRoles(_) = 2.
 :- mode play(in, in, in, out, out) is det.
 
 play(Game, Profile, !Random, MPayoffs) :-
+	strategy( array.lookup(Profile, 0), Role1, ProbabilityFavourite1),
+	strategy( array.lookup(Profile, 1), Role2, ProbabilityFavourite2),
+	(	%
+		Role1 = male,
+		Role2 = male,
+		MPayoffs = no
+	;	
+		Role1 = male,
+		Role2 = female,
+		gameMaleFemale(Game, ProbabilityFavourite1, ProbabilityFavourite2, !Random, Payoffs),
+		MPayoffs = yes(Payoffs)
+	;	
+		Role1 = female,
+		Role2 = male,
+		gameFemaleMale(Game, ProbabilityFavourite1, ProbabilityFavourite2, !Random, Payoffs),
+		MPayoffs = yes(Payoffs)
+	;	
+		Role1 = female,
+		Role2 = female,
+		MPayoffs = no
+	).
+
+  /*
 %	trace[io(!IO)] (io.format("%s => %s\n", [s(string(Game)), s(string(Profile))], !IO)),
 	Strategy1 = array.lookup(Profile, 0),
 	Strategy2 = array.lookup(Profile, 1),
@@ -215,6 +269,20 @@ play(Game, Profile, !Random, MPayoffs) :-
 		Strategy2 = person(no, _),
 		MPayoffs = no
 	).
+*/
+
+/**
+ * Given a strategy return its role and the probability to go to its favourite event.
+ */
+:- pred strategy(strategy, role, probability).
+:- mode strategy(in, out, out) is det.
+
+strategy( male(P),             male,   P).
+strategy( female(P),           female, P).
+strategy( person_pure(R, yes), R,      probability.one).
+strategy( person_pure(R, no),  R,      probability.zero).
+strategy( person_mixed(R, P),  R,      P).
+
 
 :- pred gameFemaleMale(game, probability, probability, R, R, array(float)) <= ePRNG(R).
 :- mode gameFemaleMale(in, in, in, in, out, out) is det.
@@ -293,13 +361,29 @@ fold(Strategy, AC) = Result :-
 %	AC1 = 'sumProbabilityMaleGoTennis :='(AC, AC^sumProbabilityMaleGoTennis + probability.fraction(P)),
 	Result = 'qtyMale :='(AC1, AC^qtyMale + 1)
 	;
-	Strategy = person(yes, P),
+	Strategy = person_mixed(male, P),
 	AC1 = 'sumProbabilityMaleGoTennis :='(AC, AC^sumProbabilityMaleGoTennis + float(P)),
 	Result = 'qtyMale :='(AC1, AC^qtyMale + 1)
 	;
-	Strategy = person(no, P),
+	Strategy = person_mixed(female, P),
 	AC1 = 'sumProbabilityFemaleGoOpera :='(AC, AC^sumProbabilityFemaleGoOpera + float(P)),
 	Result = 'qtyFemale :='(AC1, AC^qtyFemale + 1)
+	;
+	Strategy = person_pure(male, yes),
+	Result = 'sumMaleGoTennis :='(AC, AC^sumMaleGoTennis + 1)
+%	Result = 'qtyPureMale :='(AC1, AC^qtyPureMale + 1)
+	;
+	Strategy = person_pure(male, no),
+	Result = 'sumMaleGoOpera :='(AC, AC^sumMaleGoOpera + 1)
+%	Result = 'qtyPureMale :='(AC1, AC^qtyPureMale + 1)
+	;
+	Strategy = person_pure(female, yes),
+	Result = 'sumFemaleGoOpera :='(AC, AC^sumFemaleGoOpera + 1)
+%	Result = 'qtyPureFemale :='(AC1, AC^qtyPureFemale + 1)
+	;
+	Strategy = person_pure(female, no),
+	Result = 'sumFemaleGoTennis :='(AC, AC^sumFemaleGoTennis + 1)
+%	Result = 'qtyPureFemale :='(AC1, AC^qtyPureFemale + 1)
 	.
 
 /**
@@ -316,8 +400,14 @@ fold = Result :-
 	Result^sumProbabilityMaleGoTennis = 0.0,
 %	Result^sumProbabilityMaleGoTennis = fraction.zero,
 	Result^qtyFemale = 0,
-	Result^sumProbabilityFemaleGoOpera = 0.0
+	Result^sumProbabilityFemaleGoOpera = 0.0,
 %	Result^sumProbabilityFemaleGoOpera = fraction.zero
+%	Result^qtyPureMale = 0,
+%	Result^qtyPureFemale = 0,
+	Result^sumFemaleGoTennis = 0,
+	Result^sumFemaleGoOpera = 0,
+	Result^sumMaleGoOpera = 0,
+	Result^sumMaleGoTennis = 0
 	.
 
 
