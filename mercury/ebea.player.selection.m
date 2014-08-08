@@ -17,7 +17,7 @@
 
 :- import_module ebea.player.selection.chromosome.
 :- import_module ebea.player.selection.pcv.
-:- import_module ebea.population.
+:- import_module ebea.population, ebea.population.neighbours.
 :- import_module game.
 :- import_module userInterface.
 :- import_module array.
@@ -66,13 +66,14 @@
  */
 :- type parameters --->
 	sp(
-		poolSizeStdDev                :: float,
-		bitsPerProbabilityStdDev      :: float,
-		probabilityUpdateFactorStdDev :: float,
-		payoffThresholdStdDev         :: float,
+		poolSizeStdDev                 :: float,
+		bitsPerProbabilityStdDev       :: float,
+		probabilityUpdateFactorStdDev  :: float,
+		payoffThresholdStdDev          :: float,
 		
-		uncertaintyIncreaseFactor     :: float,
-		mu                            :: float
+		uncertaintyIncreaseFactor      :: float,
+		mu                             :: float,
+		poolSizePercentageTransmission :: int
 	).
 
 :- func defaultParameters = ebea.player.selection.parameters.
@@ -126,9 +127,9 @@
   
  */
 :- pred stepSelectPartnersPlayGame(
-	ebea.player.parameters(P), G, player(C, T), list(player(C, T)),
+	ebea.player.parameters(P), G, player(C, T), ebea.population.neighbours.neighbours,
 	population(C, T), population(C, T),
-	list(list(int)), list(list(int)),
+	list(list(ebea.population.players.key)), list(list(ebea.population.players.key)),
 	R, R)
 	<= (asymmetricGame(G, C), ePRNG(R)).
 :- mode stepSelectPartnersPlayGame(in, in, in, in, in, out, in, out, in, out) is det.
@@ -145,20 +146,28 @@
  * TODO: decrease uncertainty
   
  */
-:- pred roundCheckForDeadPlayers(G, list(int), player(C, T), neighbours(C, T), player(C, T), R, R)
+:- pred roundCheckForDeadPlayers(
+	G,
+	list(ebea.population.players.key),
+	player(C, T),
+	ebea.population.neighbours.neighbours,
+	player(C, T),
+	R, R
+)
 	<= (abstractGame(G), ePRNG(R)).
 :- mode roundCheckForDeadPlayers(in, in, in, in, out, in, out) is det.
 
 
 /**
- * teachKnowHow(Parent, !Offspring)
+ * teachKnowHow(Parameters, Parent, !Offspring)
 
  * After a player has given birth to an offspring, he can pass some
  * selection knowledge to his child.
   
  */
-:- pred teachKnowHow(ebea.player.selection.parameters, player(C, T), player(C, T), player(C, T)).
-:- mode teachKnowHow(in, in, in, out) is det.
+:- pred teachKnowHow(ebea.player.selection.parameters, player(C, T), player(C, T), player(C, T), R, R)
+	<= ePRNG(R).
+:- mode teachKnowHow(in, in, in, out, in, out) is det.
 
 /**
  * scaledPayoffToThreshold(Game, EnergyScaling, Payoff) = Threshold
@@ -295,16 +304,18 @@ defaultParameters = Result :-
 	Result^probabilityUpdateFactorStdDev = default_probabilityUpdateFactorStdDev,
 	Result^payoffThresholdStdDev = default_payoffThresholdStdDev,
 	Result^uncertaintyIncreaseFactor = default_uncertaintyIncreaseFactor,
-	Result^mu = default_mu.
+	Result^mu = default_mu,
+	Result^poolSizePercentageTransmission = 0.
 
 dialogParameters =
 	[
-	di(label("pool size std dev"),                  updateFieldFloat( get_poolSizeStdDev,                 checkFloat( "pool size stddev",                  bounded(0.0, yes), unbound, set_poolSizeStdDev))),
-	di(label("bits per probability std dev"),       updateFieldFloat( get_bitsPerProbabilityStdDev,       checkFloat( "bits per probability stddev",       unbound, unbound, set_bitsPerProbabilityStdDev))),
-	di(label("probability update factor std dev"),  updateFieldFloat( get_probabilityUpdateFactorStdDev,  checkFloat( "probability update factor stddev",  unbound, unbound, set_probabilityUpdateFactorStdDev))),
-	di(label("payoff threshold std dev"),           updateFieldFloat( get_payoffThresholdStdDev,          checkFloat( "payoff threshold stddev",           unbound, unbound, set_payoffThresholdStdDev))),
-	di(label("uncertainty increase factor"),        updateFieldFloat( get_uncertaintyIncreaseFactor,      checkFloat( "uncertainty increase factor",       bounded(1.0, yes), unbound, set_uncertaintyIncreaseFactor))),
-	di(label("mu"),                                 updateFieldFloat( get_mu,                             checkFloat( "mu",                                bounded(0.0, no),  unbound, set_mu)))
+	di(label("pool size std dev"),                       updateFieldFloat( get_poolSizeStdDev,                 checkFloat( "pool size stddev",                  bounded(0.0, yes), unbound, set_poolSizeStdDev))),
+	di(label("bits per probability std dev"),            updateFieldFloat( get_bitsPerProbabilityStdDev,       checkFloat( "bits per probability stddev",       unbound, unbound, set_bitsPerProbabilityStdDev))),
+	di(label("probability update factor std dev"),       updateFieldFloat( get_probabilityUpdateFactorStdDev,  checkFloat( "probability update factor stddev",  unbound, unbound, set_probabilityUpdateFactorStdDev))),
+	di(label("payoff threshold std dev"),                updateFieldFloat( get_payoffThresholdStdDev,          checkFloat( "payoff threshold stddev",           unbound, unbound, set_payoffThresholdStdDev))),
+	di(label("uncertainty increase factor"),             updateFieldFloat( get_uncertaintyIncreaseFactor,      checkFloat( "uncertainty increase factor",       bounded(1.0, yes), unbound, set_uncertaintyIncreaseFactor))),
+	di(label("mu"),                                      updateFieldFloat( get_mu,                             checkFloat( "mu",                                bounded(0.0, no),  unbound, set_mu))),
+	di(label("% combination slots passed to offspring"), updateFieldInt(   get_poolSizePercentageTransmission,  checkInt( "percentage",                          bounded(0, yes),  bounded(100, yes), set_poolSizePercentageTransmission)))
 	].
 
 born(Chromosome, Result, !Random) :-
@@ -325,13 +336,13 @@ born(Chromosome, Result, !Random) :-
 	),
 	Result = partnerSelection(PCV)
 	;
-	Chromosome = opinion(_, _),
+	Chromosome = opinion_old(_, _),
 	rng.nextFloat(OV, !Random),
 	Result^opinionValue = 2.0 * OV - 1.0,
 	Result^uncertainty = float.max(0.0, Chromosome^initialUncertainty + 0.5 * UV - 0.25),
 	rng.nextFloat(UV, !Random)
 	;
-	Chromosome = opinion(_, _, _, _),
+	Chromosome = opinion_old(_, _, _, _),
 	rng.distribution.unitGaussian(InitialOpinion0, rng.distribution.init, Dst, !Random),
 	InitialOpinion1 = InitialOpinion0 * Chromosome^initialStdDevOpinion + Chromosome^initialAverageOpinion,
 	Result^opinionValue = float.max(-1.0, float.min(InitialOpinion1, 1.0)),
@@ -352,7 +363,7 @@ stepSelectPartnersPlayGame(
 	Chromosome = Player^chromosome^selectionGenes,
 	Traits = Player^traits^selectionTrait,
 	(if
-		NumberPartners > list.length(Neighbours)
+		NumberPartners > ebea.population.neighbours.size(Neighbours)
 	then
 		true
 	else
@@ -361,7 +372,8 @@ stepSelectPartnersPlayGame(
 			Traits = random
 		then
 			/* create the strategy profile */
-			rng.randomElementsList(NumberPartners, Neighbours, RestProfile, !Random),
+			ebea.population.neighbours.randomElements(NumberPartners, Neighbours, PartnersID, !Random),
+			list.map(ebea.population.players.player(!.NextRoundPopulation^players), PartnersID) = RestProfile,
 			/* play the game */
 			ebea.player.energy.stepPlayGame(PlayerParameters^energyPar, Game, Player, RestProfile, _MPayoffs, !NextRoundPopulation, !PlayerProfile, !Random),
 			/* no selection traits to update */
@@ -375,7 +387,8 @@ stepSelectPartnersPlayGame(
 			Traits = partnerSelection(_)
 		then
 			/* create the strategy profile */
-			select(NumberPartners, Neighbours, Traits^pcv, !Random, SelectedSlot, RestProfileIDs, RestProfile),
+			ebea.player.selection.pcv.select(NumberPartners, Neighbours, Traits^pcv, !Random, SelectedSlot, PartnersIDs),
+			list.map(ebea.population.players.player(!.NextRoundPopulation^players), PartnersIDs) = RestProfile,
 			/* play the game */
 			ebea.player.energy.stepPlayGame(PlayerParameters^energyPar, Game, Player, RestProfile, MPayoffs, !NextRoundPopulation, !PlayerProfile, !Random),
 			/* update the selection traits */
@@ -388,7 +401,7 @@ stepSelectPartnersPlayGame(
 			),
 			ebea.player.selection.pcv.updateProbCombVectors(
 				Game, PlayerParameters^energyPar^energyScaling,
-				NumberPartners, Chromosome, RestProfileIDs, Neighbours, SelectedSlot, PlayerPayoff,
+				NumberPartners, Chromosome, PartnersIDs, Neighbours, SelectedSlot, PlayerPayoff,
 				!Random,
 				Traits^pcv, NextProbCombVector
 			),
@@ -402,8 +415,8 @@ stepSelectPartnersPlayGame(
 		)
 		;
 		(
-			Chromosome = opinion(_, _) ;
-			Chromosome = opinion(_, _, _, _)
+			Chromosome = opinion_old(_, _) ;
+			Chromosome = opinion_old(_, _, _, _)
 		),
 		(if
 			Traits = opinion(_, _)
@@ -416,10 +429,18 @@ stepSelectPartnersPlayGame(
 			% ebea.player.selection.opinion.updateOpinions(Game, PlayerParameters, [Player | RestProfile], Payoffs, !NextRoundPopulation)
 
 			/* create the strategy profile */
-			ebea.player.selection.opinion.selectPartners(Traits, NumberPartners, Neighbours, RestProfile, !Random),
+%			ebea.player.selection.opinion.selectPartners_v1(Traits, NumberPartners, Neighbours, RestProfile, !Random),
 			%rng.randomElementsList(NumberPartners, Neighbours, RestProfile, !Random),
 			(if
-				ebea.player.selection.opinion.checkPartnerOpinion(Traits, RestProfile)
+				ebea.player.selection.opinion.selectPartners(
+					Traits,
+					NumberPartners,
+					!.NextRoundPopulation^players,
+					Neighbours,
+					RestProfile,
+					!Random)
+%				ebea.player.selection.opinion.selectPartners_v2(Traits, NumberPartners, Neighbours, RestProfile, !Random),
+%				ebea.player.selection.opinion.checkPartnerOpinion(Traits, RestProfile)
 			then
 				/* play the game */
 				ebea.player.energy.stepPlayGame(PlayerParameters^energyPar, Game, Player, RestProfile, MPayoffs, !NextRoundPopulation, !PlayerProfile, !Random),
@@ -461,12 +482,33 @@ roundCheckForDeadPlayers(Game, DeadPlayerIDs, Player, Neighbours, NextPlayer, !R
 		NextPlayer = Player
 	).
 
-teachKnowHow(Parameters, Parent, !Offspring) :-
+teachKnowHow(Parameters, Parent, !Offspring, !Random) :-
 	ParentTrait = Parent^traits^selectionTrait,
 	(
 		ParentTrait = random
 		;
-		ParentTrait = partnerSelection(_)
+		ParentTrait = partnerSelection(_ParentPCV),
+		(if
+			!.Offspring^traits^selectionTrait = partnerSelection(_OldPCV)
+		then
+			copyPercentageCombinations(Parameters, Parent, !Offspring, !Random)
+			% copyPercentageCombinations(
+			% 	Parameters^poolSizePercentageTransmission,
+			% 	array.copy(ParentPCV),
+			% 	OldPCV, NewPCV,
+			% 	!Random
+			% ),
+			% !:Offspring = 'traits :='(
+			% 	!.Offspring,
+			% 	'selectionTrait :='(
+			% 		!.Offspring^traits,
+			% 		OffspringTrait
+			% 	)
+			% ),
+			% OffspringTrait = partnerSelection(NewPCV)
+		else
+			throw("teachKnowHow/6: Never reached")
+		)
 		;
 		ParentTrait = opinion(_, _),
 		(if
@@ -482,7 +524,7 @@ teachKnowHow(Parameters, Parent, !Offspring) :-
 			OffspringTrait^opinionValue = ParentTrait^opinionValue,
 			OffspringTrait^uncertainty = float.min(2.0, ParentTrait^uncertainty * Parameters^uncertaintyIncreaseFactor)
 		else
-			throw("Never reached")
+			throw("teachKnowHow/6: Never reached")
 		)
 	%,
 	%	OffspringTrait^uncertainty = float.min(2.0, ParentTrait^uncertainty * Parameters^uncertaintyIncreaseFactor)
@@ -520,7 +562,9 @@ parseParameters(P) -->
 	parseable.float32(P^probabilityUpdateFactorStdDev),
 	parseable.float32(P^payoffThresholdStdDev),
 	parseable.float32(P^uncertaintyIncreaseFactor),
-	parseable.float32(P^mu).
+	parseable.float32(P^mu),
+	parseable.int8(P^poolSizePercentageTransmission)
+	.
 
 parseTraits(T) -->
 	{T = random},
@@ -555,10 +599,10 @@ numberGenes(Chromosome) = Result :-
 	Chromosome = partnerSelection(_, _, _, _),
 	Result = 4
 	;
-	Chromosome = opinion(_, _),
+	Chromosome = opinion_old(_, _),
 	Result = 1
 	;
-	Chromosome = opinion(_, _, _, _),
+	Chromosome = opinion_old(_, _, _, _),
 	Result = 0
 	.
 
@@ -611,7 +655,7 @@ mutateGene(Parameters, Index, !Distribution, !Random, Chromosome, Result) :-
 		throw("ebea.player.selection.mutateGene/8: invalid gene index for partnerSelection chromosome")
 	)
 	;
-	Chromosome = opinion(_, _),
+	Chromosome = opinion_old(_, _),
 	(if
 		Index = 0
 	% then
@@ -629,7 +673,7 @@ mutateGene(Parameters, Index, !Distribution, !Random, Chromosome, Result) :-
 		throw("ebea.player.selection.mutateGene/8: invalid gene index for opinion chromosome")
 	)
 	;
-	Chromosome = opinion(_, _, _, _),
+	Chromosome = opinion_old(_, _, _, _),
 	throw("ebea.player.selection.mutateGene/8: No genes to mutate in chromosome opinion/4")
 	.
 
@@ -685,7 +729,7 @@ fold(Chromosome, AC) = Result :-
 	Result^qty_O = AC^qty_O,
 	Result^sumPayoffThreshold_O = AC^sumPayoffThreshold_O
 	;
-	Chromosome = opinion(_, _),
+	Chromosome = opinion_old(_, _),
 	Result =
 	'sumPayoffThreshold_O :='(
 	'qty_O :='(
@@ -695,7 +739,7 @@ fold(Chromosome, AC) = Result :-
 		AC^sumPayoffThreshold_O + Chromosome^payoffThreshold_O
 	)
 	;
-	Chromosome = opinion(_, _, _, _),
+	Chromosome = opinion_old(_, _, _, _),
 	Result = AC
 	.
 
@@ -892,6 +936,15 @@ get_mu(P) = P^mu.
 :- func set_mu(ebea.player.selection.parameters, float) = ebea.player.selection.parameters.
 
 set_mu(P, V) = 'mu :='(P, V).
+
+
+:- func get_poolSizePercentageTransmission(ebea.player.selection.parameters) = int.
+
+get_poolSizePercentageTransmission(P) = P^poolSizePercentageTransmission.
+
+:- func set_poolSizePercentageTransmission(ebea.player.selection.parameters, int) = ebea.player.selection.parameters.
+
+set_poolSizePercentageTransmission(P, V) = 'poolSizePercentageTransmission :='(P, V).
 
 
 

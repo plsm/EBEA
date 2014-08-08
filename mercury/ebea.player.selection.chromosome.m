@@ -31,11 +31,11 @@
 		probabilityUpdateFactor :: float ,
 		payoffThreshold_PS      :: float
 	) ;
-	opinion(
+	opinion_old(
 		payoffThreshold_O  :: float ,
 		initialUncertainty :: float
 	) ;
-	opinion(
+	opinion_old(
 		initialAverageOpinion     :: float ,
 		initialStdDevOpinion      :: float ,
 		initialAverageUncertainty :: float ,
@@ -132,14 +132,14 @@ parse(P) -->
 	.
 
 parse(P) -->
-	{P = opinion(_, _)},
+	{P = opinion_old(_, _)},
 	[2],
 	parseable.float32(P^payoffThreshold_O),
 	parseable.float32(P^initialUncertainty)
 	.
 
 parse(P) -->
-	{P = opinion(_, _, _, _)},
+	{P = opinion_old(_, _, _, _)},
 	[3],
 	parseable.float32(P^initialAverageOpinion),
 	parseable.float32(P^initialStdDevOpinion),
@@ -161,12 +161,12 @@ print(Stream, Chromosome, !IO) :-
 	io.print(Stream, " ", !IO),
 	io.print(Stream, Chromosome^payoffThreshold_PS, !IO)
 	;
-	Chromosome = opinion(_, _),
+	Chromosome = opinion_old(_, _),
 	io.print(Stream, Chromosome^payoffThreshold_O, !IO),
 	io.print(Stream, ' ', !IO),
 	io.print(Stream, Chromosome^initialUncertainty, !IO)
 	;
-	Chromosome = opinion(_, _, _, _),
+	Chromosome = opinion_old(_, _, _, _),
 	io.print(Stream, Chromosome^initialAverageOpinion, !IO),
 	io.print(Stream, ' ', !IO),
 	io.print(Stream, Chromosome^initialStdDevOpinion, !IO),
@@ -184,37 +184,44 @@ print(Stream, Chromosome, !IO) :-
 
 getCurrentChoice(random)                       = yes(0).
 getCurrentChoice(partnerSelection(_, _, _, _)) = yes(1).
-getCurrentChoice(opinion(_, _))                = yes(2).
-getCurrentChoice(opinion(_, _, _, _))          = yes(3).
+getCurrentChoice(opinion_old(_, _))                = yes(2).
+getCurrentChoice(opinion_old(_, _, _, _))          = yes(3).
 
 :- func setChoice(ebea.player.selection.chromosome.chromosome, int) = setResult(ebea.player.selection.chromosome.chromosome).
 
 setChoice(Chromosome, Index) = ok(Result) :-
 	(if
-		Chromosome = random,                       Index = 0, R = Chromosome ;
-		Chromosome = partnerSelection(_, _, _, _), Index = 0, R = random ;
-		Chromosome = opinion(_, _),                Index = 0, R = random ;
-		Chromosome = opinion(_, _, _, _),          Index = 0, R = random ;
-		
-		Chromosome = random,                       Index = 1, R = partnerSelection(default_poolSize, default_bitsPerProbability, default_probabilityUpdateFactor, default_payoffThreshold_PS) ;
-		Chromosome = partnerSelection(_, _, _, _), Index = 1, R = Chromosome ;
-		Chromosome = opinion(_, _),                Index = 1, R = partnerSelection(default_poolSize, default_bitsPerProbability, default_probabilityUpdateFactor, default_payoffThreshold_PS) ;
-		Chromosome = opinion(_, _, _, _),          Index = 1, R = partnerSelection(default_poolSize, default_bitsPerProbability, default_probabilityUpdateFactor, default_payoffThreshold_PS) ;
-		
-		Chromosome = random,                       Index = 2, R = opinion(default_payoffThreshold_O, default_initialUncertainty) ;
-		Chromosome = partnerSelection(_, _, _, _), Index = 2, R = opinion(default_payoffThreshold_O, default_initialUncertainty) ;
-		Chromosome = opinion(_, _),                Index = 2, R = Chromosome ;
-		Chromosome = opinion(_, _, _, _),          Index = 2, R = opinion(default_payoffThreshold_O, default_initialUncertainty) ;
-		
-		Chromosome = random,                       Index = 3, R = opinion(default_initialAverageOpinion, default_initialStdDevOpinion, default_initialAverageUncertainty, default_initialStdDevUncertainty) ;
-		Chromosome = partnerSelection(_, _, _, _), Index = 3, R = opinion(default_initialAverageOpinion, default_initialStdDevOpinion, default_initialAverageUncertainty, default_initialStdDevUncertainty) ;
-		Chromosome = opinion(_, _),                Index = 3, R = opinion(default_initialAverageOpinion, default_initialStdDevOpinion, default_initialAverageUncertainty, default_initialStdDevUncertainty) ;
-		Chromosome = opinion(_, _, _, _),          Index = 3, R = Chromosome
+		Index = 0
 	then
-		Result = R
+		Chromosome = random,                       Result = Chromosome ;
+		Chromosome = partnerSelection(_, _, _, _), Result = random ;
+		Chromosome = opinion_old(_, _),            Result = random ;
+		Chromosome = opinion_old(_, _, _, _),      Result = random
+	else if
+		Index = 1
+	then
+		Chromosome = random,                       Result = partnerSelection(default_poolSize, default_bitsPerProbability, default_probabilityUpdateFactor, default_payoffThreshold_PS) ;
+		Chromosome = partnerSelection(_, _, _, _), Result = Chromosome ;
+		Chromosome = opinion_old(_, _),            Result = partnerSelection(default_poolSize, default_bitsPerProbability, default_probabilityUpdateFactor, default_payoffThreshold_PS) ;
+		Chromosome = opinion_old(_, _, _, _),      Result = partnerSelection(default_poolSize, default_bitsPerProbability, default_probabilityUpdateFactor, default_payoffThreshold_PS)
+	else if
+		Index = 2
+	then
+		Chromosome = random,                       Result = opinion_old(default_payoffThreshold_O, default_initialUncertainty) ;
+		Chromosome = partnerSelection(_, _, _, _), Result = opinion_old(default_payoffThreshold_O, default_initialUncertainty) ;
+		Chromosome = opinion_old(_, _),            Result = Chromosome ;
+		Chromosome = opinion_old(_, _, _, _),      Result = opinion_old(default_payoffThreshold_O, default_initialUncertainty)
+	else if
+		Index = 3
+	then
+		Chromosome = random,                       Result = opinion_old(default_initialAverageOpinion, default_initialStdDevOpinion, default_initialAverageUncertainty, default_initialStdDevUncertainty) ;
+		Chromosome = partnerSelection(_, _, _, _), Result = opinion_old(default_initialAverageOpinion, default_initialStdDevOpinion, default_initialAverageUncertainty, default_initialStdDevUncertainty) ;
+		Chromosome = opinion_old(_, _),            Result = opinion_old(default_initialAverageOpinion, default_initialStdDevOpinion, default_initialAverageUncertainty, default_initialStdDevUncertainty) ;
+		Chromosome = opinion_old(_, _, _, _),      Result = Chromosome
 	else
-		throw("setChoice/2: invalid index")
-	).
+		throw("ebea.player.selecion.chromosome.setChoice/2: invalid index")
+	)
+	.
 
 :- func default_poolSize = int.
 
@@ -266,10 +273,10 @@ get_poolSize(P) = R :-
 	P = partnerSelection(_, _, _, _),
 	R = P^poolSize
 	;
-	P = opinion(_, _),
+	P = opinion_old(_, _),
 	R = default_poolSize
 	;
-	P = opinion(_, _, _, _),
+	P = opinion_old(_, _, _, _),
 	R = default_poolSize
 	.
 
@@ -282,10 +289,10 @@ set_poolSize(P, V) = R :-
 	P = partnerSelection(_, _, _, _),
 	R = 'poolSize :='(P, V)
 	;
-	P = opinion(_, _),
+	P = opinion_old(_, _),
 	R = partnerSelection(V, default_bitsPerProbability, default_probabilityUpdateFactor, default_payoffThreshold_PS)
 	;
-	P = opinion(_, _, _, _),
+	P = opinion_old(_, _, _, _),
 	R = partnerSelection(V, default_bitsPerProbability, default_probabilityUpdateFactor, default_payoffThreshold_PS)
 	.
 
@@ -299,10 +306,10 @@ get_bitsPerProbability(P) = R :-
 	P = partnerSelection(_, _, _, _),
 	R = P^bitsPerProbability
 	;
-	P = opinion(_, _),
+	P = opinion_old(_, _),
 	R = default_bitsPerProbability
 	;
-	P = opinion(_, _, _, _),
+	P = opinion_old(_, _, _, _),
 	R = default_bitsPerProbability
 	.
 
@@ -315,10 +322,10 @@ set_bitsPerProbability(P, V) = R :-
 	P = partnerSelection(_, _, _, _),
 	R = 'bitsPerProbability :='(P, V)
 	;
-	P = opinion(_, _),
+	P = opinion_old(_, _),
 	R = partnerSelection(default_poolSize, V, default_probabilityUpdateFactor, default_payoffThreshold_PS)
 	;
-	P = opinion(_, _, _, _),
+	P = opinion_old(_, _, _, _),
 	R = partnerSelection(default_poolSize, V, default_probabilityUpdateFactor, default_payoffThreshold_PS)
 	.
 
@@ -332,10 +339,10 @@ get_probabilityUpdateFactor(P) = R :-
 	P = partnerSelection(_, _, _, _),
 	R = P^probabilityUpdateFactor
 	;
-	P = opinion(_, _),
+	P = opinion_old(_, _),
 	R = default_probabilityUpdateFactor
 	;
-	P = opinion(_, _, _, _),
+	P = opinion_old(_, _, _, _),
 	R = default_probabilityUpdateFactor
 	.
 
@@ -348,10 +355,10 @@ set_probabilityUpdateFactor(P, V) = R :-
 	P = partnerSelection(_, _, _, _),
 	R = 'probabilityUpdateFactor :='(P, V)
 	;
-	P = opinion(_, _),
+	P = opinion_old(_, _),
 	R = partnerSelection(default_poolSize, default_bitsPerProbability, V, default_payoffThreshold_PS)
 	;
-	P = opinion(_, _, _, _),
+	P = opinion_old(_, _, _, _),
 	R = partnerSelection(default_poolSize, default_bitsPerProbability, V, default_payoffThreshold_PS)
 	.
 
@@ -365,10 +372,10 @@ get_payoffThreshold_PS(P) = R :-
 	P = partnerSelection(_, _, _, _),
 	R = P^payoffThreshold_PS
 	;
-	P = opinion(_, _),
+	P = opinion_old(_, _),
 	R = default_payoffThreshold_PS
 	;
-	P = opinion(_, _, _, _),
+	P = opinion_old(_, _, _, _),
 	R = default_payoffThreshold_PS
 	.
 
@@ -381,10 +388,10 @@ set_payoffThreshold_PS(P, V) = R :-
 	P = partnerSelection(_, _, _, _),
 	R = 'payoffThreshold_PS :='(P, V)
 	;
-	P = opinion(_, _),
+	P = opinion_old(_, _),
 	R = partnerSelection(default_poolSize, default_bitsPerProbability, default_probabilityUpdateFactor, V)
 	;
-	P = opinion(_, _, _, _),
+	P = opinion_old(_, _, _, _),
 	R = partnerSelection(default_poolSize, default_bitsPerProbability, default_probabilityUpdateFactor, V)
 	.
 
@@ -398,10 +405,10 @@ get_payoffThreshold_O(P) = R :-
 	P = partnerSelection(_, _, _, _),
 	R = default_payoffThreshold_O
 	;
-	P = opinion(_, _),
+	P = opinion_old(_, _),
 	R = P^payoffThreshold_O
 	;
-	P = opinion(_, _, _, _),
+	P = opinion_old(_, _, _, _),
 	R = default_payoffThreshold_O
 	.
 
@@ -409,16 +416,16 @@ get_payoffThreshold_O(P) = R :-
 
 set_payoffThreshold_O(P, V) = R :-
 	P = random,
-	R = opinion(V, default_initialUncertainty)
+	R = opinion_old(V, default_initialUncertainty)
 	;
 	P = partnerSelection(_, _, _, _),
-	R = opinion(V, default_initialUncertainty)
+	R = opinion_old(V, default_initialUncertainty)
 	;
-	P = opinion(_, _),
+	P = opinion_old(_, _),
 	R = 'payoffThreshold_O :='(P, V)
 	;
-	P = opinion(_, _, _, _),
-	R = opinion(V, default_initialUncertainty)
+	P = opinion_old(_, _, _, _),
+	R = opinion_old(V, default_initialUncertainty)
 	.
 
 
@@ -431,10 +438,10 @@ get_initialUncertainty(P) = R :-
 	P = partnerSelection(_, _, _, _),
 	R = default_initialUncertainty
 	;
-	P = opinion(_, _),
+	P = opinion_old(_, _),
 	R = P^initialUncertainty
 	;
-	P = opinion(_, _, _, _),
+	P = opinion_old(_, _, _, _),
 	R = default_initialUncertainty
 	.
 
@@ -442,16 +449,16 @@ get_initialUncertainty(P) = R :-
 
 set_initialUncertainty(P, V) = R :-
 	P = random,
-	R = opinion(default_payoffThreshold_O, V)
+	R = opinion_old(default_payoffThreshold_O, V)
 	;
 	P = partnerSelection(_, _, _, _),
-	R = opinion(default_payoffThreshold_O, V)
+	R = opinion_old(default_payoffThreshold_O, V)
 	;
-	P = opinion(_, _),
+	P = opinion_old(_, _),
 	R = 'initialUncertainty :='(P, V)
 	;
-	P = opinion(_, _, _, _),
-	R = opinion(default_payoffThreshold_O, V)
+	P = opinion_old(_, _, _, _),
+	R = opinion_old(default_payoffThreshold_O, V)
 	.
 
 
@@ -464,10 +471,10 @@ get_initialAverageOpinion(P) = R :-
 	P = partnerSelection(_, _, _, _),
 	R = default_initialAverageOpinion
 	;
-	P = opinion(_, _),
+	P = opinion_old(_, _),
 	R = default_initialAverageOpinion
 	;
-	P = opinion(_, _, _, _),
+	P = opinion_old(_, _, _, _),
 	R = P^initialAverageOpinion
 	.
 
@@ -475,15 +482,15 @@ get_initialAverageOpinion(P) = R :-
 
 set_initialAverageOpinion(P, V) = R :-
 	P = random,
-	R = opinion(V, default_initialStdDevOpinion, default_initialAverageUncertainty, default_initialStdDevUncertainty)
+	R = opinion_old(V, default_initialStdDevOpinion, default_initialAverageUncertainty, default_initialStdDevUncertainty)
 	;
 	P = partnerSelection(_, _, _, _),
-	R = opinion(V, default_initialStdDevOpinion, default_initialAverageUncertainty, default_initialStdDevUncertainty)
+	R = opinion_old(V, default_initialStdDevOpinion, default_initialAverageUncertainty, default_initialStdDevUncertainty)
 	;
-	P = opinion(_, _),
-	R = opinion(V, default_initialStdDevOpinion, default_initialAverageUncertainty, default_initialStdDevUncertainty)
+	P = opinion_old(_, _),
+	R = opinion_old(V, default_initialStdDevOpinion, default_initialAverageUncertainty, default_initialStdDevUncertainty)
 	;
-	P = opinion(_, _, _, _),
+	P = opinion_old(_, _, _, _),
 	R = 'initialAverageOpinion :='(P, V)
 	.
 
@@ -497,10 +504,10 @@ get_initialStdDevOpinion(P) = R :-
 	P = partnerSelection(_, _, _, _),
 	R = default_initialStdDevOpinion
 	;
-	P = opinion(_, _),
+	P = opinion_old(_, _),
 	R = default_initialStdDevOpinion
 	;
-	P = opinion(_, _, _, _),
+	P = opinion_old(_, _, _, _),
 	R = P^initialStdDevOpinion
 	.
 
@@ -508,15 +515,15 @@ get_initialStdDevOpinion(P) = R :-
 
 set_initialStdDevOpinion(P, V) = R :-
 	P = random,
-	R = opinion(default_initialAverageOpinion, V, default_initialAverageUncertainty, default_initialStdDevUncertainty)
+	R = opinion_old(default_initialAverageOpinion, V, default_initialAverageUncertainty, default_initialStdDevUncertainty)
 	;
 	P = partnerSelection(_, _, _, _),
-	R = opinion(default_initialAverageOpinion, V, default_initialAverageUncertainty, default_initialStdDevUncertainty)
+	R = opinion_old(default_initialAverageOpinion, V, default_initialAverageUncertainty, default_initialStdDevUncertainty)
 	;
-	P = opinion(_, _),
-	R = opinion(default_initialAverageOpinion, V, default_initialAverageUncertainty, default_initialStdDevUncertainty)
+	P = opinion_old(_, _),
+	R = opinion_old(default_initialAverageOpinion, V, default_initialAverageUncertainty, default_initialStdDevUncertainty)
 	;
-	P = opinion(_, _, _, _),
+	P = opinion_old(_, _, _, _),
 	R = 'initialStdDevOpinion :='(P, V)
 	.
 
@@ -530,10 +537,10 @@ get_initialAverageUncertainty(P) = R :-
 	P = partnerSelection(_, _, _, _),
 	R = default_initialAverageUncertainty
 	;
-	P = opinion(_, _),
+	P = opinion_old(_, _),
 	R = default_initialAverageUncertainty
 	;
-	P = opinion(_, _, _, _),
+	P = opinion_old(_, _, _, _),
 	R = P^initialAverageUncertainty
 	.
 
@@ -541,15 +548,15 @@ get_initialAverageUncertainty(P) = R :-
 
 set_initialAverageUncertainty(P, V) = R :-
 	P = random,
-	R = opinion(default_initialAverageOpinion, default_initialStdDevOpinion, V, default_initialStdDevUncertainty)
+	R = opinion_old(default_initialAverageOpinion, default_initialStdDevOpinion, V, default_initialStdDevUncertainty)
 	;
 	P = partnerSelection(_, _, _, _),
-	R = opinion(default_initialAverageOpinion, default_initialStdDevOpinion, V, default_initialStdDevUncertainty)
+	R = opinion_old(default_initialAverageOpinion, default_initialStdDevOpinion, V, default_initialStdDevUncertainty)
 	;
-	P = opinion(_, _),
-	R = opinion(default_initialAverageOpinion, default_initialStdDevOpinion, V, default_initialStdDevUncertainty)
+	P = opinion_old(_, _),
+	R = opinion_old(default_initialAverageOpinion, default_initialStdDevOpinion, V, default_initialStdDevUncertainty)
 	;
-	P = opinion(_, _, _, _),
+	P = opinion_old(_, _, _, _),
 	R = 'initialAverageUncertainty :='(P, V)
 	.
 
@@ -563,10 +570,10 @@ get_initialStdDevUncertainty(P) = R :-
 	P = partnerSelection(_, _, _, _),
 	R = default_initialStdDevUncertainty
 	;
-	P = opinion(_, _),
+	P = opinion_old(_, _),
 	R = default_initialStdDevUncertainty
 	;
-	P = opinion(_, _, _, _),
+	P = opinion_old(_, _, _, _),
 	R = P^initialStdDevUncertainty
 	.
 
@@ -574,15 +581,15 @@ get_initialStdDevUncertainty(P) = R :-
 
 set_initialStdDevUncertainty(P, V) = R :-
 	P = random,
-	R = opinion(default_initialAverageOpinion, default_initialStdDevOpinion, default_initialAverageUncertainty, V)
+	R = opinion_old(default_initialAverageOpinion, default_initialStdDevOpinion, default_initialAverageUncertainty, V)
 	;
 	P = partnerSelection(_, _, _, _),
-	R = opinion(default_initialAverageOpinion, default_initialStdDevOpinion, default_initialAverageUncertainty, V)
+	R = opinion_old(default_initialAverageOpinion, default_initialStdDevOpinion, default_initialAverageUncertainty, V)
 	;
-	P = opinion(_, _),
-	R = opinion(default_initialAverageOpinion, default_initialStdDevOpinion, default_initialAverageUncertainty, V)
+	P = opinion_old(_, _),
+	R = opinion_old(default_initialAverageOpinion, default_initialStdDevOpinion, default_initialAverageUncertainty, V)
 	;
-	P = opinion(_, _, _, _),
+	P = opinion_old(_, _, _, _),
 	R = 'initialStdDevUncertainty :='(P, V)
 	.
 

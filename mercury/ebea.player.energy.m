@@ -113,7 +113,7 @@
 
 
 /**
- * stepPlayGame(EnergyParameters, Player, Partners, Payoffs, !NextRoundPopulation, !Random)
+ * stepPlayGame(EnergyParameters, Player, Partners, Payoffs, !NextRoundPopulation, !PlayerProfile, !Random)
 
  * Plays a game between {@code Player} and {@code Partners} and updates
  * their energy in {@code NextRoundPopulation}.  Parameters {@code Player}
@@ -126,7 +126,7 @@
 	player(C, T), list(player(C, T)),
 	maybe(array(float)),
 	population(C, T), population(C, T),
-	list(list(int)), list(list(int)),
+	list(list(key)), list(list(key)),
 	R, R)
 	<= (asymmetricGame(G, C), ePRNG(R)).
 :- mode stepPlayGame(in, in, in, in, out, in, out, in, out, in, out) is det.
