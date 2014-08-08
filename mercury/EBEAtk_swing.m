@@ -20,7 +20,7 @@
 
 :- import_module ui_swing, userInterface.
 :- import_module data, data.config, data.config.io, data.config.pretty.
-:- import_module tools, tools.export_playerProfiles_graphviz, tools.'PCVNetwork'.
+:- import_module tools, tools.export_playerProfiles_graphviz, tools.'PCVNetwork', tools.populationDynamics.
 :- import_module int, dir, list, maybe, string, time.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -31,6 +31,7 @@
 		config                   :: data.config.config,
 		parameters_playerProfile :: tools.export_playerProfiles_graphviz.parameters,
 		parameters_PCV           :: tools.'PCVNetwork'.parameters,
+		parameters_PD            :: tools.populationDynamics.parameters,
 		filename                 :: maybe(string),
 		fileChooser              :: fileChooser
 	).
@@ -71,6 +72,10 @@ menu = m(
 		 mi(label("Probability combination vectors movie"),   submenu(
 			[mi(label("Run"),			actionDataIO('PCVMovie')),
 			 mi(label("Config"),    edit('new dialog'(parameters_PCV, set('parameters_PCV :='), tools.'PCVNetwork'.dialog_parameters)))
+			])),
+		 mi(label("Population dynamics"),   submenu(
+			[mi(label("Run"),			actionDataIO(populationDynamics)),
+			 mi(label("Config"),    edit('new dialog'(parameters_PD, set('parameters_PD :='), tools.populationDynamics.dialog_parameters)))
 			]))
 		])),
 	 mi(label("Run background"),       actionDataIO('EBEAtk_swing'.runBackground))
@@ -96,6 +101,7 @@ initData(FileChooser) = data(
 	data.config.default,
 	tools.export_playerProfiles_graphviz.default_parameters,
 	tools.'PCVNetwork'.default_parameters,
+	tools.populationDynamics.default_parameters,
 	no,
 	FileChooser).
 
@@ -108,8 +114,14 @@ initData(FileChooser) = data(
 :- func parameters_PCV(data) = tools.'PCVNetwork'.parameters.
 :- func 'parameters_PCV :='(data, tools.'PCVNetwork'.parameters) = data.
 
+:- func parameters_PD(data) = tools.populationDynamics.parameters.
+:- func 'parameters_PD :='(data, tools.populationDynamics.parameters) = data.
 
 
+
+/**
+ * Menu option.
+ */
 :- pred loadConfiguration(data, data, io.state, io.state).
 :- mode loadConfiguration(in, out, di, uo) is det.
 
@@ -142,7 +154,9 @@ loadConfiguration(!Data, !IO) :-
 		MFilename = no
 	).
 
-
+/**
+ * Menu option.
+ */
 :- pred saveConfiguration(data, data, io.state, io.state).
 :- mode saveConfiguration(in, out, di, uo) is det.
 
@@ -160,6 +174,9 @@ saveConfiguration(!Data, !IO) :-
 		io.nl(!IO)
 	).
 
+/**
+ * Menu option.
+ */
 :- pred saveAsConfiguration(data, data, io.state, io.state).
 :- mode saveAsConfiguration(in, out, di, uo) is det.
 
@@ -195,6 +212,9 @@ saveAsConfiguration(!Data, !IO) :-
 	.
 
 
+/**
+ * Menu option.
+ */
 :- pred playerProfilesMovie(data, io.state, io.state).
 :- mode playerProfilesMovie(in, di, uo) is det.
 
@@ -204,20 +224,38 @@ playerProfilesMovie(Data, !IO) :-
 	% FilenamePrefix = string.format("movie_%4d-%02d-%02d_%02d:%02d",
 	% 	[i(TM^tm_year + 1900), i(TM^tm_mon + 1), i(TM^tm_mday),
 	% 	 i(TM^tm_hour), i(TM^tm_sec)]),
-	createPlayerProfilesNetworks(Data^config, Data^parameters_playerProfile, Feedback, !IO),
+	createPlayerProfilesNetworks(Data^config, Data^parameters_playerProfile, "./", Feedback, !IO),
 	io.print(Feedback, !IO),
 	io.nl(!IO)
 	.
 
+/**
+ * Menu option.
+ */
 :- pred 'PCVMovie'(data, io.state, io.state).
 :- mode 'PCVMovie'(in, di, uo) is det.
 
 'PCVMovie'(Data, !IO) :-
-	tools.'PCVNetwork'.runTool(Data^config, Data^parameters_PCV, Feedback, !IO),
+	tools.'PCVNetwork'.runTool(Data^config, Data^parameters_PCV, "./", Feedback, !IO),
 	io.print(Feedback, !IO),
 	io.nl(!IO)
 	.
 
+/**
+ * Menu option.
+ */
+:- pred populationDynamics(data, io.state, io.state).
+:- mode populationDynamics(in, di, uo) is det.
+
+populationDynamics(Data, !IO) :-
+	tools.populationDynamics.runTool(Data^config, Data^parameters_PD, "./", Feedback, !IO),
+	io.print(Feedback, !IO),
+	io.nl(!IO)
+	.
+
+/**
+ * Menu option.
+ */
 :- pred runBackground(data, io.state, io.state).
 :- mode runBackground(in, di, uo) is det.
 
@@ -238,6 +276,9 @@ runBackground(Data, !IO) :-
 
 
 
+/**
+ * Menu option.
+ */
 :- pred printConfiguration(data, io.state, io.state).
 :- mode printConfiguration(in, di, uo) is det.
 
@@ -265,6 +306,7 @@ printConfiguration(Data, !IO) :-
 	[will_not_call_mercury, promise_pure],
 	"
 	Result = new javax.swing.JFileChooser ();
+	Result.setAcceptAllFileFilterUsed (false);
 	Result.addChoosableFileFilter (new javax.swing.filechooser.FileFilter () {
 		@Override
 		public boolean accept (java.io.File f) {

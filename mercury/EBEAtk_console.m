@@ -424,7 +424,7 @@ print_PopulationSize(Population, no, !IO) :-
 		R^age = AC^age + P^traits^ageTrait
 	),
 	PopulationSize = float(ebea.population.size(Population)),
-	ebea.population.fold(Add, Population, plotData(0.0, 0)) = PlotData,
+	ebea.population.fold_players(Add, Population, plotData(0.0, 0)) = PlotData,
 	PlotData^energy / PopulationSize = AverageEnergy,
 	float(PlotData^age) / PopulationSize = AverageAge,
 	addPoints_PopulationSize(PopulationSize, AverageEnergy, AverageAge, !IO).

@@ -119,7 +119,7 @@
 
 :- implementation.
 
-:- import_module ebea.player, ebea.player.age, ebea.player.selection, ebea.streams.birth, ebea.streams.death, ebea.streams.phenotype, ebea.streams.playerProfile.
+:- import_module ebea.player, ebea.player.chromosome, ebea.player.age, ebea.player.selection, ebea.population.players, ebea.streams.birth, ebea.streams.death, ebea.streams.phenotype, ebea.streams.playerProfile.
 :- import_module benchmarking, char, int, list, maybe, solutions, string.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -148,7 +148,7 @@
 % Implementation of exported predicates and functions
 
 init(Game, Parameters, Streams, Population, data(Game, Parameters, Streams), Stats) :-
-	Stats^reduceEvolution = population.fold(ebea.player.foldChromosome, Population, ebea.player.initAc),
+	Stats^reduceEvolution = ebea.population.fold_players(ebea.player.foldChromosome, Population, ebea.player.initAc),
 	Stats^deathsCarryingCapacity = 0,
 	Stats^deathsOldAge = 0,
 	Stats^deathsStarvation = 0,
@@ -182,7 +182,7 @@ iteration(Data, IterationNumber, !Population, ThisStats, NextStats, !Distributio
 		[], PlayerProfiles,
 		!Random),
 	%io.print('\r', !IO), io.print(IterationNumber, !IO), io.print(' ', !IO), io.print('b', !IO), io.flush_output(io.stdout_stream, !IO),
-	ebea.population.map_player(ebea.player.age.stepClockTick, !Population),
+	ebea.population.map_players(ebea.player.age.stepClockTick, !Population),
 	%io.print('\r', !IO), io.print(IterationNumber, !IO), io.print(' ', !IO), io.print('c', !IO), io.flush_output(io.stdout_stream, !IO),
 	ebea.population.stepBirthDeath(
 		Data^gp,
@@ -199,7 +199,7 @@ iteration(Data, IterationNumber, !Population, ThisStats, NextStats, !Distributio
 	%io.print('\r', !IO), io.print(IterationNumber, !IO), io.print(' ', !IO), io.print('e', !IO), io.flush_output(io.stdout_stream, !IO),
 	NextStats = stats(
 		%NextStats^reduceEvolution =
-		ebea.population.fold(
+		ebea.population.fold_players(
 			ebea.player.foldChromosome,
 			!.Population,
 			ThisStats^reduceEvolution
@@ -283,16 +283,19 @@ runLoop(Mode, Data, TimeLeft, Iteration, !Population, !Stats, !Distribution, !Ra
 
 printInitialDataToStreams(Streams, Population, !IO) :-
 	Streams = detailedTxt(_, _, _, _),
-	list.foldl(printBirth(Streams^tosBirth, -1), ebea.population.players(Population), !IO)
+	ebea.population.fold_players(printBirth(Streams^tosBirth, -1), Population, !IO)
+%	list.foldl(printBirth(Streams^tosBirth, -1), ebea.population.players(Population), !IO)
 	;
 	Streams = detailedBin(_, _, _, _),
-	ebea.streams.birth.write(Streams^bosBirth, -1, ebea.population.players(Population), !IO)
+	ebea.population.fold_players(ebea.streams.birth.foldInit, Population, []) = Births,
+	ebea.streams.birth.writeInit(Streams^bosBirth, Births, !IO)
+%	ebea.streams.birth.write(Streams^bosBirth, -1, ebea.population.players(Population), !IO)
 	;
 	Streams = dynamics(_),
 	io.print(Streams^sopopulation, "-1 ", !IO),
 	io.print(Streams^sopopulation, ebea.population.size(Population), !IO),
 	io.print(Streams^sopopulation, " 0 0 0 0 ", !IO),
-	ebea.population.fold(ebea.player.foldChromosome, Population, ebea.player.initAc) = Reduce,
+	ebea.population.fold_players(ebea.player.foldChromosome, Population, ebea.player.initAc) = Reduce,
 	printable.print(Streams^sopopulation, Reduce, !IO),
 	io.nl(Streams^sopopulation, !IO)
 	;
@@ -315,9 +318,9 @@ printInitialDataToStreams(Streams, Population, !IO) :-
 		G,
 		int,
 		ebea.population.population(C, T),
-		list(list(int)),
+		list(list(key)),
 		list(ebea.player.player(C, T)),
-		list(int), list(int), list(int),
+		list(key), list(key), list(key),
 		io, io)
 	<= (
 		  asymmetricGame(G, C),
@@ -336,7 +339,7 @@ printIterationDataToStreams(Streams, Game, Iteration, Population, PlayerProfiles
 	list.foldl(printDeathDataToStream(Streams^tosDeath, Iteration, carryingCapacity), CemeteryCarryingCapacity, !IO),
 	list.foldl(printDeathDataToStream(Streams^tosDeath, Iteration, oldAge), CemeteryOldAge, !IO),
 	list.foldl(printDeathDataToStream(Streams^tosDeath, Iteration, starvation), CemeteryStarvation, !IO),
-	ebea.population.fold(printPhenotypeDataToStream(Streams^tosPhenotype, Iteration), Population, !IO)
+	ebea.population.fold_players(printPhenotypeDataToStream(Streams^tosPhenotype, Iteration), Population, !IO)
 	;
 	Streams = detailedBin(_, _, _, _),
 	ebea.streams.birth.write(Streams^bosBirth, Iteration, Births, !IO),
@@ -357,7 +360,7 @@ printIterationDataToStreams(Streams, Game, Iteration, Population, PlayerProfiles
 	io.print(Streams^sopopulation, " ", !IO),
 	io.print(Streams^sopopulation, list.length(CemeteryStarvation) `with_type` int, !IO),
 	io.print(Streams^sopopulation, " ", !IO),
-	ebea.population.fold(ebea.player.foldChromosome, Population, ebea.player.initAc) = Reduce,
+	ebea.population.fold_players(ebea.player.foldChromosome, Population, ebea.player.initAc) = Reduce,
 	printable.print(Streams^sopopulation, Reduce, !IO),
 	io.nl(Streams^sopopulation, !IO)
 	;
@@ -385,7 +388,7 @@ printLastIterationDataToStreams(Stats, Streams, Iteration, Population, !IO)
 	Streams = dynamics(_)
 	;
 	Streams = summary(_),
-	ebea.population.fold(ebea.player.foldChromosome, Population, ebea.player.initAc) = Reduce,
+	ebea.population.fold_players(ebea.player.foldChromosome, Population, ebea.player.initAc) = Reduce,
 	io.print(Streams^sosummary, Iteration, !IO),
 	io.print(Streams^sosummary, " ", !IO),
 	io.print(Streams^sosummary, ebea.population.size(Population), !IO),
@@ -417,9 +420,9 @@ printLastIterationDataToStreams(Stats, Streams, Iteration, Population, !IO)
 		ebea.streams.outStreams,
 		int,
 		ebea.population.population(C, T),
-		list(list(int)),
+		list(list(key)),
 		list(ebea.player.player(C, T)),
-		list(int), list(int), list(int),
+		list(key), list(key), list(key),
 		io, io)
 	<= (asymmetricGame(G, C),
 			chromosome(C, T, P), foldable(C, A), parseable(C),
@@ -436,7 +439,7 @@ printDataToStreams(Game, Last, Streams, Iteration, Population, PlayerProfiles, B
 	list.foldl(printDeathDataToStream(Streams^tosDeath, Iteration, carryingCapacity), CemeteryCarryingCapacity, !IO),
 	list.foldl(printDeathDataToStream(Streams^tosDeath, Iteration, oldAge), CemeteryOldAge, !IO),
 	list.foldl(printDeathDataToStream(Streams^tosDeath, Iteration, starvation), CemeteryStarvation, !IO),
-	ebea.population.fold(printPhenotypeDataToStream(Streams^tosPhenotype, Iteration), Population, !IO)
+	ebea.population.fold_players(printPhenotypeDataToStream(Streams^tosPhenotype, Iteration), Population, !IO)
 	;
 	Streams = detailedBin(_, _, _, _),
 	ebea.streams.birth.write(Streams^bosBirth, Iteration, Births, !IO),
@@ -457,7 +460,7 @@ printDataToStreams(Game, Last, Streams, Iteration, Population, PlayerProfiles, B
 	io.print(Streams^sopopulation, " ", !IO),
 	io.print(Streams^sopopulation, list.length(CemeteryStarvation) `with_type` int, !IO),
 	io.print(Streams^sopopulation, " ", !IO),
-	ebea.population.fold(ebea.player.foldChromosome, Population, ebea.player.initAc) = Reduce,
+	ebea.population.fold_players(ebea.player.foldChromosome, Population, ebea.player.initAc) = Reduce,
 	printable.print(Streams^sopopulation, Reduce, !IO),
 	io.nl(Streams^sopopulation, !IO)
 	;
@@ -466,7 +469,7 @@ printDataToStreams(Game, Last, Streams, Iteration, Population, PlayerProfiles, B
 	;
 	Last = yes(Stats),
 	Streams = summary(_),
-	ebea.population.fold(ebea.player.foldChromosome, Population, ebea.player.initAc) = Reduce,
+	ebea.population.fold_players(ebea.player.foldChromosome, Population, ebea.player.initAc) = Reduce,
 	io.print(Streams^sosummary, Iteration, !IO),
 	io.print(Streams^sosummary, " ", !IO),
 	io.print(Streams^sosummary, ebea.population.size(Population), !IO),
@@ -485,7 +488,7 @@ printDataToStreams(Game, Last, Streams, Iteration, Population, PlayerProfiles, B
 	io.nl(Streams^sosummary, !IO)
 	.
 
-:- pred printPlayerProfile(io.output_stream, int, list(int), io.state, io.state).
+:- pred printPlayerProfile(io.output_stream, int, list(key), io.state, io.state).
 :- mode printPlayerProfile(in, in, in, di, uo) is det.
 
 printPlayerProfile(Stream, Iteration, PlayerProfile, !IO) :-
@@ -511,11 +514,11 @@ printBirth(Stream, Iteration, Player, !IO) :-
 	io.print(Stream, " ", !IO),
 	io.print(Stream, Player^siteIndex, !IO),
 	io.print(Stream, " ", !IO),
-	ebea.player.printChromosome(Stream, Player, !IO),
+	ebea.player.chromosome.print(Stream, Player^chromosome, !IO),
 	io.nl(Stream, !IO)
 	.
 
-:- pred printDeathDataToStream(io.output_stream, int, ebea.population.death, int, io, io).
+:- pred printDeathDataToStream(io.output_stream, int, ebea.population.death, key, io, io).
 :- mode printDeathDataToStream(in, in, in, in, di, uo) is det.
 
 printDeathDataToStream(Stream, Iteration, Death, ID, !IO) :-
