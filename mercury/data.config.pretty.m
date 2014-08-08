@@ -34,12 +34,14 @@
 print(Stream, plain, Config, !IO) :-
 	io.format(Stream, "-- statistical --
 pseudo-random number generator: %s
+number of runs:  %d
 number of iterations:  %d
 streams:  %s
 -- general population dynamics --
 dynamic:  %s
 mutation probability:   ",
 		[s(string(Config^random)),
+		 i(Config^numberRuns),
 		 i(Config^numberIterations),
 		 s(string(Config^level)),
 		 s(string(Config^dynamic))],
@@ -77,14 +79,17 @@ stddev bits per probability:      %f
 stddev probability update factor: %f
 stddev payoff threshold:          %f
 uncertainty increase factor: %f
-mu:                          %f\n",
+mu:                          %f
+pool size parent-offspring transmission: %d%%\n",
 		[f(SP^poolSizeStdDev),
 		 f(SP^bitsPerProbabilityStdDev),
 		 f(SP^probabilityUpdateFactorStdDev),
 		 f(SP^payoffThresholdStdDev),
 		
 		 f(SP^uncertaintyIncreaseFactor),
-		 f(SP^mu)],
+		 f(SP^mu),
+
+		 i(SP^poolSizePercentageTransmission)],
 		!IO),
 	io.format(Stream, "-- game --\nselected: %s\n", [s(string(Config^selectedGame))], !IO),
 	(

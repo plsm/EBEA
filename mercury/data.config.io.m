@@ -25,7 +25,7 @@
 
 :- implementation.
 
-:- import_module ebea.population.site, ebea.population.site.parameters.
+:- import_module ebea.player.chromosome, ebea.population.site, ebea.population.site.parameters.
 :- import_module parseable.
 :- import_module exception, float.
 
@@ -57,6 +57,27 @@
 		'config_pgp+pa',                  % 18 pgp+pa
 		config_ultimatum                  % 19 ultimatum
 	) ;
+	config_v1002(
+		data.prng.supplyParameter,        %  1 random
+		int,                              %  2 numberRuns
+		int,                              %  3 numberIterations
+		ebea.streams.level,               %  4 level
+		ebea.population.dynamic,          %  5 dynamic
+		probability,                      %  6 mutationProbability
+		probability,                      %  7 migrationProbability
+		ebea.player.age.parameters,       %  8 ageParameters
+		ebea.player.energy.parameters,    %  9 energyParameters
+		ebea_player_selection_parameters_v1002, % 10 selectionParameters
+		games,                            % 11 selectedGame
+		config_2x2,                       % 12 cfg_2x2
+		config_battlesexes,               % 13 battlesexes
+		config_centipede,                 % 14 centipede
+		config_givetake,                  % 15 givetake
+		config_investment,                % 16 investment
+		config_pgp,                       % 17 pgp
+		'config_pgp+pa',                  % 18 pgp+pa
+		config_ultimatum                  % 19 ultimatum
+	) ;
 	config_v1001(
 		data.prng.supplyParameter,         %  1 random
 		int,                               %  2 numberRuns
@@ -67,7 +88,7 @@
 		probability,                       %  7 migrationProbability
 		ebea.player.age.parameters,        %  8 ageParameters
 		ebea.player.energy.parameters,     %  9 energyParameters
-		ebea.player.selection.parameters,  % 10 selectionParameters
+		ebea_player_selection_parameters_v1002,  % 10 selectionParameters
 		games_old_v1001,                     % 11 selectedGame
 		config_2x2,                        % 12 cfg_2x2
 		config_battlesexes,                % 13 battlesexes
@@ -86,7 +107,7 @@
 		float,									 %  7 mutationProbability
 		ebea.player.age.parameters,		 %  8 ageParameters
 		ebea.player.energy.parameters,	 %  9 energyParameters
-		ebea.player.selection.parameters, % 10 selectionParameters
+		ebea_player_selection_parameters_v1002, % 10 selectionParameters
 		games_old_v1001,							 % 11 selectedGame
 		config_old_v1000_2x2,				 % 12 cfg_2x2
 		config_old_v1000_battlesexes,	 % 13 battlesexes
@@ -95,6 +116,17 @@
 		'config_old_v1000_pgp+pa',		 % 16 pgp+pa
 		config_old_v1000_ultimatum		 % 19 ultimatum
 	 ).
+
+:- type ebea_player_selection_parameters_v1002 --->
+	sp_v1002(
+		poolSizeStdDev                :: float,
+		bitsPerProbabilityStdDev      :: float,
+		probabilityUpdateFactorStdDev :: float,
+		payoffThresholdStdDev         :: float,
+		
+		uncertaintyIncreaseFactor     :: float,
+		mu                            :: float
+	).
 
 
 :- type games_old_v1001 --->
@@ -115,7 +147,7 @@
 :- type initialPlayers_old_v1000(CS) --->
 	initialPlayers_old_v1000(
 		int,                       % quantity
-		ebea.player.chromosome(CS) % chromosome 
+		ebea.player.chromosome.chromosome(CS) % chromosome 
 	).
 
 :- type chromosome --->
@@ -279,7 +311,7 @@ parse(C) -->
 	parseable.float32(MutationProbability),
 	ebea.player.age.parseParameters(AgeParameters),
 	ebea.player.energy.parseParameters(EnergyParameters),
-	ebea.player.selection.parseParameters(SelectionParameters),
+	ebea_player_selection_parseParameters_v1002(SelectionParameters),
 	parseGames_v1001(SelectedGame),
 	parse_GameConfig_old_v1000(Cfg_2x2),
 	parse_GameConfig_old_v1000(BattleSexes),
@@ -318,11 +350,54 @@ parse(C) -->
 	probability.parse(MigrationProbability),
 	ebea.player.age.parseParameters(AgeParameters),
 	ebea.player.energy.parseParameters(EnergyParameters),
-	ebea.player.selection.parseParameters(SelectionParameters),
+	ebea_player_selection_parseParameters_v1002(SelectionParameters),
 	parseGames_v1001(SelectedGame),
 	parse_GameConfig(Cfg_2x2),
 	parse_GameConfig(BattleSexes),
 	parse_GameConfig(Centipede),
+	parse_GameConfig(PGP),
+	parse_GameConfig(PGP_PA),
+	parse_GameConfig(Ultimatum)
+	.
+
+parse(C) -->
+	{C = config_v1002(
+		Random,
+		NumberRuns,
+		NumberIterations,
+		Level,
+		Dynamic,
+		MutationProbability,
+		MigrationProbability,
+		AgeParameters,
+		EnergyParameters,
+		SelectionParameters,
+		SelectedGame,
+		Cfg_2x2,
+		BattleSexes,
+		Centipede,
+		GiveTake,
+		Investment,
+		PGP,
+		PGP_PA,
+		Ultimatum)},
+	[2],
+	data.prng.parse(Random),
+	parseable.int32(NumberRuns),
+	parseable.int32(NumberIterations),
+	ebea.streams.parse(Level),
+	ebea.population.parseDynamic(Dynamic),
+	probability.parse(MutationProbability),
+	probability.parse(MigrationProbability),
+	ebea.player.age.parseParameters(AgeParameters),
+	ebea.player.energy.parseParameters(EnergyParameters),
+	ebea_player_selection_parseParameters_v1002(SelectionParameters),
+	parseGames(SelectedGame),
+	parse_GameConfig(Cfg_2x2),
+	parse_GameConfig(BattleSexes),
+	parse_GameConfig(Centipede),
+	parse_GameConfig(GiveTake),
+	parse_GameConfig(Investment),
 	parse_GameConfig(PGP),
 	parse_GameConfig(PGP_PA),
 	parse_GameConfig(Ultimatum)
@@ -349,7 +424,7 @@ parse(C) -->
 		PGP,
 		PGP_PA,
 		Ultimatum)},
-	[2],
+	[3],
 	data.prng.parse(Random),
 	parseable.int32(NumberRuns),
 	parseable.int32(NumberIterations),
@@ -402,8 +477,21 @@ parse_GameConfig_old_v1000(Config) -->
 parse_initialPlayers_old_v1000(InitialPlayers) -->
 	{InitialPlayers = initialPlayers_old_v1000(Quantity, Chromosome)},
 	parseable.int32(Quantity),
-	ebea.player.parseChromosome(Chromosome)
+	ebea.player.chromosome.parse(Chromosome)
 	.
+
+:- pred ebea_player_selection_parseParameters_v1002(ebea_player_selection_parameters_v1002, list(int), list(int)).
+:- mode ebea_player_selection_parseParameters_v1002(in, out, in) is det.
+:- mode ebea_player_selection_parseParameters_v1002(out, in, out) is semidet.
+
+ebea_player_selection_parseParameters_v1002(P) -->
+	{P = sp_v1002(PoolSizeStdDev, BitsPerProbabilityStdDev, ProbabilityUpdateFactorStdDev, PayoffThresholdStdDev, UncertaintyIncreaseFactor, MU)},
+	parseable.float32(PoolSizeStdDev),
+	parseable.float32(BitsPerProbabilityStdDev),
+	parseable.float32(ProbabilityUpdateFactorStdDev),
+	parseable.float32(PayoffThresholdStdDev),
+	parseable.float32(UncertaintyIncreaseFactor),
+	parseable.float32(MU).
 
 
 /**
@@ -413,7 +501,38 @@ parse_initialPlayers_old_v1000(InitialPlayers) -->
 
 :- func map(config_file) = config.
 
-map(config_v1000(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17)) = Result :-
+map(config_v1000(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17)) =
+	config(
+		A1,
+		A2,
+		A3,
+		A4,
+		A6,
+		probability.init(A7),
+		probability.zero,
+		A8,
+		A9,
+		map_ebea_player_selection_parseParameters_v1002(A10),
+		mapGames_v1001(A11),
+		map_v1000(A5, A12),
+		map_v1000(A5, A13),
+		map_v1000(A5, A14),
+		gameConfig(
+			gl.givetake.game.default,
+			gl.givetake.parameters.default,
+			ebea.population.parameters.default(gl.givetake.strategy.default)
+		),
+		gameConfig(
+			gl.investment.game.default,
+			gl.investment.parameter.default,
+			ebea.population.parameters.default(gl.investment.strategy.default)
+		),
+		map_v1000(A5, A15),
+		map_v1000(A5, A16),
+		map_v1000(A5, A17)
+	).
+/*
+Result :-
 	Result^random = A1,
 	Result^numberRuns = A2,
 	Result^numberIterations = A3,
@@ -423,7 +542,7 @@ map(config_v1000(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A1
 	Result^migrationProbability = probability.zero,
 	Result^ageParameters = A8,
 	Result^energyParameters = A9,
-	Result^selectionParameters = A10,
+	Result^selectionParameters = A10_out,
 	Result^selectedGame = mapGames_v1001(A11),
 	Result^cfg_2x2 = map_v1000(A5, A12),
 	Result^battlesexes = map_v1000(A5, A13),
@@ -440,11 +559,12 @@ map(config_v1000(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A1
 		),
 	Result^pgp = map_v1000(A5, A15),
 	Result^'pgp+pa' = map_v1000(A5, A16),
-	Result^ultimatum = map_v1000(A5, A17)
+	Result^ultimatum = map_v1000(A5, A17),
+	A10_out = map_ebea_player_selection_parseParameters_v1002(A10_in)
 	.
-
-map(config_v1001(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17)) =
-	config(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, mapGames_v1001(A11), A12, A13, A14, B1, B2, A15, A16, A17) :-
+*/
+map(config_v1001(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10_in, A11, A12, A13, A14, A15, A16, A17)) =
+	config(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10_out, mapGames_v1001(A11), A12, A13, A14, B1, B2, A15, A16, A17) :-
 	B1 = gameConfig(
 		gl.givetake.game.default,
 		gl.givetake.parameters.default,
@@ -454,7 +574,13 @@ map(config_v1001(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A1
 		gl.investment.game.default,
 		gl.investment.parameter.default,
 		ebea.population.parameters.default(gl.investment.strategy.default)
-	)
+	),
+	A10_out = map_ebea_player_selection_parseParameters_v1002(A10_in)
+	.
+
+map(config_v1002(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10_in, A11, A12, A13, A14, A15, A16, A17, A18, A19)) =
+config(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10_out, A11, A12, A13, A14, A15, A16, A17, A18, A19) :-
+	A10_out = map_ebea_player_selection_parseParameters_v1002(A10_in)
 	.
 
 map(config_v1003(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19)) =
@@ -517,6 +643,30 @@ parseGames_v1001(centipede)   --> [2].
 parseGames_v1001(pgp)         --> [3].
 parseGames_v1001('pgp+pa')    --> [4].
 parseGames_v1001(ultimatum)   --> [5].
+
+
+
+
+:- func map_ebea_player_selection_parseParameters_v1002(ebea_player_selection_parameters_v1002) = ebea.player.selection.parameters.
+
+map_ebea_player_selection_parseParameters_v1002(
+	sp_v1002(
+		PoolSizeStdDev,
+		BitsPerProbabilityStdDev,
+		ProbabilityUpdateFactorStdDev,
+		PayoffThresholdStdDev,
+		UncertaintyIncreaseFactor,
+		MU
+	)) =
+	sp(
+		PoolSizeStdDev,
+		BitsPerProbabilityStdDev,
+		ProbabilityUpdateFactorStdDev,
+		PayoffThresholdStdDev,
+		UncertaintyIncreaseFactor,
+		MU,
+		0
+	).
 
 :- end_module data.config.io.
 

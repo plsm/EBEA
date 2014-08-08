@@ -179,7 +179,7 @@
 :- func dialog = list(dialogItem(config)).
 
 :- pred errors(config, string).
-:- mode errors(in, out) is semidet.
+:- mode errors(in, out) is nondet.
 
 :- pred runBackground(config, io.state, io.state).
 :- mode runBackground(in, di, uo) is det.
@@ -187,8 +187,12 @@
 :- pred runInteractively(selectedGamePred, config, io.state, io.state).
 :- mode runInteractively(in(selectedGamePred), in, di, uo) is det.
 
+:- func random(config) = data.prng.supplyParameter.
+:- func 'random :='(config, data.prng.supplyParameter) = config.
+
 :- implementation.
 
+:- import_module data.seed.
 :- import_module rng, rng.distribution.
 :- import_module bool, exception, int, maybe, string.
 
@@ -257,7 +261,8 @@ default = config(
 
 dialog =
 	[
-	di(label("pseudo-random number generator"),  'new editField'(  get_random,               set(set_random), data.prng.dialog)),
+%	di(label("pseudo-random number generator"),  'new editField'(  get_random,               set(set_random), data.prng.dialog)),
+	di(label("pseudo-random number generator"),  subdialog([data.prng.dialogItem])),
 	di(label("number runs"),                     updateFieldInt(   get_numberRuns,           checkInt(   "number runs",           bounded(10, yes),  unbound, set_numberRuns))),
 	di(label("number iterations"),               updateFieldInt(   get_numberIterations,     checkInt(   "number iterations",     bounded(100, yes), unbound, set_numberIterations))),
 	di(label("data to store"),                   'new editField'(  get_level,                set(set_level), ebea.streams.dialog)),
@@ -300,14 +305,14 @@ dialog =
 	% di(label("ultimatum"),            'new editField'(  get_ultimatum,            set(set_ultimatum), dialog_ultimatum))
 	].
 
-errors(Config, Errors) :-
-	fail
-	% List =
-	%   [
-	% 	gl.ultimatum.game.errors(Config^ultimatum^game)
-	%   ],
-	% callErrors(List, no, Result),
-	% Result = yes(Errors)
+errors(Config, Error) :-
+	Config^numberRuns =< 0,
+	Error = "number of runs is not positive"
+	;
+	Config^numberIterations =< 0,
+	Error = "number of iterations is not positive"
+	;
+	gl.ultimatum.game.errors(Config^ultimatum^game, Error)
 	.
 
 % initSelectedGamePred(Config, Pred) = Result :-

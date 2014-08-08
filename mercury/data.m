@@ -8,7 +8,7 @@
 
 :- interface.
 
-:- include_module config, prng.
+:- include_module config, prng, seed.
 :- include_module util.
 
 :- type games --->
