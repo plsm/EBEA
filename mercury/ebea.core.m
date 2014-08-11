@@ -98,7 +98,7 @@
 
 
 %%
-%% iterationData3(Data, IterationNumber, !Population, !StrategyStats, !Distribution, !Random, !IO)
+%% iterationData3(Data, IterationNumber, !Population, !Stats, !Distribution, !Random, !IO)
 %%
 %% Perform an iteration of EBEA and update the current population and
 %% statistics using type {@code data/3}.
@@ -164,6 +164,7 @@ ebea.player.selection, ebea.population.players, ebea.population.site,
 ebea.streams.birth, ebea.streams.death, ebea.streams.phenotype,
 ebea.streams.playerProfile.
 
+:- import_module util.
 :- import_module benchmarking, char, int, list, maybe, solutions, string.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -268,14 +269,48 @@ iteration(Data, IterationNumber, !Population, ThisStats, NextStats, !Distributio
 	ebea.core.printIterationDataToStreams(Data^s, Data^game, IterationNumber, !.Population, PlayerProfiles, Births, CemeteryCarryingCapacity, CemeteryOldAge, CemeteryStarvation, !IO)
 	.
 
-iterationData3(Data, IterationNumber, !Population, !StrategyStats, !Distribution, !Random, !IO) :-
+iterationData3(Data, IterationNumber, !Population, !Stats, !Distribution, !Random, !IO) :-
 	Data^parameters3^siteDynamics = SiteDynamics,
 	(	%
 		SiteDynamics = static,
-		iteration(data(Data^game3, Data^parameters3^base, Data^streams3), IterationNumber, !Population, !StrategyStats, !Distribution, !Random, !IO)
+		iteration(data(Data^game3, Data^parameters3^base, Data^streams3), IterationNumber, !Population, !Stats, !Distribution, !Random, !IO)
 	;
 		SiteDynamics = dynamic(_),
-		true
+		ebea.population.fold4_PlayerNeighbour(
+			ebea.player.selection.stepSelectPartnersPlayGame3(
+				Data^parameters3^base^playerParameters,
+				Data^game3
+			),
+			!.Population,
+			!Population,
+			[], PlayerProfiles,
+			!Random,
+			util.arrayInitUnique(0, foldable.initAC), SiteActionAccumulator
+		),
+		ebea.population.map_players(ebea.player.age.stepClockTick, !Population),
+		ebea.population.stepBirthDeath(
+			Data^parameters3^base,
+			!Distribution,
+			!Random,
+			!Population,
+			Births,
+			CemeteryCarryingCapacity, CemeteryOldAge, CemeteryStarvation),
+		ebea.population.mapfold_PlayerNeighbour(
+			ebea.player.selection.roundCheckForDeadPlayers(Data^game3, list.append(CemeteryCarryingCapacity, list.append(CemeteryOldAge, CemeteryStarvation))),
+			!Population,
+			!Random),
+		!:Stats = stats(
+			ebea.population.fold_players(
+				ebea.player.foldChromosome,
+				!.Population,
+				!.Stats^reduceEvolution
+			),
+			!.Stats^deathsCarryingCapacity + list.length(CemeteryCarryingCapacity),
+			!.Stats^deathsOldAge + list.length(CemeteryOldAge),
+			!.Stats^deathsStarvation + list.length(CemeteryStarvation),
+			!.Stats^births + list.length(Births)
+		),
+		ebea.core.printIterationDataToStreams(Data^streams3, Data^game3, IterationNumber, !.Population, PlayerProfiles, Births, CemeteryCarryingCapacity, CemeteryOldAge, CemeteryStarvation, !IO)
 	).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

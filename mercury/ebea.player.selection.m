@@ -134,6 +134,47 @@
 	<= (asymmetricGame(G, C), ePRNG(R)).
 :- mode stepSelectPartnersPlayGame(in, in, in, in, in, out, in, out, in, out) is det.
 
+%% ************************************************************************
+%%
+%% stepSelectPartnersPlayGame3(PlayerParameters, Game, Player, Neighbours, !NextRoundPopulation, !PlayerProfiles, !SiteActionAccumulator, !Random)
+%%
+%% Select partners for player {@code Player} from collection {@code
+%% Neighbours} using a game that returns the action done by players.  Play
+%% game {@code Game} between the selected player profile.  This is handled
+%% by predicate {@code ebea.energy.round}.  After playing, update the
+%% traits of {@code Player}.
+%%
+%% <p> This predicate performs the core of the selection process of an
+%% Energy Based Evolutionary Algorithm.
+%%
+%% @param P player parameters which contains game and energy parameters.
+%%
+%% @param G The game player by players
+%%
+%% @param CS The game strategy and strategy genes.
+%%
+%% @param T  The player phenotype that results from the strategy genes.
+%%
+%% @param R The pseudo-random number generator.
+%%
+%% @param A The game actions.
+%%
+:- pred stepSelectPartnersPlayGame3(
+	ebea.player.parameters(P)             :: in,
+	G                                     :: in,
+	player(CS, T)                         :: in,
+	ebea.population.neighbours.neighbours :: in,
+	population(CS, T)                       :: in,  population(CS, T)                       :: out,
+	list(list(ebea.population.players.key)) :: in,  list(list(ebea.population.players.key)) :: out,
+	R                                       :: in,  R                                       :: out,
+	array(AA) :: di,  array(AA):: uo
+) is det
+	<= (
+	asymmetricGame(G, CS, A),
+	ePRNG(R),
+	foldable(A, AA)
+).
+
 /**
  * roundCheckForDeadPlayers(Game, DeadPlayerIDs, Player, Neighbours, NextPlayer, !Random)
 
@@ -461,6 +502,107 @@ stepSelectPartnersPlayGame(
 			throw("ebea.player.selection.stepSelectPartnersPlayGame/10: Invalid combination of chromosome and traits")
 		)
 	).
+
+
+stepSelectPartnersPlayGame3(
+	PlayerParameters, Game, Player, Neighbours,
+	!NextRoundPopulation,
+	!PlayerProfile,
+	!Random,
+	!SiteActionAccumulator
+) :-
+	NumberPartners = game.numberPlayers(Game) - 1,
+	Chromosome = Player^chromosome^selectionGenes,
+	Traits = Player^traits^selectionTrait,
+	(if
+		NumberPartners > ebea.population.neighbours.size(Neighbours)
+	then
+		true
+	else
+		Chromosome = random,
+		(if
+			Traits = random
+		then
+			/* create the strategy profile */
+			ebea.population.neighbours.randomElements(NumberPartners, Neighbours, PartnersID, !Random),
+			list.map(ebea.population.players.player(!.NextRoundPopulation^players), PartnersID) = RestProfile,
+			/* play the game */
+			ebea.player.energy.stepPlayGame3(PlayerParameters^energyPar, Game, Player, RestProfile, _MPayoffs, !NextRoundPopulation, !PlayerProfile, !Random, !SiteActionAccumulator),
+			/* no selection traits to update */
+			true
+		else
+			throw("ebea.player.selection.stepSelectPartnersPlayGame/10: Invalid combination of chromosome and phenotipic trait")
+		)
+		;
+		Chromosome = partnerSelection(_, _, _, _),
+		(if
+			Traits = partnerSelection(_)
+		then
+			/* create the strategy profile */
+			ebea.player.selection.pcv.select(NumberPartners, Neighbours, Traits^pcv, !Random, SelectedSlot, PartnersIDs),
+			list.map(ebea.population.players.player(!.NextRoundPopulation^players), PartnersIDs) = RestProfile,
+			/* play the game */
+			ebea.player.energy.stepPlayGame3(PlayerParameters^energyPar, Game, Player, RestProfile, MPayoffs, !NextRoundPopulation, !PlayerProfile, !Random, !SiteActionAccumulator),
+			/* update the selection traits */
+			(
+				MPayoffs = yes(Payoffs),
+				PlayerPayoff = array.lookup(Payoffs, 0)
+				;
+				MPayoffs = no,
+				PlayerPayoff = game.lowestPayoff(Game)
+			),
+			ebea.player.selection.pcv.updateProbCombVectors(
+				Game, PlayerParameters^energyPar^energyScaling,
+				NumberPartners, Chromosome, PartnersIDs, Neighbours, SelectedSlot, PlayerPayoff,
+				!Random,
+				Traits^pcv, NextProbCombVector
+			),
+			ebea.population.update(
+				Player^id,
+				ebea.player.selection.pcv.updatePlayerProbCombVectors(NextProbCombVector),
+				!NextRoundPopulation
+			)
+		else
+			throw("ebea.player.selection.stepSelectPartnersPlayGame/10: Invalid combination of chromosome and phenotipic trait")
+		)
+		;
+		(
+			Chromosome = opinion_old(_, _) ;
+			Chromosome = opinion_old(_, _, _, _)
+		),
+		(if
+			Traits = opinion(_, _)
+		then
+			/* create the strategy profile */
+			(if
+				ebea.player.selection.opinion.selectPartners(
+					Traits,
+					NumberPartners,
+					!.NextRoundPopulation^players,
+					Neighbours,
+					RestProfile,
+					!Random)
+			then
+				/* play the game */
+				ebea.player.energy.stepPlayGame3(PlayerParameters^energyPar, Game, Player, RestProfile, MPayoffs, !NextRoundPopulation, !PlayerProfile, !Random, !SiteActionAccumulator),
+				/* update the selection traits */
+				(
+					MPayoffs = yes(Payoffs),
+					ebea.player.selection.opinion.updateOpinions(Game, PlayerParameters, [Player | RestProfile], Payoffs, !NextRoundPopulation)
+					;
+					MPayoffs = no
+				)
+			else
+				ebea.population.update(
+					Player^id,
+					ebea.player.selection.opinion.increaseUncertainty(PlayerParameters^selectionPar),
+					!NextRoundPopulation)
+			)
+		else
+			throw("ebea.player.selection.stepSelectPartnersPlayGame/10: Invalid combination of chromosome and traits")
+		)
+	).
+
 
 roundCheckForDeadPlayers(Game, DeadPlayerIDs, Player, Neighbours, NextPlayer, !Random) :-
 	NumberPartners = game.numberPlayers(Game) - 1,

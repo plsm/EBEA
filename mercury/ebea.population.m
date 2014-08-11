@@ -248,6 +248,10 @@
 :- pred fold3_PlayerNeighbour(pred(player(C, T), neighbours, A1, A1, A2, A2, A3, A3), population(C, T), A1, A1, A2, A2, A3, A3).
 :- mode fold3_PlayerNeighbour(in(pred(in, in, in, out, in, out, in, out) is det), in, in, out, in, out, in, out) is det.
 
+:- pred fold4_PlayerNeighbour(pred(player(C, T), neighbours, A1, A1, A2, A2, A3, A3, A4, A4), population(C, T), A1, A1, A2, A2, A3, A3, A4, A4).
+:- mode fold4_PlayerNeighbour(in(pred(in, in, in, out, in, out, in, out, di, uo) is det), in, in, out, in, out, in, out, di, uo) is det.
+
+
 /**
  * mapfold_PlayerNeighbour(Pred, !Population, !Accumulator1)
   
@@ -488,6 +492,9 @@ transform_player(Closure, Population) = Result :-
 fold3_PlayerNeighbour(Pred, Population, !Accumulator1, !Accumulator2, !Accumulator3) :-
 	ebea.population.players.fold3(fold3_real_PlayerNeighbour(Pred, Population), Population^players, !Accumulator1, !Accumulator2, !Accumulator3).
 
+fold4_PlayerNeighbour(Pred, Population, !Accumulator1, !Accumulator2, !Accumulator3, !Accumulator4) :-
+	ebea.population.players.fold4(fold4_real_PlayerNeighbour(Pred, Population), Population^players, !Accumulator1, !Accumulator2, !Accumulator3, !Accumulator4).
+
 mapfold_PlayerNeighbour(Pred, PopulationIn, PopulationOut, !Accumulator) :-
 	ebea.population.players.mapFold(mapfold_real_PlayerNeighbour(Pred, PopulationIn), PopulationIn^players, MappedPlayers, !Accumulator),
 	PopulationOut = 'players :='(PopulationIn, MappedPlayers).
@@ -688,7 +695,7 @@ playerSite(Population, Player) = array.lookup(Population^sites, Player^siteIndex
  * fold3_real_PlayerNeighbour(Pred, Population, Player, !Accumulator1, !Accumulator2, !Accumulator3)
   
  * Iterate through all pairs where a pair is a player and his neighbours
- * calling {@code Pred} with the two accumulators.
+ * calling {@code Pred} with the three accumulators.
   
  */
 :- pred fold3_real_PlayerNeighbour(
@@ -708,6 +715,27 @@ playerSite(Population, Player) = array.lookup(Population^sites, Player^siteIndex
 fold3_real_PlayerNeighbour(Pred, Population, Player, !Accumulator1, !Accumulator2, !Accumulator3) :-
 	ebea.population.neighbours.init(Population^sites, Player) = Neighbours,
 	Pred(Player, Neighbours, !Accumulator1, !Accumulator2, !Accumulator3).
+
+%% ************************************************************************
+%% fold4_real_PlayerNeighbour(Pred, Population, Player, !Accumulator1, !Accumulator2, !Accumulator3, !Accumulator4)
+%%
+%% Iterate through all pairs where a pair is a player and his neighbours
+%% calling {@code Pred} with the four accumulators.
+%%
+:- pred fold4_real_PlayerNeighbour(
+	pred(player(C, T), neighbours, A1, A1, A2, A2, A3, A3, A4, A4)
+		:: in(pred(in, in, in, out, in, out, in, out, di, uo) is det),
+	population(C, T) :: in,
+	player(C, T)     :: in,
+	A1 :: in,  A1 :: out,
+	A2 :: in,  A2 :: out,
+	A3 :: in,  A3 :: out,
+	A4 :: di,  A4 :: uo
+) is det.
+
+fold4_real_PlayerNeighbour(Pred, Population, Player, !Accumulator1, !Accumulator2, !Accumulator3, !Accumulator4) :-
+	ebea.population.neighbours.init(Population^sites, Player) = Neighbours,
+	Pred(Player, Neighbours, !Accumulator1, !Accumulator2, !Accumulator3, !Accumulator4).
 
 
 

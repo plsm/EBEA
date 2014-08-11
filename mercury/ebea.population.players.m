@@ -94,6 +94,15 @@
 :- mode fold3(in(pred(in, in, out, in, out, in, out) is det), in, in, out, in, out, in, out) is det.
 :- mode fold3(in(pred(in, in, out, in, out, di,  uo) is det), in, in, out, in, out, di,  uo) is det.
 
+%% ************************************************************************
+%% fold4(Pred, Players, !A, !B, !C, !D)
+%%
+%% Reduce the players using the closure with the four accumulators.
+%%
+:- pred fold4(pred(player(C, P), T1, T1, T2, T2, T3, T3, T4, T4), players(C, P), T1, T1, T2, T2, T3, T3, T4, T4).
+:- mode fold4(in(pred(in, in, out, in, out, in, out, in, out) is det), in, in, out, in, out, in, out, in, out) is det.
+:- mode fold4(in(pred(in, in, out, in, out, in, out, di,  uo) is det), in, in, out, in, out, in, out, di,  uo) is det.
+
 :- pred filterFold4(pred(player(C, P), bool, T1, T1, T2, T2, T3, T3, T4, T4), players(C, P), players(C, P), T1, T1, T2, T2, T3, T3, T4, T4).
 :- mode filterFold4(in(pred(in, out, in, out, in, out, in, out, in, out) is det), in, out, in, out, in, out, in, out, in, out) is det.
 :- mode filterFold4(in(pred(in, out, in, out, in, out, in, out, di,  uo) is det), in, out, in, out, in, out, in, out, di,  uo) is det.
@@ -205,6 +214,9 @@ fold3(Pred, Players, !AC1, !AC2, !AC3) :-
 	map.foldl3(withKey_fold3(Pred), Players, !AC1, !AC2, !AC3).
 %	map.foldl3_values(Pred, Players, !AC1, !AC2, !AC3).
 
+fold4(Pred, Players, !AC1, !AC2, !AC3, !AC4) :-
+	map.foldl4(withKey_fold4(Pred), Players, !AC1, !AC2, !AC3, !AC4).
+
 map(MapFunc, Players) = map.map_values_only(MapFunc, Players).
 
 mapFold(Pred, !Players, !AC) :-
@@ -286,6 +298,39 @@ withKey_filterFold5(Pred, Key, Player, !Players, !AC1, !AC2, !AC3, !AC4) :-
 
 withKey_fold3(Pred, _Key, Player, !AC1, !AC2, !AC3) :-
 	Pred(Player, !AC1, !AC2, !AC3).
+
+
+:- pred withKey_fold4(
+	pred(player(C, T), T1, T1, T2, T2, T3, T3, T4, T4),
+	key,
+	player(C, T),
+	T1, T1,
+	T2, T2,
+	T3, T3,
+	T4, T4
+).
+:- mode withKey_fold4(
+	in(pred(in, in, out, in, out, in, out, di, uo) is det),
+	in,
+	in,
+	in, out,
+	in, out,
+	in, out,
+	di, uo
+) is det.
+:- mode withKey_fold4(
+	in(pred(in, in, out, in, out, in, out, in, out) is det),
+	in,
+	in,
+	in, out,
+	in, out,
+	in, out,
+	in, out
+) is det.
+
+withKey_fold4(Pred, _Key, Player, !AC1, !AC2, !AC3, !AC4) :-
+	Pred(Player, !AC1, !AC2, !AC3, !AC4).
+
 
 :- pred withKey_filterFold4(
 	pred(player(C, T), bool, T1, T1, T2, T2, T3, T3, T4, T4),
