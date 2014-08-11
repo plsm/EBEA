@@ -6,7 +6,7 @@
  * EBEA.
 
  * @author Pedro Mariano
- * @version 1.0 2012/07/ 3
+ * @version 1.0 2012/07/03
  */
 :- module ebea.population.
 
@@ -49,16 +49,33 @@
 		nextID  :: ebea.population.players.key
 	).
 
-%:- type neighbours(C, T) == list(player(C, T)).
-
-/**
- * Parameters that govern the population dynamics include the carrying capacity.
- */
+%% ************************************************************************
+%% Parameters that govern population dynamics.  These include the behaviour
+%% of players meaning ageing, reproduction and partner selection.
+%%
+%% @param P Parameters the govern the game played by players
+%%
 :- type parameters(P) --->
 	p(
 	  migrationProbability :: float,
 	  dynamic              :: dynamic,
-	  playerParameters     :: ebea.player.parameters(P)).
+	  playerParameters     :: ebea.player.parameters(P)
+	).
+
+%% ************************************************************************
+%% Parameters that govern population dynamics.  These include the behaviour
+%% of players meaning ageing, reproduction and partner selection.
+%%
+%% @param P Parameters the govern the game played by players
+%%
+%% @param A The action accumulator.
+%%
+:- type parameters(P, A) --->
+	p(
+	  base         :: ebea.population.parameters(P),
+	  siteDynamics :: ebea.population.site.dynamics(A)
+	).
+
 
 /**
  * Represents the round dynamic.  How the next population is calculated
@@ -99,12 +116,6 @@
  * Return the number of players in the population.
  */
 :- func size(population(C, P)) = int.
-
-% NOT USED
-% /**
-%  * Return a list with the players in the population.
-%  */
-% :- func players(population(C, P)) = list(player(C, P)).
 
 /**
  * Return the player's identification last used.
@@ -334,7 +345,8 @@ createInitialPopulation(PlayerParameters, Parameters, Population, !Random) :-
 			[], SitePlayerKeys,
 			EmptyPlayers, PopulationPlayers,
 			!Random),
-		SingleSite = site(float(Site^carryingCapacity), SitePlayerKeys, array.init(0, -1)),
+		SiteState^carryingCapacity = float(Site^carryingCapacity),
+		SingleSite = site(SiteState, SitePlayerKeys, array.init(0, -1)),
 		Population = pop(array.init(1, SingleSite), PopulationPlayers, NextKey)
 	)
 	;
@@ -343,11 +355,13 @@ createInitialPopulation(PlayerParameters, Parameters, Population, !Random) :-
 	ebea.population.players.init(EmptyPlayers, InitialKey),
 	list.map_foldl4(
 		ebea.population.site.createLatticeInitialSite(
-			float(Parameters^defaultCarryingCapacity), Geometry, PlayerParameters),
-		SiteIndexes, InitialSites,
+			float(Parameters^defaultCarryingCapacity),
+			Geometry,
+			PlayerParameters),
+		SiteIndexes,      InitialSites,
 		Parameters^sites, _,
-		InitialKey, NextKey,
-		EmptyPlayers, PopulationPlayers,
+		InitialKey,       NextKey,
+		EmptyPlayers,     PopulationPlayers,
 		!Random),
 	Population = pop(array.from_list(InitialSites), PopulationPlayers, NextKey)
 	).

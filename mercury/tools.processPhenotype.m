@@ -1,8 +1,9 @@
 /**
- * 
+ * Process the players' phenotype.  Currently we only print the opinion and
+ * uncertainty of applicable players.
 
  * @author Pedro Mariano
- * @version 1.0 2014/04/ 8
+ * @version 1.0 2014/04/08
  */
 :- module tools.processPhenotype.
 

@@ -89,16 +89,26 @@
 	noac.
 
 /**
+ * defaultParameters = Result
+
  * Return a default value of {@code parameters} that can be used when
  * constructing new values of this type.
  */
 :- func defaultParameters = ebea.player.energy.parameters.
 
 /**
+ * dialogParameters = Result
+
  * Return a dialog to display and edit values of {@code parameters} type.
  */
 :- func dialogParameters = list(dialogItem(ebea.player.energy.parameters)).
 
+/**
+ * defaultChromosome = Result
+
+ * Return a default value of {@code chromosome} that can be used when
+ * constructing new values of this type.
+ */
 :- func defaultChromosome = ebea.player.energy.chromosome.
 
 /**
@@ -132,8 +142,12 @@
 :- mode stepPlayGame(in, in, in, in, out, in, out, in, out, in, out) is det.
 
 /**
- * This predicate succeeds if the player does not have sufficient energy.
+ * stepSurvive(Parameters, Player, !Random, Dies)
+  
+ * Unifies {@code Dies} with {@code yes} if the player does not have
+ * sufficient energy.
  */
+
 :- pred stepSurvive(
 	ebea.player.energy.parameters, player(C, T),
 	R, R,

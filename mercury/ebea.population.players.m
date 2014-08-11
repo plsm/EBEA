@@ -34,7 +34,11 @@
 :- mode parseKey(out, in, out) is semidet.
 
 /**
- * Initialise the players of some population.
+ * init(Players, Key)
+  
+ * Initialise the players of some population.  The population is empty and
+ * {@code Key} is used to assign a key to the first player in the
+ * population.
  */
 :- pred init(players(C, T), key).
 :- mode init(out, out) is det.
@@ -79,7 +83,7 @@
  * fold(Closure, Players, !AC)
  *
  * Apply the given closure to all players of some population and reduce them
- * to {@code Result}.
+ * to {@code !:AC}.
 
 */
 :- pred fold(pred(player(C, P), A, A), players(C, P), A, A).
@@ -114,17 +118,13 @@
 )
 	is det.
 
+/**
+ * nextKey(!Key)
+
+ * Returns the next player key.
+ */
 :- pred nextKey(key, key).
 :- mode nextKey(in, out) is det.
-
-% /**
-%  * Given a list of players, return a random list of player's identification.
-
-%  * TODO: Should be in ebea.population.players or ebea.population.neighbours
-%  */
-% :- pred randomIDs(int, list(int), list(player(C, T)), R, R)
-% 	<= ePRNG(R).
-% :- mode randomIDs(in, out, in, in, out) is det.
 
 /**
  * update(ID, UpdateFunc, !Players)
@@ -132,24 +132,9 @@
  * Given a list of players, update the one with the given identification,
  * using the provided function.  The player to be updated is passed to the
  * function.
-  
-
- * TODO: Should be in ebea.population.players or ebea.population.neighbours
  */
 :- pred update(key, func(player(C, T)) = player(C, T), players(C, T), players(C, T)).
 :- mode update(in, in, in, out) is det.
-
-/**
- * player(Players, ID) = Result
-
- * Given a list of players and an identification, return the player with
- * that identification.  Throws an exception if there is no such player.
-  
- * TODO: Should be in ebea.population.players or ebea.population.neighbours
- */
-%:- func player(list(player(C, T)), int) = player(C, T).
-
-
 
 :- implementation.
 
@@ -241,19 +226,6 @@ filterFold4(Pred, !Players, !AC1, !AC2, !AC3, !AC4) :-
 %	map.foldl5(withKey_filterFold5(Pred), !.Players, !Players, !AC1, !AC2, !AC3, !AC4).
 
 
-
-% randomIDs(HowMany, Result, Players, !Random) :-
-% 	(if
-% 		HowMany =< 0
-% 	then
-% 		Result = []
-% 	else
-% 		rng.nextInt(0, list.length(Players) - 1, Index, !Random),
-% 		removeIndex(Index, Players, Player, RestPlayers),
-% 		Result = [Player^id | RestResult],
-% 		randomIDs(HowMany - 1, RestResult, RestPlayers, !Random)
-% 	).
-
 update(ID, UpdateFunc, !Players) :-
 	map.lookup(!.Players, ID) = Player,
 	map.set(ID, UpdateFunc(Player), !Players)
@@ -261,18 +233,6 @@ update(ID, UpdateFunc, !Players) :-
 
 nextKey(key(Key), key(Key + 1)).
 
-% player(Players, ID) = Result :-
-% 	Players = [],
-% 	throw("ebea.player.player/2: there is no such player identification in the list")
-% 	;
-% 	Players = [Player | Rest],
-% 	(if
-% 		Player^id = ID
-% 	then
-% 		Result = Player
-% 	else
-% 		Result = player(Rest, ID)
-% 	).
 
 
 

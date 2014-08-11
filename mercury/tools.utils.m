@@ -2,7 +2,7 @@
  * 
 
  * @author Pedro Mariano
- * @version 1.0 2014/04/ 8
+ * @version 1.0 2014/04/08
  */
 :- module tools.utils.
 

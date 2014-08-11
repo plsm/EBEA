@@ -1,8 +1,13 @@
 /**
- * 
+ * Provides types that represent birth data stored in binary format.  The
+ * stream with birth data is composed of records.  Each record represents
+ * the births occurred during an iteration.  If there was no births in an
+ * iteration, nothing is written.  The record contains the iteration number
+ * and a list with data of where the birth occurred (site index), player
+ * key and chromosome.
 
  * @author Pedro Mariano
- * @version 1.0 2014/03/ 8
+ * @version 1.0 2014/03/08
  */
 :- module ebea.streams.birth.
 

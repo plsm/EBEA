@@ -41,18 +41,12 @@
  */
 :- type runMode(C, T) --->
 	background ;
-%	interactively(pred(population(C, T), bool, io.state, io.state))
 	interactively(
 		first :: processPred(C, T),
 		itera :: interactivePred(C, T),
 		final :: processPred(C, T)
 	)
 	.
-
-% :- type runMode --->
-% 	background ;
-% 	interactively(pred(pop, bool, io.state, io.state))
-% 	.
 
 :- inst runMode ==
 	bound(
@@ -103,6 +97,52 @@
 :- mode iteration(in, in, in, out, in, out, in, out, in, out, di, uo) is det.
 
 
+%%
+%% iterationData3(Data, IterationNumber, !Population, !StrategyStats, !Distribution, !Random, !IO)
+%%
+%% Perform an iteration of EBEA and update the current population and
+%% statistics using type {@code data/3}.
+%%
+%% This predicate can be used to interactively run EBEA.
+%%
+%% @param G The game used by players (values of the payoff matrix, number
+%% of players...).
+%%
+%% @param P Other parameters of the game (mutation operator parameters...).
+%%
+%% @param A Game actions
+%%
+%% @param CS Players' strategy genes and game strategies.
+%%
+%% @param T Players' phenotype that result from strategy genes.
+%%
+%% @param AS The strategy accumulator used to reduce the strategy genes in
+%% every iteration.
+%%
+%% @param AA The game actions accumulator.
+%%
+:- pred iterationData3(
+	ebea.core.data(G, P, AA) :: in,
+	int                      :: in,
+	population(CS, T) :: in,  population(CS, T) :: out,
+	stats(AS)         :: in,  stats(AS)         :: out,
+	distribution      :: in,  distribution      :: out,
+	R                 :: in,  R                 :: out,
+	io.state          :: di,  io.state          :: uo
+) is det
+	<= (
+	ePRNG(R),
+	asymmetricGame(G, CS, A),
+	chromosome(CS, T, P),
+	foldable(CS, AS),
+	foldable(A, AA),
+	parseable(CS),
+	printable(CS),
+	printable(T),
+	printable(AS)
+).
+
+
 /**
  * run(Mode, Game, Parameters, Streams, NumberIterations, Population, !Distribution, !Random, !IO)
 
@@ -119,7 +159,11 @@
 
 :- implementation.
 
-:- import_module ebea.player, ebea.player.chromosome, ebea.player.age, ebea.player.selection, ebea.population.players, ebea.streams.birth, ebea.streams.death, ebea.streams.phenotype, ebea.streams.playerProfile.
+:- import_module ebea.player, ebea.player.chromosome, ebea.player.age,
+ebea.player.selection, ebea.population.players, ebea.population.site,
+ebea.streams.birth, ebea.streams.death, ebea.streams.phenotype,
+ebea.streams.playerProfile.
+
 :- import_module benchmarking, char, int, list, maybe, solutions, string.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -130,6 +174,13 @@
 		game  :: G,
 		gp    :: ebea.population.parameters(P),
 		s     :: ebea.streams.outStreams
+	).
+
+:- type data(G, P, AA) --->
+	data(
+		game3       :: G,
+		parameters3 :: ebea.population.parameters(P, AA),
+		streams3    :: ebea.streams.outStreams
 	).
 
 :- type stats(A) --->
@@ -216,6 +267,16 @@ iteration(Data, IterationNumber, !Population, ThisStats, NextStats, !Distributio
 	%io.print('\r', !IO), io.print(IterationNumber, !IO), io.print(' ', !IO), io.print('f', !IO), io.flush_output(io.stdout_stream, !IO),
 	ebea.core.printIterationDataToStreams(Data^s, Data^game, IterationNumber, !.Population, PlayerProfiles, Births, CemeteryCarryingCapacity, CemeteryOldAge, CemeteryStarvation, !IO)
 	.
+
+iterationData3(Data, IterationNumber, !Population, !StrategyStats, !Distribution, !Random, !IO) :-
+	Data^parameters3^siteDynamics = SiteDynamics,
+	(	%
+		SiteDynamics = static,
+		iteration(data(Data^game3, Data^parameters3^base, Data^streams3), IterationNumber, !Population, !StrategyStats, !Distribution, !Random, !IO)
+	;
+		SiteDynamics = dynamic(_),
+		true
+	).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of private predicates and functions

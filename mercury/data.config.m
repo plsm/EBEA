@@ -5,7 +5,7 @@
  * file.
 
  * @author Pedro Mariano
- * @version 1.0 2013/12/ 7
+ * @version 1.0 2013/12/07
  */
 :- module data.config.
 

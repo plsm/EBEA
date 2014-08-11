@@ -12,12 +12,46 @@
 :- include_module parameters.
 :- import_module ebea.population.site.parameters.
 
+%% ************************************************************************
+%% Represents a site in an EBEA population.  A site has a state, the list
+%% with current players, and an array with adjacent sites.  A site state
+%% may change during an evolutionary run depending on the dynamics.  The
+%% list of players contains players' keys.  This list changes from
+%% iteration to iteration as players reproduce and die.  The array with
+%% adjacent sites contains site indexes.  These refer to the site array in
+%% type {@code population}.  This array does not change during an
+%% evolutionary run.
+%%
 :- type site --->
 	site(
-		carryingCapacity  :: float,
+		state             :: ebea.population.site.state,
 		playerIDs         :: list(ebea.population.players.key),
 		neighbourSiteIdxs :: array(int)
 	).
+
+%% ************************************************************************
+%% The state of site which contains the data that can change during an
+%% iteration depending on a value of type {@code dynamics(A)}.
+%%
+%% @cons state(CarryingCapacity)
+%%
+:- type state --->
+	state(
+		carryingCapacity  :: float
+	).
+
+%% ************************************************************************
+%% Represents site dynamics.
+%%
+%% @cons static Site state does not change during an evolutionary run.
+%%
+%% @cons dynamic(F) Site state changes is given by function {@code F}.
+%% Given a site, it returns its next state.
+%%
+:- type dynamics(A) --->
+	static ;
+	dynamic(func(A, ebea.population.site.site) = ebea.population.site.state)
+	.
 
 /**
  * Initialise the players in some site given the initial site state parameters.
@@ -75,19 +109,6 @@
  * Return the number of players in the site.
  */
 :- func numberPlayers(site) = int.
-
-% /**
-%  * neighbours(ArraySites, RestPlayers, Player, Neighbours)
-  
-%  * For each player in the population return a list with the neighbours.
-%  * This predicate is similar to {@code neighbours/3} but is amenable to
-%  * predicates from module {@code solutions}.
-%  */
-% :- pred neighbours(array(site), list(player(C, P)), player(C, P), list(player(C, P))).
-% :- mode neighbours(in, in, out, out) is nondet.
-% %:- mode neighbours(in, in, in, out) is det.
-
-% :- func neighbours(array(site), list(player(C, P)), player(C, P)) = list(player(C, P)).
 
 
 /**
@@ -230,7 +251,8 @@ createInitialSite(PlayerParameters, SiteParameters, MSiteIndex, MSiteNeighbourho
 		;
 		MSiteNeighbourhood = yes(SiteNeighbourhood)
 	),
-	InitialSite^carryingCapacity = float(SiteParameters^carryingCapacity),
+	SiteState^carryingCapacity = float(SiteParameters^carryingCapacity),
+	InitialSite^state = SiteState,
 	InitialSite^playerIDs = SitePlayerKeys,
 	InitialSite^neighbourSiteIdxs = array.from_list(SiteNeighbourhood)
 	.
@@ -255,7 +277,8 @@ createLatticeInitialSite(
 			!PopulationPlayers,
 			!Random)
 	else
-		InitialSite^carryingCapacity = DefaultCarryingCapacity,
+		SiteState^carryingCapacity = DefaultCarryingCapacity,
+		InitialSite^state = SiteState,
 		InitialSite^playerIDs = [],
 		InitialSite^neighbourSiteIdxs = array.from_list(makeConnections(Geometry, SiteIndex))
 	).
@@ -306,7 +329,7 @@ stepDeath(Parameters, Population, Player, Filter, !Random,
 	!CemeteryCarryingCapacity, !CemeteryOldAge, !CemeteryStarvation)
 :-
 	Site = playerSite(Population, Player),
-	deathProbability(Site^carryingCapacity, numberPlayers(Site)) = Value,
+	deathProbability(Site^state^carryingCapacity, numberPlayers(Site)) = Value,
 	rng.flipCoin(Value, DiesCC, !Random),
 	(if
 		DiesCC = yes

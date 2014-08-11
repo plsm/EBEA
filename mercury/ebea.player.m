@@ -1,8 +1,12 @@
 /**
- * 
+ * This module and its sub-modules provide a set of types to represent a
+ * player in EBEA.  There are types for a player's chromosome, its
+ * phenotype, parameters that control several processes.  The processes are
+ * ageing and death by old age, energy acquisition and reproduction, and
+ * player selection.
 
  * @author Pedro Mariano
- * @version 1.0 2012/07/ 4
+ * @version 1.0 2012/07/04
  */
 :- module ebea.player.
 
@@ -44,10 +48,10 @@
 
 /**
  * Represents a player in the Energy Based Evolutionary Algorithm.  The
- * player contains it chromosome and it traits.  Type parameters {@code
+ * player contains its chromosome and its traits.  Type parameters {@code
  * C} and {@code T} represent the chromosome and the traits of the game
- * being used in EBEA.  The chromosome also contains genes related to the
- * energy component and selection process of the EBEA.  The same is true
+ * used in EBEA.  The chromosome also contains genes related to the
+ * energy and selection process of the EBEA.  The same is true
  * for the phenotype.
  */
 :- type player(C, T) --->
@@ -73,7 +77,7 @@
 :- instance printable(ac(A)) <= printable(A).
 
 /**
- * init(Parameters, Chromosome, ID, SiteIndex)
+ * init(Parameters, Chromosome, ID, SiteIndex, Player, !Random)
   
  * Initialise a player given its chromosome.
  */
