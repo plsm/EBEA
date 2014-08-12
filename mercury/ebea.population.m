@@ -14,7 +14,8 @@
 
 :- include_module neighbours, parameters, players, site.
 
-:- import_module ebea.population.neighbours, ebea.population.parameters, ebea.population.players, ebea.population.site.
+:- import_module ebea.population.neighbours, ebea.population.parameters,
+ebea.population.players, ebea.population.site.
 :- import_module chromosome, ebea.player, rng, rng.distribution, parseable.
 :- import_module array, char, io, list, maybe.
 
@@ -153,6 +154,14 @@
 	list(key), list(key), list(key))
 	<= (ePRNG(R), chromosome(C, T, P)).
 :- mode stepBirthDeath(in, in, out, in, out, in, out, out, out, out, out) is det.
+
+%% ************************************************************************
+%% stepUpdateSitesState(SiteDynamics, SiteActionAccumulator, !Population)
+%%
+%% For each site update its site using the given actions and closure.
+%%
+:- pred stepUpdateSitesState(ebea.population.site.dynamics(A), array(A), population(C, T), population(C, T)).
+:- mode stepUpdateSitesState(in, in, in, out) is det.
 
 /**
  * Return the player with the given identification.  Throws an exception if
@@ -449,6 +458,20 @@ stepBirthDeath(
 	ebea.population.site.removePlayers(CemeteryOldAge, [], CemeteryIDsOldAge, Sites1, Sites2),
 	ebea.population.site.removePlayers(CemeteryStarvation, [], CemeteryIDsStarvation, Sites2, NextSites),
 	NextPlayers = ebea.population.players.append(MappedPlayers, Newborn)
+	.
+
+stepUpdateSitesState(SiteDynamics, SiteActionAccumulator, !Population) :-
+	SiteDynamics = static
+	;
+	SiteDynamics = dynamic(UpdateFunc),
+	UpdateSite =
+	(pred(OldSite::in, NewSite::out, Index::in, NextIndex::out) is det :-
+		NextIndex = Index + 1,
+		array.lookup(SiteActionAccumulator, Index) = AA,
+		NewSite = 'state :='(OldSite, UpdateFunc(AA, OldSite))
+	),
+	array.map_foldl(UpdateSite, !.Population^sites, NewSites, 0, _),
+	!:Population = 'sites :='(!.Population, NewSites)
 	.
 
 update(ID, PlayerFunc, Population) = Result :-

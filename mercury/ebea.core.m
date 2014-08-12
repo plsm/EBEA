@@ -78,6 +78,44 @@
 	<= (chromosome(C, T, P), asymmetricGame(G, C), foldable(C, A)).
 :- mode init(in, in, in, in, out, out) is det.
 
+%% ************************************************************************
+%% initData3(Game, Parameters, Streams, Population, Data, Stats)
+%%
+%% Initialise data and statistics necessary to interactively run EBEA.  The
+%% data contains the game, population parameters and output streams.  This
+%% data controls all aspects of an EBEA run bar the number of iterations.
+%% The statistics are used when we only write a run summary.
+%%
+%% @param G The game used by players (values of the payoff matrix, number
+%% of players...).
+%%
+%% @param P Other parameters of the game (mutation operator parameters...).
+%%
+%% @param AA The game actions accumulator.
+%%
+%% @param CS Players' strategy genes and game strategies.
+%%
+%% @param T Players' phenotype that result from strategy genes.
+%%
+%% @param A Game actions.
+%%
+%% @param AS The strategy accumulator used to reduce the strategy genes in
+%% every iteration.
+%%
+:- pred initData3(
+	G                                 :: in,
+	ebea.population.parameters(P, AA) :: in,
+	ebea.streams.outStreams           :: in,
+	population(CS, T)                 :: in,
+	data(G, P, AA) :: out,
+	stats(AS)      :: out
+) is det
+	<= (
+	chromosome(CS, T, P),
+	asymmetricGame(G, CS, A),
+	foldable(CS, AS),
+	foldable(A, AA)
+).
 
 /**
  * Perform an iteration of EBEA and update the current population and
@@ -86,7 +124,7 @@
  * This predicate can be used to interactively run EBEA.
   
  */
-:- pred iteration(
+:- pred iterationData2(
 	ebea.core.data(G, P), int,
 	population(C, T), population(C, T),
 	stats(A), stats(A),
@@ -94,10 +132,10 @@
 	R, R,
 	io.state, io.state)
 	<= (ePRNG(R), asymmetricGame(G, C), chromosome(C, T, P), foldable(C, A), parseable(C), printable(C), printable(T), printable(A)).
-:- mode iteration(in, in, in, out, in, out, in, out, in, out, di, uo) is det.
+:- mode iterationData2(in, in, in, out, in, out, in, out, in, out, di, uo) is det.
 
 
-%%
+%% ************************************************************************
 %% iterationData3(Data, IterationNumber, !Population, !Stats, !Distribution, !Random, !IO)
 %%
 %% Perform an iteration of EBEA and update the current population and
@@ -206,6 +244,13 @@ init(Game, Parameters, Streams, Population, data(Game, Parameters, Streams), Sta
 	Stats^deathsStarvation = 0,
 	Stats^births = 0.
 
+initData3(Game, Parameters, Streams, Population, data(Game, Parameters, Streams), Stats) :-
+	Stats^reduceEvolution = ebea.population.fold_players(ebea.player.foldChromosome, Population, ebea.player.initAc),
+	Stats^deathsCarryingCapacity = 0,
+	Stats^deathsOldAge = 0,
+	Stats^deathsStarvation = 0,
+	Stats^births = 0.
+
 %:- pragma promise_pure(run/9).
 
 run(Mode, Game, Parameters, Streams, NumberIterations, Population, !Distribution, !Random, !IO) :-
@@ -225,7 +270,7 @@ run(Mode, Game, Parameters, Streams, NumberIterations, Population, !Distribution
 		(Mode^final)(FinalPopulation, !IO)
 	).
 
-iteration(Data, IterationNumber, !Population, ThisStats, NextStats, !Distribution, !Random, !IO) :-
+iterationData2(Data, IterationNumber, !Population, ThisStats, NextStats, !Distribution, !Random, !IO) :-
 	%io.print('\r', !IO), io.print(IterationNumber, !IO), io.print(' ', !IO), io.print('a', !IO), io.flush_output(io.stdout_stream, !IO),
 	ebea.population.fold3_PlayerNeighbour(
 		ebea.player.selection.stepSelectPartnersPlayGame(Data^gp^playerParameters, Data^game),
@@ -273,7 +318,7 @@ iterationData3(Data, IterationNumber, !Population, !Stats, !Distribution, !Rando
 	Data^parameters3^siteDynamics = SiteDynamics,
 	(	%
 		SiteDynamics = static,
-		iteration(data(Data^game3, Data^parameters3^base, Data^streams3), IterationNumber, !Population, !Stats, !Distribution, !Random, !IO)
+		iterationData2(data(Data^game3, Data^parameters3^base, Data^streams3), IterationNumber, !Population, !Stats, !Distribution, !Random, !IO)
 	;
 		SiteDynamics = dynamic(_),
 		ebea.population.fold4_PlayerNeighbour(
@@ -299,6 +344,7 @@ iterationData3(Data, IterationNumber, !Population, !Stats, !Distribution, !Rando
 			ebea.player.selection.roundCheckForDeadPlayers(Data^game3, list.append(CemeteryCarryingCapacity, list.append(CemeteryOldAge, CemeteryStarvation))),
 			!Population,
 			!Random),
+		ebea.population.stepUpdateSitesState(Data^parameters3^siteDynamics, SiteActionAccumulator, !Population),
 		!:Stats = stats(
 			ebea.population.fold_players(
 				ebea.player.foldChromosome,
@@ -333,7 +379,7 @@ runLoop(Mode, Data, TimeLeft, Iteration, !Population, !Stats, !Distribution, !Ra
 	% io.print(Iteration, !IO),
 	% io.flush_output(io.stdout_stream, !IO),
 	
-	iteration(Data, Iteration, !Population, !Stats, !Distribution, !Random, !IO),
+	iterationData2(Data, Iteration, !Population, !Stats, !Distribution, !Random, !IO),
 	(
 		Mode = background,
 		Stop = no
