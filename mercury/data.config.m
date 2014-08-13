@@ -24,7 +24,7 @@
 :- import_module gl.'pgp+pa',    gl.'pgp+pa'.game,    gl.'pgp+pa'.strategy,    gl.'pgp+pa'.parameters.
 :- import_module gl.ultimatum,   gl.ultimatum.game,   gl.ultimatum.strategy,   gl.ultimatum.parameters.
 
-:- import_module ebea, ebea.core, ebea.player, ebea.population, ebea.population.parameters, ebea.streams, ebea.player.age, ebea.player.energy, ebea.player.selection.
+:- import_module ebea, ebea.core, ebea.player, ebea.population, ebea.population.configuration, ebea.streams, ebea.player.age, ebea.player.energy, ebea.player.selection.
 :- import_module data.prng.
 :- import_module chromosome, game.
 :- import_module foldable, printable.
@@ -141,35 +141,23 @@
 
 
 
-:- type gameConfig(G, CS, P) --->
+:- type gameConfig(G, CS, P, A) --->
 	gameConfig(
 		game              :: G,
 		parameters        :: P,
-		initialPopulation :: ebea.population.parameters.parameters(CS)
+		initialPopulation :: ebea.population.configuration.configuration(CS, A)
 	).
 
 
-:- type config_2x2          == gameConfig(gl.'2x2'.game.game,       gl.'2x2'.strategy.strategy,       gl.'2x2'.parameters.parameters).
-:- type config_battlesexes  == gameConfig(gl.battlesexes.game.game, gl.battlesexes.strategy.strategy, gl.battlesexes.parameters.parameters).
-:- type config_centipede    == gameConfig(gl.centipede.game.game,   gl.centipede.strategy.strategy,   gl.centipede.parameters.parameters).
-:- type config_givetake     == gameConfig(gl.givetake.game.game,    gl.givetake.strategy.strategy,    gl.givetake.parameters.parameters).
-:- type config_investment   == gameConfig(gl.investment.game.game,  gl.investment.strategy.strategy,  gl.investment.parameter.parameter).
-:- type config_pgp          == gameConfig(gl.pgp.game.game,         gl.pgp.strategy.strategy,         gl.pgp.parameters.parameters).
-:- type 'config_pgp+pa'     == gameConfig(gl.'pgp+pa'.game.game,    gl.'pgp+pa'.strategy.strategy,    gl.'pgp+pa'.parameters.parameters).
-:- type config_ultimatum    == gameConfig(gl.ultimatum.game.game,   gl.ultimatum.strategy.strategy,   gl.ultimatum.parameters.parameters).
+:- type config_2x2          == gameConfig(gl.'2x2'.game.game,       gl.'2x2'.strategy.strategy,       gl.'2x2'.parameters.parameters,       unit).
+:- type config_battlesexes  == gameConfig(gl.battlesexes.game.game, gl.battlesexes.strategy.strategy, gl.battlesexes.parameters.parameters, unit).
+:- type config_centipede    == gameConfig(gl.centipede.game.game,   gl.centipede.strategy.strategy,   gl.centipede.parameters.parameters,   unit).
+:- type config_givetake     == gameConfig(gl.givetake.game.game,    gl.givetake.strategy.strategy,    gl.givetake.parameters.parameters,    unit).
+:- type config_investment   == gameConfig(gl.investment.game.game,  gl.investment.strategy.strategy,  gl.investment.parameter.parameter,    unit).
+:- type config_pgp          == gameConfig(gl.pgp.game.game,         gl.pgp.strategy.strategy,         gl.pgp.parameters.parameters,         unit).
+:- type 'config_pgp+pa'     == gameConfig(gl.'pgp+pa'.game.game,    gl.'pgp+pa'.strategy.strategy,    gl.'pgp+pa'.parameters.parameters,    unit).
+:- type config_ultimatum    == gameConfig(gl.ultimatum.game.game,   gl.ultimatum.strategy.strategy,   gl.ultimatum.parameters.parameters,   unit).
 
-/*
-:- type gameConfig --->
-	some [G, CS, T, P, A] (gameConfig(gameConfig(G, CS, P))
-	=> (
-		asymmetricGame(G, CS),
-			chromosome(CS, T, P),
-			foldable(CS, A),
-			parseable(CS),
-			printable(CS),
-			printable(T),
-			printable(A))).
-*/
 
 % :- func initSelectedGamePred(config, interactivePred(C, T)) = selectedGamePred.
 % :- mode initSelectedGamePred(in, in(interactivePred)) = out(selectedGamePred) is det.
@@ -220,42 +208,42 @@ default = config(
 	gameConfig(
 		gl.'2x2'.game.default,
 		gl.'2x2'.parameters.default,
-		ebea.population.parameters.default(gl.'2x2'.strategy.default)
+		ebea.population.configuration.default(gl.'2x2'.strategy.default)
 		),
 	gameConfig(
 		gl.battlesexes.game.default,
 		gl.battlesexes.parameters.default,
-		ebea.population.parameters.default(gl.battlesexes.strategy.default)
+		ebea.population.configuration.default(gl.battlesexes.strategy.default)
 		),
 	gameConfig(
 		gl.centipede.game.default,
 		gl.centipede.parameters.default,
-		ebea.population.parameters.default(gl.centipede.strategy.default)
+		ebea.population.configuration.default(gl.centipede.strategy.default)
 		),
 	gameConfig(
 		gl.givetake.game.default,
 		gl.givetake.parameters.default,
-		ebea.population.parameters.default(gl.givetake.strategy.default)
+		ebea.population.configuration.default(gl.givetake.strategy.default)
 		),
 	gameConfig(
 		gl.investment.game.default,
 		gl.investment.parameter.default,
-		ebea.population.parameters.default(gl.investment.strategy.default)
+		ebea.population.configuration.default(gl.investment.strategy.default)
 		),
 	gameConfig(
 		gl.pgp.game.default,
 		gl.pgp.parameters.default,
-		ebea.population.parameters.default(gl.pgp.strategy.default)
+		ebea.population.configuration.default(gl.pgp.strategy.default)
 		),
 	gameConfig(
 		gl.'pgp+pa'.game.default,
 		gl.'pgp+pa'.parameters.default,
-		ebea.population.parameters.default(gl.'pgp+pa'.strategy.default)
+		ebea.population.configuration.default(gl.'pgp+pa'.strategy.default)
 		),
 	gameConfig(
 		gl.ultimatum.game.default,
 		gl.ultimatum.parameters.default,
-		ebea.population.parameters.default(gl.ultimatum.strategy.default)
+		ebea.population.configuration.default(gl.ultimatum.strategy.default)
 		)
 	).
 
@@ -459,9 +447,21 @@ setData(_, Config) = ok(Config).
  * generator.  The initialisation may fail because of an invalid seed.
  */
 
-:- pred run_s1(ebea.core.runMode(CS, T), config, gameConfig(G, CS, P), io.state, io.state)
-	<= (asymmetricGame(G, CS), chromosome(CS, T, P), foldable(CS, A), parseable(CS), printable(CS), printable(T), printable(A)).
-:- mode run_s1(in(runMode), in, in, di, uo) is det.
+:- pred run_s1(
+	ebea.core.runMode(CS, T)   :: in(runMode),
+	config                     :: in,
+	gameConfig(G, CS, P, unit) :: in,
+	io.state :: di,  io.state :: uo
+) is det
+	<= (
+	asymmetricGame(G, CS),
+	chromosome(CS, T, P),
+	foldable(CS, ACS),
+	parseable(CS),
+	printable(CS),
+	printable(T),
+	printable(ACS)
+).
 
 run_s1(RunMode, AllConfig, GameConfig, !IO) :-
 	data.prng.init(AllConfig^random, MRandom, !IO),
@@ -483,17 +483,24 @@ run_s1(RunMode, AllConfig, GameConfig, !IO) :-
  * given run index.
  */
 
-:- pred run_s2(ebea.core.runMode(CS, T), config, gameConfig(G, CS, P), int, R, R, io.state, io.state)
+:- pred run_s2(
+	ebea.core.runMode(CS, T)   :: in(runMode),
+	config                     :: in,
+	gameConfig(G, CS, P, unit) :: in,
+	int                        :: in,
+	R :: in,  R :: out,
+	io.state :: di,  io.state :: uo
+) is det
 	<= (
-		asymmetricGame(G, CS),
-		chromosome(CS, T, P),
-		foldable(CS, A),
-		parseable(CS),
-		printable(CS),
-		printable(T),
-		printable(A),
-		ePRNG(R)).
-:- mode run_s2(in(runMode), in, in,  in,  in, out, di, uo) is det.
+	asymmetricGame(G, CS),
+	chromosome(CS, T, P),
+	foldable(CS, A),
+	parseable(CS),
+	printable(CS),
+	printable(T),
+	printable(A),
+	ePRNG(R)
+).
 
 run_s2(RunMode, AllConfig, ConfigGame, RunIndex, !Random, !IO) :-
 	io.format(io.stderr_stream, "Run %d ", [i(RunIndex)], !IO),
@@ -520,9 +527,24 @@ run_s2(RunMode, AllConfig, ConfigGame, RunIndex, !Random, !IO) :-
  * The third and last step we call predicate {@code ebea.core.run/12}.
  */
 
-:- pred run_s3(ebea.core.runMode(CS, T), config, gameConfig(G, CS, P), ebea.streams.outStreams, R, R, io.state, io.state)
-	<= (ePRNG(R), asymmetricGame(G, CS), chromosome(CS, T, P), foldable(CS, A), parseable(CS), printable(CS), printable(T), printable(A)).
-:- mode run_s3(in(runMode), in, in, in,  in, out, di, uo) is det.
+:- pred run_s3(
+	ebea.core.runMode(CS, T)   :: in(runMode),
+	config                     :: in,
+	gameConfig(G, CS, P, unit) :: in,
+	ebea.streams.outStreams    :: in,
+	R :: in,  R :: out,
+	io.state :: di,  io.state :: uo
+) is det
+	<= (
+	ePRNG(R),
+	asymmetricGame(G, CS),
+	chromosome(CS, T, P),
+	foldable(CS, A),
+	parseable(CS),
+	printable(CS),
+	printable(T),
+	printable(A)
+).
 
 run_s3(RunMode, AllConfig, GameConfig, Streams, !Random, !IO) :-
 	PlayerParameters^mutationProbability = float(AllConfig^mutationProbability),
@@ -711,7 +733,7 @@ run_s3(RunMode, AllConfig, GameConfig, Streams, !Random, !IO) :-
 % 	).
 
 
-:- func dialog(list(dialogItem(G)), list(dialogItem(P)), list(dialogItem(CS)), CS) = list(dialogItem(gameConfig(G, CS, P))).
+:- func dialog(list(dialogItem(G)), list(dialogItem(P)), list(dialogItem(CS)), CS) = list(dialogItem(gameConfig(G, CS, P, A))).
 
 dialog(DialogGame, DialogParameters, DialogStrategyChromosome, DefaultStrategyChromosome) =
 	[
@@ -721,7 +743,7 @@ dialog(DialogGame, DialogParameters, DialogStrategyChromosome, DefaultStrategyCh
 		'new editField'(
 			get_initialPopulation,
 			set_initialPopulation,
-			ebea.population.parameters.dialog(DefaultStrategyChromosome, DialogStrategyChromosome)))
+			ebea.population.configuration.dialog(DefaultStrategyChromosome, DialogStrategyChromosome)))
 	].
 
 
@@ -797,27 +819,27 @@ dialog_ultimatum = dialog(
 
                                                           % getters and setters for config/3
 
-:- func get_game(gameConfig(G, CS, P)) = G.
+:- func get_game(gameConfig(G, CS, P, A)) = G.
 
 get_game(Config) = Config^game.
 
-:- func set_game(gameConfig(G, CS, P), G) = setResult(gameConfig(G, CS, P)).
+:- func set_game(gameConfig(G, CS, P, A), G) = setResult(gameConfig(G, CS, P, A)).
 
 set_game(Config, Game) = ok('game :='(Config, Game)).
 
-:- func get_parameters(gameConfig(G, CS, P)) = P.
+:- func get_parameters(gameConfig(G, CS, P, A)) = P.
 
 get_parameters(Config) = Config^parameters.
 
-:- func set_parameters(gameConfig(G, CS, P), P) = setResult(gameConfig(G, CS, P)).
+:- func set_parameters(gameConfig(G, CS, P, A), P) = setResult(gameConfig(G, CS, P, A)).
 
 set_parameters(Config, Parameters) = ok('parameters :='(Config, Parameters)).
 
-:- func get_initialPopulation(gameConfig(G, CS, P)) = ebea.population.parameters.parameters(CS).
+:- func get_initialPopulation(gameConfig(G, CS, P, A)) = ebea.population.configuration.configuration(CS, A).
 
 get_initialPopulation(Config) = Config^initialPopulation.
 
-:- func set_initialPopulation(gameConfig(G, CS, P), ebea.population.parameters.parameters(CS)) = setResult(gameConfig(G, CS, P)).
+:- func set_initialPopulation(gameConfig(G, CS, P, A), ebea.population.configuration.configuration(CS, A)) = setResult(gameConfig(G, CS, P, A)).
 
 set_initialPopulation(Config, InitialPopulation) = ok('initialPopulation :='(Config, InitialPopulation)).
 

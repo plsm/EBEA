@@ -53,7 +53,7 @@
 :- import_module parseable, parseable.iou.
 :- import_module game, foldable, printable.
 :- import_module data.util.
-:- import_module ebea, ebea.player, ebea.player.selection, ebea.player.selection.pcv, ebea.population, ebea.population.parameters, ebea.population.players, ebea.streams, ebea.streams.birth, ebea.streams.death, ebea.streams.phenotype.
+:- import_module ebea, ebea.player, ebea.player.selection, ebea.player.selection.pcv, ebea.population, ebea.population.configuration, ebea.population.players, ebea.streams, ebea.streams.birth, ebea.streams.death, ebea.streams.phenotype.
 :- import_module array, bool, exception, int, maybe, set, solutions, string.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -122,21 +122,21 @@ runTool(Data, Parameters, Directory, Feedback, !IO) :-
  
  */
 :- pred create_populationDynamics_forRun_s1(
-	data.config.config            :: in,
-	G                             :: in,
-	ebea.player.ac(A)                        :: in,
-	ebea.population.parameters.parameters(C) :: in,
-	tools.populationDynamics.parameters :: in,
-	string :: in,
-	int                           :: in,
+	data.config.config                                 :: in,
+	G                                                  :: in,
+	ebea.player.ac(ACS)                                :: in,
+	ebea.population.configuration.configuration(CS, A) :: in,
+	tools.populationDynamics.parameters                :: in,
+	string                                             :: in,
+	int                                                :: in,
 	list(string) :: in, list(string) :: out,
 	io.state     :: di, io.state     :: uo
 ) is det <= (
-	asymmetricGame(G, C),
-	parseable(C),
-	printable(C),
-	foldable(C, A),
-	printable(A)
+	asymmetricGame(G, CS),
+	parseable(CS),
+	printable(CS),
+	foldable(CS, ACS),
+	printable(ACS)
 ).
 
 create_populationDynamics_forRun_s1(
@@ -189,22 +189,22 @@ create_populationDynamics_forRun_s1(
  */
 
 :- pred create_populationDynamics_forRun_s2(
-	data.config.config                       :: in,
-	G                                        :: in,
-	ebea.player.ac(A)                        :: in,
-	ebea.population.parameters.parameters(C) :: in,
-	tools.populationDynamics.parameters      :: in,
-	ebea.streams.inStreams                   :: in(detailedBin),
-	int                                      :: in,
+	data.config.config                                 :: in,
+	G                                                  :: in,
+	ebea.player.ac(ACS)                                :: in,
+	ebea.population.configuration.configuration(CS, A) :: in,
+	tools.populationDynamics.parameters                :: in,
+	ebea.streams.inStreams                             :: in(detailedBin),
+	int                                                :: in,
 	list(string) :: in, list(string) :: out,
 	io.state     :: di, io.state     :: uo
 ) is det
 <= (
-	asymmetricGame(G, C),
-	parseable(C),
-	printable(C),
-	foldable(C, A),
-	printable(A)
+	asymmetricGame(G, CS),
+	parseable(CS),
+	printable(CS),
+	foldable(CS, ACS),
+	printable(ACS)
 ).
 
 create_populationDynamics_forRun_s2(

@@ -12,9 +12,9 @@
 
 :- interface.
 
-:- include_module neighbours, parameters, players, site.
+:- include_module neighbours, configuration, players, site.
 
-:- import_module ebea.population.neighbours, ebea.population.parameters,
+:- import_module ebea.population.neighbours, ebea.population.configuration,
 ebea.population.players, ebea.population.site.
 :- import_module chromosome, ebea.player, rng, rng.distribution, parseable.
 :- import_module array, char, io, list, maybe.
@@ -108,7 +108,7 @@ ebea.population.players, ebea.population.site.
 :- inst playerDeath == bound(oldAge ; starvation).
 
 
-:- pred createInitialPopulation(ebea.player.parameters(P), ebea.population.parameters.parameters(C), population(C, T), R, R)
+:- pred createInitialPopulation(ebea.player.parameters(P), ebea.population.configuration.configuration(C, A), population(C, T), R, R)
 	<= (chromosome(C, T, P), ePRNG(R)).
 :- mode createInitialPopulation(in, in, out, in, out) is det.
 

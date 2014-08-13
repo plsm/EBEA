@@ -31,7 +31,7 @@
 :- implementation.
 
 :- import_module ebea, ebea.player, ebea.player.chromosome, ebea.player.selection, ebea.player.selection.chromosome,
-ebea.population, ebea.population.parameters, ebea.population.site, ebea.population.site.parameters,
+ebea.population, ebea.population.configuration, ebea.population.site, ebea.population.site.parameters,
 ebea.streams, ebea.streams.birth, ebea.streams.death, ebea.streams.phenotype.
 :- import_module data.util.
 :- import_module tools.utils.
@@ -297,7 +297,7 @@ printOpinionDynamics(OpinionStream, IterationIndex, ArrayPhenotypes, !IO) :-
 	list.foldl(PrintOpinionUncertainty, IterationPhenotypicRecords^phenotypes, !IO)
 	.
 
-:- pred opinionChromosomes(ebea.population.parameters.parameters(CS)).
+:- pred opinionChromosomes(ebea.population.configuration.configuration(CS, A)).
 :- mode opinionChromosomes(in) is semidet.
 
 opinionChromosomes(L) :-

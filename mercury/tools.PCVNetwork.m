@@ -67,7 +67,12 @@
 
 :- import_module data.util.
 :- import_module game, printable.
-:- import_module ebea, ebea.player, ebea.player.selection, ebea.player.selection.pcv, ebea.population, ebea.population.parameters, ebea.population.players, ebea.streams, ebea.streams.birth, ebea.streams.death, ebea.streams.phenotype.
+
+:- import_module ebea, ebea.player, ebea.player.selection,
+ebea.player.selection.pcv, ebea.population, ebea.population.configuration,
+ebea.population.players, ebea.streams, ebea.streams.birth,
+ebea.streams.death, ebea.streams.phenotype.
+
 :- import_module parseable, parseable.iou.
 :- import_module util.
 :- import_module tools.utils.
@@ -147,18 +152,18 @@ runTool(Data, Parameters, Directory, Feedback, !IO) :-
  
  */
 :- pred createProbabilityCombinationVectorsNetworksForRun_s1(
-	data.config.config                       :: in,
-	G                                        :: in,
-	ebea.population.parameters.parameters(C) :: in,
-	tools.'PCVNetwork'.parameters            :: in,
-	string                                   :: in,
-	int                                      :: in,
+	data.config.config                                 :: in,
+	G                                                  :: in,
+	ebea.population.configuration.configuration(CS, A) :: in,
+	tools.'PCVNetwork'.parameters                      :: in,
+	string                                             :: in,
+	int                                                :: in,
 	list(string) :: in, list(string) :: out,
 	io.state     :: di, io.state     :: uo
 ) is det <= (
-	asymmetricGame(G, C),
-	parseable(C),
-	printable(C)
+	asymmetricGame(G, CS),
+	parseable(CS),
+	printable(CS)
 ).
 
 createProbabilityCombinationVectorsNetworksForRun_s1(
@@ -200,18 +205,18 @@ createProbabilityCombinationVectorsNetworksForRun_s1(
 	.
 
 :- pred createProbabilityCombinationVectorsNetworksForRun_s2(
-	data.config.config                       :: in,
-	G                                        :: in,
-	ebea.population.parameters.parameters(C) :: in,
-	tools.'PCVNetwork'.parameters            :: in,
-	ebea.streams.inStreams                   :: in(detailedBin),
-	int                                      :: in,
+	data.config.config                                 :: in,
+	G                                                  :: in,
+	ebea.population.configuration.configuration(CS, A) :: in,
+	tools.'PCVNetwork'.parameters                      :: in,
+	ebea.streams.inStreams                             :: in(detailedBin),
+	int                                                :: in,
 	list(string)           :: in, list(string) :: out,
 	io.state               :: di, io.state     :: uo
 ) is det <= (
-	asymmetricGame(G, C),
-	parseable(C),
-	printable(C)
+	asymmetricGame(G, CS),
+	parseable(CS),
+	printable(CS)
 ).
 
 createProbabilityCombinationVectorsNetworksForRun_s2(

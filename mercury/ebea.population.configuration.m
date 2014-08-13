@@ -69,7 +69,11 @@
 /**
  * Return the initial population size.
  */
-:- func populationSize(ebea.population.configuration.configuration(_)) = int.
+:- func populationSize(ebea.population.configuration.configuration(_, _)) = int.
+
+:- pred parse_geometry(geometry, list(int), list(int)).
+:- mode parse_geometry(in, out, in) is det.
+:- mode parse_geometry(out, in, out) is semidet.
 
 :- implementation.
 
@@ -103,7 +107,7 @@ default(DefaultStrategyChromosome) = Result :-
 	Result^geometry = default_geometry,
 	Result^sites = [ebea.population.site.parameters.default(DefaultStrategyChromosome)],
 	Result^defaultCarryingCapacity = default_defaultCarryingCapacity,
-	Result^siteDynamic = static.
+	Result^siteDynamics = static.
 
 dialog(DefaultStrategyChromosome, DialogStrategyChromosome) =
 	[
@@ -119,10 +123,8 @@ dialog(DefaultStrategyChromosome, DialogStrategyChromosome) =
 parse(P) -->
 	parse_geometry(P^geometry),
 	parseable.parseList(normalType, P^sites),
-	% {P = parameters(_, _, _)},
-	% {P^geometry = throw("TODO implement parsing")},
-	% {P^sites = throw("TODO implement parsing")},
-	parseable.int32(P^defaultCarryingCapacity)
+	parseable.int32(P^defaultCarryingCapacity),
+	{P^siteDynamics = throw("Implement siteDynamics parsing")}
 	.
 
 populationSize(Configuration) = list.foldl(Sum, Configuration^sites, 0) :-
@@ -134,6 +136,21 @@ populationSize(Configuration) = list.foldl(Sum, Configuration^sites, 0) :-
 	ebea.population.site.parameters.populationSize(Site)
 	+ ebea.population.parameters.populationSize(Rest)
 */
+
+parse_geometry(P) -->
+	{P = wellmixed},
+	[0]
+	.
+
+parse_geometry(P) -->
+	{P = lattice(_, _, _, _)},
+	[1],
+	parseable.int32(P^xSize),
+	parseable.int32(P^ySize),
+	parse_neighbourhood(P^neighbourhood),
+	parse_boundary(P^boundary)
+	.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of private predicates and functions
@@ -497,26 +514,6 @@ set_boundary(P, V) = R :-
 	R = 'boundary :='(P, V)
 	.
 
-
-:- pred parse_geometry(geometry, list(int), list(int)).
-:- mode parse_geometry(in, out, in) is det.
-:- mode parse_geometry(out, in, out) is semidet.
-
-parse_geometry(P) -->
-	{P = wellmixed},
-	[0]
-	.
-
-parse_geometry(P) -->
-	{P = lattice(_, _, _, _)},
-	[1],
-	parseable.int32(P^xSize),
-	parseable.int32(P^ySize),
-	parse_neighbourhood(P^neighbourhood),
-	parse_boundary(P^boundary)
-	% {P^neighbourhood = throw("TODO implement parsing")},
-	% {P^boundary = throw("TODO implement parsing")}
-	.
 
 :- func default_sites = list(ebea.population.site.parameters.parameters(CS)).
 
