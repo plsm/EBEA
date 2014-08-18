@@ -48,9 +48,11 @@
 %% @cons dynamic(F) Site state changes is given by function {@code F}.
 %% Given a site, it returns its next state.
 %%
-:- type dynamics(A) --->
+%% @param AA The game actions accumulator.
+%%
+:- type dynamics(AA) --->
 	static ;
-	dynamic(func(A, ebea.population.site.site) = ebea.population.site.state)
+	dynamic(func(AA, ebea.population.site.site) = ebea.population.site.state)
 	.
 
 /**

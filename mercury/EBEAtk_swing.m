@@ -272,7 +272,7 @@ runBackground(Data, !IO) :-
 		;
 		MErrors = no
 	),
-	data.config.runBackground(Data^config, !IO).
+	data.config.runEBEA(background, Data^config, !IO).
 
 
 

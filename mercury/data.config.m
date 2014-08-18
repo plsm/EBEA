@@ -24,7 +24,9 @@
 :- import_module gl.'pgp+pa',    gl.'pgp+pa'.game,    gl.'pgp+pa'.strategy,    gl.'pgp+pa'.parameters.
 :- import_module gl.ultimatum,   gl.ultimatum.game,   gl.ultimatum.strategy,   gl.ultimatum.parameters.
 
-:- import_module ebea, ebea.core, ebea.player, ebea.population, ebea.population.configuration, ebea.streams, ebea.player.age, ebea.player.energy, ebea.player.selection.
+:- import_module ebea, ebea.core, ebea.player, ebea.population,
+ebea.population.configuration, ebea.population.site, ebea.streams,
+ebea.player.age, ebea.player.energy, ebea.player.selection.
 :- import_module data.prng.
 :- import_module chromosome, game.
 :- import_module foldable, printable.
@@ -59,7 +61,8 @@
 		ultimatum            :: config_ultimatum
 	).
 
-:- type selectedGamePred --->
+:- type runMode --->
+	background ;
 	'2x2'(
 		processPred(     gl.'2x2'.strategy.strategy,       unit) ,
 		interactivePred( gl.'2x2'.strategy.strategy,       unit) ,
@@ -85,7 +88,6 @@
 		interactivePred( gl.investment.strategy.strategy,   unit) ,
 		processPred(     gl.investment.strategy.strategy,   unit)
 	) ;
-%	investment(  processPred(gl.investment.strategy.strategy,  unit) ) ;
 	pgp(
 		processPred(     gl.pgp.strategy.strategy,         unit) ,
 		interactivePred( gl.pgp.strategy.strategy,         unit) ,
@@ -101,17 +103,11 @@
 		interactivePred( gl.ultimatum.strategy.strategy,   unit) ,
 		processPred(     gl.ultimatum.strategy.strategy,   unit)
 	)
-% 	'2x2'(       pred(population(gl.'2x2'.strategy.strategy,       unit), bool, io.state, io.state) ) ;
-% 	battlesexes( pred(population(gl.battlesexes.strategy.strategy, unit), bool, io.state, io.state) ) ;
-% 	centipede(   pred(population(gl.centipede.strategy.strategy,   unit), bool, io.state, io.state) ) ;
-% %	investment(  pred(population(gl.investment.strategy.strategy,  unit), bool, io.state, io.state) ) ;
-% 	pgp(         pred(population(gl.pgp.strategy.strategy,         unit), bool, io.state, io.state) ) ;
-% 	'pgp+pa'(    pred(population(gl.'pgp+pa'.strategy.strategy,    unit), bool, io.state, io.state) ) ;
-% 	ultimatum(   pred(population(gl.ultimatum.strategy.strategy,   unit), bool, io.state, io.state) )
 	.
 
-:- inst selectedGamePred ==
+:- inst runMode ==
 	bound(
+		background ;
 		'2x2'(       processPred, interactivePred, processPred ) ;
 		battlesexes( processPred, interactivePred, processPred ) ;
 		centipede(   processPred, interactivePred, processPred ) ;
@@ -120,34 +116,14 @@
 		pgp(         processPred, interactivePred, processPred ) ;
 		'pgp+pa'(    processPred, interactivePred, processPred ) ;
 		ultimatum(   processPred, interactivePred, processPred )
-		% '2x2'(       pred(in, out, di, uo) is det ) ;
-		% battlesexes( pred(in, out, di, uo) is det ) ;
-		% centipede(   pred(in, out, di, uo) is det ) ;
-		% pgp(         pred(in, out, di, uo) is det ) ;
-		% 'pgp+pa'(    pred(in, out, di, uo) is det ) ;
-		% ultimatum(   pred(in, out, di, uo) is det )
 	).
 
-% :- type gameSet --->
-% 	gameSet(
-% 		selectedGame         :: games,
-% 		cfg_2x2              :: config_2x2,
-% 		battlesexes          :: config_battlesexes,
-% 		centipede            :: config_centipede,
-% 		pgp                  :: config_pgp,
-% 		'pgp+pa'             :: 'config_pgp+pa',
-% 		ultimatum            :: config_ultimatum
-% 	).
-
-
-
-:- type gameConfig(G, CS, P, A) --->
+:- type gameConfig(G, CS, P, AA) --->
 	gameConfig(
 		game              :: G,
 		parameters        :: P,
-		initialPopulation :: ebea.population.configuration.configuration(CS, A)
+		initialPopulation :: ebea.population.configuration.configuration(CS, AA)
 	).
-
 
 :- type config_2x2          == gameConfig(gl.'2x2'.game.game,       gl.'2x2'.strategy.strategy,       gl.'2x2'.parameters.parameters,       unit).
 :- type config_battlesexes  == gameConfig(gl.battlesexes.game.game, gl.battlesexes.strategy.strategy, gl.battlesexes.parameters.parameters, unit).
@@ -169,11 +145,14 @@
 :- pred errors(config, string).
 :- mode errors(in, out) is nondet.
 
-:- pred runBackground(config, io.state, io.state).
-:- mode runBackground(in, di, uo) is det.
+% :- pred runBackground(config, io.state, io.state).
+% :- mode runBackground(in, di, uo) is det.
 
-:- pred runInteractively(selectedGamePred, config, io.state, io.state).
-:- mode runInteractively(in(selectedGamePred), in, di, uo) is det.
+% :- pred runInteractively(selectedGamePred, config, io.state, io.state).
+% :- mode runInteractively(in(selectedGamePred), in, di, uo) is det.
+
+:- pred runEBEA(data.config.runMode, config, io.state, io.state).
+:- mode runEBEA(in(data.config.runMode), in, di, uo) is det.
 
 :- func random(config) = data.prng.supplyParameter.
 :- func 'random :='(config, data.prng.supplyParameter) = config.
@@ -249,7 +228,6 @@ default = config(
 
 dialog =
 	[
-%	di(label("pseudo-random number generator"),  'new editField'(  get_random,               set(set_random), data.prng.dialog)),
 	di(label("pseudo-random number generator"),  subdialog([data.prng.dialogItem])),
 	di(label("number runs"),                     updateFieldInt(   get_numberRuns,           checkInt(   "number runs",           bounded(10, yes),  unbound, set_numberRuns))),
 	di(label("number iterations"),               updateFieldInt(   get_numberIterations,     checkInt(   "number iterations",     bounded(100, yes), unbound, set_numberIterations))),
@@ -322,7 +300,7 @@ errors(Config, Error) :-
 % 	Config^selectedGame = ultimatum,
 % 	Result = ultimatum(Pred)
 % 	.
-	
+/*	
 runBackground(Config, !IO) :-
 	Config^selectedGame = '2x2',
 	run_s1(background, Config, Config^cfg_2x2, !IO)
@@ -379,27 +357,42 @@ runInteractively(SelectedGamePred, Config, !IO) :-
 			'cakeSizeCopy :='(GameConfig0^parameters, GameConfig0^game^cakeSize)),
 	run_s1(interactively(FirstPred, IteraPred, FinalPred), Config, GameConfig1, !IO)
 	.
-
-% runAnonymous(Pred, Config, !IO) :-
-% 	Config^selectedGame = '2x2',
-% 	run_s1(interactively(Pred), Config, Config^cfg_2x2, !IO)
-% 	;
-% 	Config^selectedGame = battlesexes,
-% 	run_s1(interactively(Pred), Config, Config^battlesexes, !IO)
-% 	;
-% 	Config^selectedGame = centipede,
-% 	run_s1(interactively(Pred), Config, Config^centipede, !IO)
-% 	;
-% 	Config^selectedGame = pgp,
-% 	run_s1(interactively(Pred), Config, Config^pgp, !IO)
-% 	;
-% 	Config^selectedGame = 'pgp+pa',
-% 	run_s1(interactively(Pred), Config, Config^'pgp+pa', !IO)
-% 	;
-% 	Config^selectedGame = ultimatum,
-% 	run_s1(interactively(Pred), Config, Config^ultimatum, !IO).
-
-
+*/
+runEBEA(RunMode, Config, !IO) :-
+	(if
+		RunMode = '2x2'(_, _, _),
+		Config^selectedGame \= '2x2'
+	;
+		RunMode = battlesexes(_, _, _),
+		Config^selectedGame \= battlesexes
+	;
+		RunMode = centipede(_, _, _),
+		Config^selectedGame \= centipede
+	;
+		RunMode = givetake(_, _, _),
+		Config^selectedGame \= givetake
+	;
+		RunMode = investment(_, _, _),
+		Config^selectedGame \= investment
+	;
+		RunMode = pgp(_, _, _),
+		Config^selectedGame \= pgp
+	;
+		RunMode = 'pgp+pa'(_, _, _),
+		Config^selectedGame \= 'pgp+pa'
+	;
+		RunMode = ultimatum(_, _, _),
+		Config^selectedGame \= ultimatum
+	% ;
+	% 	RunMode = (_, _, _),
+	% 	Config^selectedGame \= 
+	then
+		io.format(io.stderr_stream, "Overriding selected game %s.\n", [s(string(Config^selectedGame))], !IO)
+	else
+		true
+	),
+	runVS1(RunMode, Config, !IO)
+	.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of private predicates and functions
@@ -439,13 +432,241 @@ setChoice(Config, Index) = ok(sc(NextConfig, NextConfig)) :-
 
 setData(_, Config) = ok(Config).
 
+%% ************************************************************************
+%% runVS1(Config, !IO)
+%%
+%% The first step of an EBEA run is to initialise the pseudo-random number
+%% generator.  The initialisation may fail because of an invalid seed.
+%%
+:- pred runVS1(
+	data.config.runMode :: in(data.config.runMode),
+	config              :: in,
+	io.state :: di,  io.state :: uo
+) is det.
 
+runVS1(RunMode, Config, !IO) :-
+	data.prng.init(Config^random, MRandom, !IO),
+	(	%
+		MRandom = ok({Supply, Seed}),
+		Supply = supply(Random),
+		io.format(io.stderr_stream, "RANDOM SEED %d\n", [i(Seed)], !IO),
+		int.fold_up2(runVS2(RunMode, Config), 1, Config^numberRuns, Random, _, !IO)
+		;
+		MRandom = error(Msg),
+		io.print(io.stderr_stream, Msg, !IO),
+		io.nl(io.stderr_stream, !IO)
+	).
 
+%% ************************************************************************
+%% runVS2(Config, RunIndex, !Random, !IO)
+%%
+%% The second step of an EBEA run is to open the output streams for the
+%% given run index.
+%%
+:- pred runVS2(
+	data.config.runMode :: in(data.config.runMode),
+	config              :: in,
+	int                 :: in,
+	R        :: in,  R        :: out,
+	io.state :: di,  io.state :: uo
+) is det
+	<= (
+	ePRNG(R)
+).
 
-/**
+runVS2(RunMode, Config, RunIndex, !Random, !IO) :-
+	io.format(io.stderr_stream, "Run %d ", [i(RunIndex)], !IO),
+	io.flush_output(io.stderr_stream, !IO),
+	ebea.streams.openOutputStreams(Config^level, yes(string.format("_R%d", [i(RunIndex)])), IMStreams, !IO),
+	(
+		IMStreams = ok(Streams),
+		runVS3(RunMode, Config, Streams, !Random, !IO),
+		io.print(io.stderr_stream, "finished\n", !IO)
+		;
+		IMStreams = error(Msg),
+		io.print(io.stderr_stream, Msg, !IO),
+		io.nl(io.stderr_stream, !IO)
+	).
+
+%% ************************************************************************
+%% runVS3(Config, RunIndex, !Random, !IO)
+%%
+%% The third step of an EBEA run is to switch to the selected game.
+%%
+:- pred runVS3(
+	data.config.runMode     :: in(data.config.runMode),
+	config                  :: in,
+	ebea.streams.outStreams :: in,
+	R        :: in,  R        :: out,
+	io.state :: di,  io.state :: uo
+) is det
+	<= (
+	ePRNG(R)
+).
+
+runVS3(RunMode, Config, Streams, !Random, !IO) :-
+	RunMode = background,
+	(
+		Config^selectedGame = '2x2',
+		runVS4Game2(background, Config, Config^cfg_2x2, Streams, !Random, !IO)
+	;
+		Config^selectedGame = battlesexes,
+		runVS4Game2(background, Config, Config^battlesexes, Streams, !Random, !IO)
+	;
+		Config^selectedGame = centipede,
+		runVS4Game2(background, Config, Config^centipede, Streams, !Random, !IO)
+	;
+		Config^selectedGame = givetake,
+		runVS4Game2(background, Config, Config^givetake, Streams, !Random, !IO)
+	;
+		Config^selectedGame = investment,
+		runVS4Game2(background, Config, Config^investment, Streams, !Random, !IO)
+	;
+		Config^selectedGame = pgp,
+		runVS4Game2(background, Config, Config^pgp, Streams, !Random, !IO)
+	;
+		Config^selectedGame = 'pgp+pa',
+		runVS4Game2(background, Config, Config^'pgp+pa', Streams, !Random, !IO)
+	;
+		Config^selectedGame = ultimatum,
+		runVS4Game2(background, Config, Config^ultimatum, Streams, !Random, !IO)
+	)
+	;
+	RunMode = '2x2'(FirstPred, IteraPred, FinalPred),
+	runVS4Game2(interactively(FirstPred, IteraPred, FinalPred), Config, Config^cfg_2x2, Streams, !Random, !IO)
+	;
+	RunMode = battlesexes(FirstPred, IteraPred, FinalPred),
+	runVS4Game2(interactively(FirstPred, IteraPred, FinalPred), Config, Config^battlesexes, Streams, !Random, !IO)
+	;
+	RunMode = centipede(FirstPred, IteraPred, FinalPred),
+	runVS4Game2(interactively(FirstPred, IteraPred, FinalPred), Config, Config^centipede, Streams, !Random, !IO)
+	;
+	RunMode = givetake(FirstPred, IteraPred, FinalPred),
+	runVS4Game2(interactively(FirstPred, IteraPred, FinalPred), Config, Config^givetake, Streams, !Random, !IO)
+	;
+	RunMode = investment(FirstPred, IteraPred, FinalPred),
+	runVS4Game2(interactively(FirstPred, IteraPred, FinalPred), Config, Config^investment, Streams, !Random, !IO)
+	;
+	RunMode = pgp(FirstPred, IteraPred, FinalPred),
+	runVS4Game2(interactively(FirstPred, IteraPred, FinalPred), Config, Config^pgp, Streams, !Random, !IO)
+	;
+	RunMode = 'pgp+pa'(FirstPred, IteraPred, FinalPred),
+	runVS4Game2(interactively(FirstPred, IteraPred, FinalPred), Config, Config^'pgp+pa', Streams, !Random, !IO)
+	;
+	RunMode = ultimatum(FirstPred, IteraPred, FinalPred),
+	GameConfig0 = Config^ultimatum,
+	GameConfig1 =
+		'parameters :='(GameConfig0,
+			'cakeSizeCopy :='(GameConfig0^parameters, GameConfig0^game^cakeSize)),
+	runVS4Game2(interactively(FirstPred, IteraPred, FinalPred), Config, GameConfig1, Streams, !Random, !IO)
+	.
+
+%% ************************************************************************
+%% runVS4Game2(Config, RunIndex, !Random, !IO)
+%%
+%% The fourth step of an EBEA run is to call {@code ebea.core.runGame2/12}
+%% for games that implement the {@code asymmetricGame/2} type-class.
+%%
+:- pred runVS4Game2(
+	ebea.core.runMode(CS, T)   :: in(ebea.core.runMode),
+	config                     :: in,
+	gameConfig(G, CS, P, unit) :: in,
+	ebea.streams.outStreams    :: in,
+	R        :: in,  R        :: out,
+	io.state :: di,  io.state :: uo
+) is det
+	<= (
+	ePRNG(R),
+	asymmetricGame(G, CS),
+	chromosome(CS, T, P),
+	foldable(CS, ACS),
+	parseable(CS),
+	printable(CS),
+	printable(T),
+	printable(ACS)
+).
+
+runVS4Game2(RunMode, AllConfig, GameConfig, Streams, !Random, !IO) :-
+	PlayerParameters^mutationProbability = float(AllConfig^mutationProbability),
+	PlayerParameters^agePar = AllConfig^ageParameters,
+	PlayerParameters^energyPar = AllConfig^energyParameters,
+	PlayerParameters^selectionPar = AllConfig^selectionParameters,
+	PlayerParameters^gamePar = GameConfig^parameters,
+
+	Parameters^migrationProbability = float(AllConfig^migrationProbability),
+	Parameters^dynamic = AllConfig^dynamic,
+	Parameters^playerParameters = PlayerParameters,
+	
+	ebea.population.createInitialPopulation(PlayerParameters, GameConfig^initialPopulation, Population, !Random),
+	ebea.core.runGame2(RunMode, GameConfig^game, Parameters, Streams, AllConfig^numberIterations, Population, rng.distribution.init, _, !Random, !IO),
+	ebea.streams.closeOutputStreams(Streams, !IO)
+	.
+
+%% ************************************************************************
+%% runVS4Game3(Config, RunIndex, !Random, !IO)
+%%
+%% The fourth step of an EBEA run is to call {@code ebea.core.runGame2/12}
+%% for games that implement the {@code asymmetricGame/3} type-class.
+%%
+:- pred runVS4Game3(
+	ebea.core.runMode(CS, T) :: in(ebea.core.runMode),
+	config                   :: in,
+	gameConfig(G, CS, P, AA) :: in,
+	ebea.streams.outStreams  :: in,
+	R        :: in,  R        :: out,
+	io.state :: di,  io.state :: uo
+) is det
+	<= (
+	ePRNG(R),
+	asymmetricGame(G, CS, A),
+	chromosome(CS, T, P),
+	foldable(CS, ACS),
+	foldable(A, AA),
+	parseable(CS),
+	parseable(A),
+	printable(CS),
+	printable(T),
+	printable(ACS)
+).
+
+runVS4Game3(RunMode, AllConfig, GameConfig, Streams, !Random, !IO) :-
+	PlayerParameters^mutationProbability = float(AllConfig^mutationProbability),
+	PlayerParameters^agePar = AllConfig^ageParameters,
+	PlayerParameters^energyPar = AllConfig^energyParameters,
+	PlayerParameters^selectionPar = AllConfig^selectionParameters,
+	PlayerParameters^gamePar = GameConfig^parameters,
+
+	Base^migrationProbability = float(AllConfig^migrationProbability),
+	Base^dynamic = AllConfig^dynamic,
+	Base^playerParameters = PlayerParameters,
+	PopulationParameters^base = Base,
+	PopulationParameters^siteDynamics = GameConfig^initialPopulation^siteDynamics,
+	
+	ebea.population.createInitialPopulation(
+		PlayerParameters,
+		GameConfig^initialPopulation,
+		Population,
+		!Random
+	),
+	ebea.core.runGame3(
+		RunMode,
+		GameConfig^game,
+		PopulationParameters,
+		Streams,
+		AllConfig^numberIterations,
+		Population,
+		rng.distribution.init, _,
+		!Random,
+		!IO
+	),
+	ebea.streams.closeOutputStreams(Streams, !IO)
+	.
+
+/*
+**
  * The first step of an EBEA run is to initialise the pseudo-random number
  * generator.  The initialisation may fail because of an invalid seed.
- */
+ *
 
 :- pred run_s1(
 	ebea.core.runMode(CS, T)   :: in(runMode),
@@ -478,10 +699,10 @@ run_s1(RunMode, AllConfig, GameConfig, !IO) :-
 		io.nl(io.stderr_stream, !IO)
 	).
 
-/**
+**
  * The second step of an EBEA run is to open the output streams for the
  * given run index.
- */
+ *
 
 :- pred run_s2(
 	ebea.core.runMode(CS, T)   :: in(runMode),
@@ -523,9 +744,9 @@ run_s2(RunMode, AllConfig, ConfigGame, RunIndex, !Random, !IO) :-
 		io.nl(io.stderr_stream, !IO)
 	).
 
-/**
+**
  * The third and last step we call predicate {@code ebea.core.run/12}.
- */
+ *
 
 :- pred run_s3(
 	ebea.core.runMode(CS, T)   :: in(runMode),
@@ -558,10 +779,10 @@ run_s3(RunMode, AllConfig, GameConfig, Streams, !Random, !IO) :-
 	Parameters^playerParameters = PlayerParameters,
 	
 	ebea.population.createInitialPopulation(PlayerParameters, GameConfig^initialPopulation, Population, !Random),
-	ebea.core.run(RunMode, GameConfig^game, Parameters, Streams, AllConfig^numberIterations, Population, rng.distribution.init, _, !Random, !IO),
+	ebea.core.runGame2(RunMode, GameConfig^game, Parameters, Streams, AllConfig^numberIterations, Population, rng.distribution.init, _, !Random, !IO),
 	ebea.streams.closeOutputStreams(Streams, !IO)
 	.
-
+*/
 
 
 

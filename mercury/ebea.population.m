@@ -73,8 +73,8 @@ ebea.population.players, ebea.population.site.
 %%
 :- type parameters(P, A) --->
 	p(
-	  base         :: ebea.population.parameters(P),
-	  siteDynamics :: ebea.population.site.dynamics(A)
+		base         :: ebea.population.parameters(P),
+		siteDynamics :: ebea.population.site.dynamics(A)
 	).
 
 
@@ -158,10 +158,16 @@ ebea.population.players, ebea.population.site.
 %% ************************************************************************
 %% stepUpdateSitesState(SiteDynamics, SiteActionAccumulator, !Population)
 %%
-%% For each site update its site using the given actions and closure.
+%% For each site update its site using the given game actions accumulator
+%% and closure.
 %%
-:- pred stepUpdateSitesState(ebea.population.site.dynamics(A), array(A), population(C, T), population(C, T)).
-:- mode stepUpdateSitesState(in, in, in, out) is det.
+%% @param AA The game actions accumulator.
+%%
+:- pred stepUpdateSitesState(
+	ebea.population.site.dynamics(AA) :: in,
+	array(AA)                         :: in,
+	population(C, T) :: in,  population(C, T) :: out
+) is det.
 
 /**
  * Return the player with the given identification.  Throws an exception if

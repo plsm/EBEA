@@ -255,6 +255,12 @@ arrayInitUnique(Size, Item) = Result :-
     ML_init_array(Array, Size, Item);
 ").
 
+:- pragma foreign_proc("Java",
+    arrayInitUnique(Size::in, Item::in, Array::uo),
+    [will_not_call_mercury, promise_pure, thread_safe],
+"
+    Array = jmercury.array.ML_new_array(Size, Item, true);
+").
 
 
 :- pragma foreign_proc("C",
@@ -300,6 +306,25 @@ arrayInitUnique(Size, Item) = Result :-
     Array0->elements[Index] = Item; /* destructive update! */
     Array = Array0;
 ").
+
+:- pragma foreign_proc("Java",
+    arrayUnsafeSet(Index::in, Item::in, Array0::di, Array::uo),
+    [will_not_call_mercury, promise_pure, thread_safe],
+"
+    if (Array0 instanceof int[]) {
+        ((int[]) Array0)[Index] = (Integer) Item;
+    } else if (Array0 instanceof double[]) {
+        ((double[]) Array0)[Index] = (Double) Item;
+    } else if (Array0 instanceof char[]) {
+        ((char[]) Array0)[Index] = (Character) Item;
+    } else if (Array0 instanceof boolean[]) {
+        ((boolean[]) Array0)[Index] = (Boolean) Item;
+    } else {
+        ((Object[]) Array0)[Index] = Item;
+    }
+    Array = Array0;         /* destructive update! */
+").
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of private predicates and functions

@@ -31,6 +31,8 @@
 
 :- type data(G, P).
 
+:- type data(G, P, AA).
+
 /**
  * Statistics about the events in an EBEA run.
  */
@@ -66,7 +68,7 @@
 	some [C, T] pop(population(C, T)).
 
 /**
- * init(Game, Parameters, Streams, Population, Data, Stats)
+ * initData2(Game, Parameters, Streams, Population, Data, Stats)
   
  * Initialise data and statistics necessary to interactively run EBEA.  The
  * data contains the game, population parameters and output streams.  This
@@ -74,9 +76,19 @@
  * The statistics are used when we only write a run summary.
   
  */
-:- pred init(G, ebea.population.parameters(P), ebea.streams.outStreams, population(C, T), data(G, P), stats(A))
-	<= (chromosome(C, T, P), asymmetricGame(G, C), foldable(C, A)).
-:- mode init(in, in, in, in, out, out) is det.
+:- pred initData2(
+	G                             :: in,
+	ebea.population.parameters(P) :: in,
+	ebea.streams.outStreams       :: in,
+	population(CS, T)             :: in,
+	data(G, P) :: out,
+	stats(AS)  :: out
+) is det
+	<= (
+	chromosome(CS, T, P),
+	asymmetricGame(G, CS),
+	foldable(CS, AS)
+).
 
 %% ************************************************************************
 %% initData3(Game, Parameters, Streams, Population, Data, Stats)
@@ -163,7 +175,7 @@
 	ebea.core.data(G, P, AA) :: in,
 	int                      :: in,
 	population(CS, T) :: in,  population(CS, T) :: out,
-	stats(AS)         :: in,  stats(AS)         :: out,
+	stats(ACS)        :: in,  stats(ACS)        :: out,
 	distribution      :: in,  distribution      :: out,
 	R                 :: in,  R                 :: out,
 	io.state          :: di,  io.state          :: uo
@@ -172,12 +184,12 @@
 	ePRNG(R),
 	asymmetricGame(G, CS, A),
 	chromosome(CS, T, P),
-	foldable(CS, AS),
+	foldable(CS, ACS),
 	foldable(A, AA),
 	parseable(CS),
 	printable(CS),
 	printable(T),
-	printable(AS)
+	printable(ACS)
 ).
 
 
@@ -190,9 +202,55 @@
  * distributions.
   
  */
-:- pred run(runMode(C, T), G, ebea.population.parameters(P), ebea.streams.outStreams, int, population(C, T), distribution, distribution, R, R, io.state, io.state)
+:- pred runGame2(runMode(C, T), G, ebea.population.parameters(P), ebea.streams.outStreams, int, population(C, T), distribution, distribution, R, R, io.state, io.state)
 	<= (ePRNG(R), asymmetricGame(G, C), chromosome(C, T, P), foldable(C, A), parseable(C), printable(C), printable(T), printable(A)).
-:- mode run(in(runMode), in, in, in, in, in,  in, out, in, out, di, uo) is det.
+:- mode runGame2(in(runMode), in, in, in, in, in,  in, out, in, out, di, uo) is det.
+
+
+%% ************************************************************************
+%% runGame3(Mode, Game, Parameters, Streams, NumberIterations, Population, !Distribution, !Random, !IO)
+%%
+%% Perform a run of EBEA using a game that conforms to the {@code
+%% asymmetricGame/3} type-class.  
+%%
+%% @param G The game used by players (values of the payoff matrix, number
+%% of players...).
+%%
+%% @param P Other parameters of the game (mutation operator parameters...).
+%%
+%% @param AA The game actions accumulator.
+%%
+%% @param CS Players' strategy genes and game strategies.
+%%
+%% @param T Players' phenotype that result from strategy genes.
+%%
+%% @param A Game actions.
+%%
+%% @param ACS The strategy accumulator used to reduce the strategy genes in
+%% every iteration.
+%%
+:- pred runGame3(
+	runMode(CS, T)                    :: in(runMode),
+	G                                 :: in,
+	ebea.population.parameters(P, AA) :: in,
+	ebea.streams.outStreams           :: in,
+	int                               :: in,
+	population(CS, T)                 :: in,
+	distribution :: in,  distribution :: out,
+	R            :: in,  R            :: out,
+	io.state     :: di,  io.state     :: uo
+) is det
+	<= (
+	ePRNG(R),
+	asymmetricGame(G, CS, A),
+	chromosome(CS, T, P),
+	foldable(CS, ACS),
+	foldable(A, AA),
+	parseable(CS),
+	printable(CS),
+	printable(T),
+	printable(ACS)
+).
 
 
 :- implementation.
@@ -237,7 +295,7 @@ ebea.streams.playerProfile.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of exported predicates and functions
 
-init(Game, Parameters, Streams, Population, data(Game, Parameters, Streams), Stats) :-
+initData2(Game, Parameters, Streams, Population, data(Game, Parameters, Streams), Stats) :-
 	Stats^reduceEvolution = ebea.population.fold_players(ebea.player.foldChromosome, Population, ebea.player.initAc),
 	Stats^deathsCarryingCapacity = 0,
 	Stats^deathsOldAge = 0,
@@ -253,8 +311,8 @@ initData3(Game, Parameters, Streams, Population, data(Game, Parameters, Streams)
 
 %:- pragma promise_pure(run/9).
 
-run(Mode, Game, Parameters, Streams, NumberIterations, Population, !Distribution, !Random, !IO) :-
-	init(Game, Parameters, Streams, Population, Data, Stats),
+runGame2(Mode, Game, Parameters, Streams, NumberIterations, Population, !Distribution, !Random, !IO) :-
+	initData2(Game, Parameters, Streams, Population, Data, Stats),
 	printInitialDataToStreams(Data^s, Population, !IO),
 	(
 		Mode = background
@@ -262,7 +320,24 @@ run(Mode, Game, Parameters, Streams, NumberIterations, Population, !Distribution
 		Mode = interactively(_, _, _),
 		(Mode^first)(Population, !IO)
 	),
-	runLoop(Mode, Data, NumberIterations, 0, Population, FinalPopulation, Stats, _, !Distribution, !Random, !IO),
+	runLoopData2(Mode, Data, NumberIterations, 0, Population, FinalPopulation, Stats, _, !Distribution, !Random, !IO),
+	(
+		Mode = background
+		;
+		Mode = interactively(_, _, _),
+		(Mode^final)(FinalPopulation, !IO)
+	).
+
+runGame3(Mode, Game, Parameters, Streams, NumberIterations, Population, !Distribution, !Random, !IO) :-
+	initData3(Game, Parameters, Streams, Population, Data, Stats),
+	printInitialDataToStreams(Data^streams3, Population, !IO),
+	(
+		Mode = background
+		;
+		Mode = interactively(_, _, _),
+		(Mode^first)(Population, !IO)
+	),
+	runLoopData3(Mode, Data, NumberIterations, 0, Population, FinalPopulation, Stats, _, !Distribution, !Random, !IO),
 	(
 		Mode = background
 		;
@@ -316,7 +391,7 @@ iterationData2(Data, IterationNumber, !Population, ThisStats, NextStats, !Distri
 
 iterationData3(Data, IterationNumber, !Population, !Stats, !Distribution, !Random, !IO) :-
 	Data^parameters3^siteDynamics = SiteDynamics,
-	(	%
+	(
 		SiteDynamics = static,
 		iterationData2(data(Data^game3, Data^parameters3^base, Data^streams3), IterationNumber, !Population, !Stats, !Distribution, !Random, !IO)
 	;
@@ -341,7 +416,12 @@ iterationData3(Data, IterationNumber, !Population, !Stats, !Distribution, !Rando
 			Births,
 			CemeteryCarryingCapacity, CemeteryOldAge, CemeteryStarvation),
 		ebea.population.mapfold_PlayerNeighbour(
-			ebea.player.selection.roundCheckForDeadPlayers(Data^game3, list.append(CemeteryCarryingCapacity, list.append(CemeteryOldAge, CemeteryStarvation))),
+			ebea.player.selection.roundCheckForDeadPlayers(
+				Data^game3,
+				list.append(
+					CemeteryCarryingCapacity,
+					list.append(
+						CemeteryOldAge, CemeteryStarvation))),
 			!Population,
 			!Random),
 		ebea.population.stepUpdateSitesState(Data^parameters3^siteDynamics, SiteActionAccumulator, !Population),
@@ -362,7 +442,7 @@ iterationData3(Data, IterationNumber, !Population, !Stats, !Distribution, !Rando
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of private predicates and functions
 
-:- pred runLoop(
+:- pred runLoopData2(
 	runMode(C, T),
 	ebea.core.data(G, P), int, int,
 	population(C, T), population(C, T),
@@ -371,9 +451,9 @@ iterationData3(Data, IterationNumber, !Population, !Stats, !Distribution, !Rando
 	R, R,
 	io, io)
 	<= (ePRNG(R), asymmetricGame(G, C), chromosome(C, T, P), foldable(C, A), parseable(C), printable(C), printable(T), printable(A)).
-:- mode runLoop(in(runMode), in, in, in, in, out, in, out, in, out, in, out, di, uo) is det.
+:- mode runLoopData2(in(runMode), in, in, in, in, out, in, out, in, out, in, out, di, uo) is det.
 
-runLoop(Mode, Data, TimeLeft, Iteration, !Population, !Stats, !Distribution, !Random, !IO) :-
+runLoopData2(Mode, Data, TimeLeft, Iteration, !Population, !Stats, !Distribution, !Random, !IO) :-
 	NumberPlayers = game.numberPlayers(Data^game),
 	% io.print("\r", !IO),
 	% io.print(Iteration, !IO),
@@ -396,7 +476,60 @@ runLoop(Mode, Data, TimeLeft, Iteration, !Population, !Stats, !Distribution, !Ra
 	then
 		ebea.core.printLastIterationDataToStreams(!.Stats, Data^s, Iteration, !.Population, !IO)
 	else
-		runLoop(Mode, Data, TimeLeft - 1, Iteration + 1, !Population, !Stats, !Distribution, !Random, !IO)
+		runLoopData2(Mode, Data, TimeLeft - 1, Iteration + 1, !Population, !Stats, !Distribution, !Random, !IO)
+	).
+
+:- pred runLoopData3(
+	runMode(CS, T)           :: in(runMode),
+	ebea.core.data(G, P, AA) :: in,
+	int                      :: in,
+	int                      :: in,
+	population(CS, T) :: in,  population(CS, T) :: out,
+	stats(ACS)        :: in,  stats(ACS)        :: out,
+	distribution      :: in,  distribution      :: out,
+	R                 :: in,  R                 :: out,
+	io.state          :: di,  io.state          :: uo
+) is det
+	<= (
+	ePRNG(R),
+	asymmetricGame(G, CS, A),
+	chromosome(CS, T, P),
+	foldable(CS, ACS),
+	foldable(A, AA),
+	parseable(CS),
+	printable(CS),
+	printable(T),
+	printable(ACS)
+).
+
+runLoopData3(background, Data, TimeLeft, Iteration, !Population, !Stats, !Distribution, !Random, !IO) :-
+	NumberPlayers = game.numberPlayers(Data^game3),
+	iterationData3(Data, Iteration, !Population, !Stats, !Distribution, !Random, !IO),
+	(if
+		ebea.population.size(!.Population) < NumberPlayers
+		;
+		TimeLeft = 0
+	then
+		ebea.core.printLastIterationDataToStreams(!.Stats, Data^streams3, Iteration, !.Population, !IO)
+	else
+		runLoopData3(background, Data, TimeLeft - 1, Iteration + 1, !Population, !Stats, !Distribution, !Random, !IO)
+	).
+
+runLoopData3(Mode, Data, TimeLeft, Iteration, !Population, !Stats, !Distribution, !Random, !IO) :-
+	Mode = interactively(_, _, _),
+	NumberPlayers = game.numberPlayers(Data^game3),
+	iterationData3(Data, Iteration, !Population, !Stats, !Distribution, !Random, !IO),
+	(Mode^itera)(!.Population, Stop, !IO),
+	(if
+		ebea.population.size(!.Population) < NumberPlayers
+		;
+		TimeLeft = 0
+		;
+		Stop = yes
+	then
+		ebea.core.printLastIterationDataToStreams(!.Stats, Data^streams3, Iteration, !.Population, !IO)
+	else
+		runLoopData3(Mode, Data, TimeLeft - 1, Iteration + 1, !Population, !Stats, !Distribution, !Random, !IO)
 	).
 
 /**

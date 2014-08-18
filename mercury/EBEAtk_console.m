@@ -173,7 +173,7 @@ check3(Result, !IO) :-
 	).
 
 
-:- pred run(runMode, maybe(string), io.state, io.state).
+:- pred run('EBEAtk_console'.runMode, maybe(string), io.state, io.state).
 :- mode run(in, in, di, uo) is det.
 
 run(print, MFilename, !IO) :-
@@ -204,7 +204,7 @@ run(run, MFilename, !IO) :-
 	data.config.io.read(Filename, MConfig, !IO),
 	(
 		MConfig = ok(Config),
-		data.config.runBackground(Config, !IO)
+		data.config.runEBEA(background, Config, !IO)
 		;
 		MConfig = error(Msg),
 		io.print(Msg, !IO),
@@ -338,7 +338,7 @@ printConfiguration(Data, !IO) :-
 :- mode runBackground(in, di, uo) is det.
 
 runBackground(Data, !IO) :-
-	data.config.runBackground(Data^config, !IO).
+	data.config.runEBEA(background, Data^config, !IO).
 
 
 
