@@ -1,36 +1,24 @@
 /**
- * 
+ * This module and its sub-modules provide a set of types to represent a
+ * player in EBEA.  There are types for a player's chromosome, its
+ * phenotype, parameters that control several processes.  The processes are
+ * ageing and death by old age, energy acquisition and reproduction, and
+ * player selection.
 
  * @author Pedro Mariano
- * @version 1.0 2012/07/ 4
+ * @version 1.0 2012/07/04
  */
 :- module ebea.player.
 
 :- interface.
 
-:- include_module age, energy, selection.
-:- import_module ebea.player.age, ebea.player.energy, ebea.player.selection, ebea.player.selection.chromosome.
+:- include_module chromosome, age, energy, selection.
+:- import_module ebea.player.chromosome, ebea.player.age, ebea.player.energy, ebea.player.selection, ebea.player.selection.chromosome.
+:- import_module ebea.population, ebea.population.players.
 :- import_module chromosome, rng, rng.distribution.
 :- import_module foldable, parseable, printable.
 :- import_module userInterface.
 :- import_module io, maybe, list.
-
-
-/**
- * The chromosome of an EBEA player.  It is represented in a list type
- * structure.  The first node contains the genes related to the energy
- * process.  The second node contains the genes related to partner
- * selection process.  The last node contains the genes that control the
- * behaviour in the game being used.  Type parameter {@code C} represents
- * the game strategy.
- */
-:- type chromosome(S) --->
-	chromosome(
-		ageGenes       :: ebea.player.age.chromosome,
-		energyGenes    :: ebea.player.energy.chromosome,
-		selectionGenes :: ebea.player.selection.chromosome.chromosome,
-		strategyGenes  :: S
-	).
 
 :- type traits --->
 	traits(
@@ -60,17 +48,17 @@
 
 /**
  * Represents a player in the Energy Based Evolutionary Algorithm.  The
- * player contains it chromosome and it traits.  Type parameters {@code
+ * player contains its chromosome and its traits.  Type parameters {@code
  * C} and {@code T} represent the chromosome and the traits of the game
- * being used in EBEA.  The chromosome also contains genes related to the
- * energy component and selection process of the EBEA.  The same is true
+ * used in EBEA.  The chromosome also contains genes related to the
+ * energy and selection process of the EBEA.  The same is true
  * for the phenotype.
  */
 :- type player(C, T) --->
 	player(
-		id          :: int,
+		id          :: ebea.population.players.key,
 		siteIndex   :: int,
-		chromosome  :: ebea.player.chromosome(C),
+		chromosome  :: ebea.player.chromosome.chromosome(C),
 		traits      :: ebea.player.traits(T)
 	).
 
@@ -88,19 +76,21 @@
 
 :- instance printable(ac(A)) <= printable(A).
 
-:- func defaultChromosome(S) = chromosome(S).
-
 /**
- * init(Parameters, Chromosome, ID, SiteIndex)
+ * init(Parameters, Chromosome, ID, SiteIndex, Player, !Random)
   
  * Initialise a player given its chromosome.
  */
-:- pred init(ebea.player.parameters(P), ebea.player.chromosome(C), int, int, player(C, T), R, R)
+:- pred init(
+	ebea.player.parameters(P),
+	ebea.player.chromosome.chromosome(C),
+	ebea.population.players.key,
+	int,
+	player(C, T),
+	R, R)
 	<= (chromosome(C, T, P), ePRNG(R)).
 :- mode init(in, in, in, in, out, in, out) is det.
 
-
-:- func dialog(list(dialogItem(CS))) = list(dialogItem(ebea.player.chromosome(CS))).
 
 /**
  * Return the strategy used by this player.
@@ -110,7 +100,7 @@
 /**
  * Return the identification of a player.
  */
-:- func 'ID'(player(C, T)) = int.
+:- func 'ID'(player(C, T)) = ebea.population.players.key.
 
 /**
  * reproduce(Parameters, Parent, NextParent, NewID, Offspring,, !Random)
@@ -121,36 +111,9 @@
  * probability to occur an one-point mutation.
  */
 
-:- pred reproduce(ebea.player.parameters(P), player(C, T), player(C, T), int, maybe(player(C, T)), distribution, distribution, R, R)
+:- pred reproduce(ebea.player.parameters(P), player(C, T), player(C, T), ebea.population.players.key, maybe(player(C, T)), distribution, distribution, R, R)
 	<= (ePRNG(R), chromosome(C, T, P)).
 :- mode reproduce(in, in, out, in, out, in, out, in, out) is det.
-
-/**
- * Given a list of players, return a random list of player's identification.
- */
-:- pred randomIDs(int, list(int), list(player(C, T)), R, R)
-	<= ePRNG(R).
-:- mode randomIDs(in, out, in, in, out) is det.
-
-/**
- * update(ID, UpdateFunc, !Players)
-  
- * Given a list of players, update the one with the given identification,
- * using the provided function.  The player to be updated is passed to the
- * function.
-  
- */
-:- pred update(int, func(player(C, T)) = player(C, T), list(player(C, T)), list(player(C, T))).
-:- mode update(in, in, in, out) is det.
-
-/**
- * player(Players, ID) = Result
-
- * Given a list of players and an identification, return the player with
- * that identification.  Throws an exception if there is no such player.
-  
- */
-:- func player(list(player(C, T)), int) = player(C, T).
 
 /**
  * Return the initial value of the accumulator.
@@ -164,6 +127,12 @@
 	<= foldable(C, A).
 %	<= (chromosome(C, T, P), foldable(C, A)).
 
+:- pred printAc(io.output_stream, ebea.player.ac(A), io, io)
+	<= printable(A).
+:- mode printAc(in, in, di, uo) is det.
+
+
+
 /**
  * Print a player to the given stream.
  */
@@ -171,19 +140,10 @@
 	<= (chromosome(C, T, P), printable(C)).
 :- mode print(in, in, di, uo) is det.
 
-:- pred printChromosome(io.output_stream, player(C, T), io, io)
-	<= printable(C).
-%	<= (chromosome(C, T, P), printable(C)).
-:- mode printChromosome(in, in, di, uo) is det.
 
 :- pred printTraits(io.output_stream, player(C, T), io, io)
 	<= (chromosome(C, T, P)).
 :- mode printTraits(in, in, di, uo) is det.
-
-:- pred parseChromosome(chromosome(C), parseable.state, parseable.state)
-	<= parseable(C).
-:- mode parseChromosome(in, out, in) is det.
-:- mode parseChromosome(out, in, out) is semidet.
 
 :- implementation.
 
@@ -209,19 +169,11 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Definition of private types
 
-%:- instance chromosome(ebea.player.chromosome(C), ebea.player.traits, ebea.player.parameters(P), ebea.player.ac(A))
+%:- instance chromosome(ebea.player.chromosome.chromosome(C), ebea.player.traits, ebea.player.parameters(P), ebea.player.ac(A))
 %	<= chromosome(C, T, P, A).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of exported predicates and functions
-
-defaultChromosome(StrategyChromosome) =
-	chromosome(
-		ebea.player.age.defaultChromosome,
-		ebea.player.energy.defaultChromosome,
-		ebea.player.selection.chromosome.default,
-		StrategyChromosome
-	).
 
 init(Parameters, Chromosome, ID, SiteIndex, Result, !Random) :-
 	Result^id = ID,
@@ -232,18 +184,6 @@ init(Parameters, Chromosome, ID, SiteIndex, Result, !Random) :-
 		chromosome.born(Parameters^energyPar,    Chromosome^energyGenes),
 		SelectionTrait),
 	ebea.player.selection.born(Chromosome^selectionGenes, SelectionTrait, !Random).
-
-
-dialog(DialogStrategyGenes) =
-	[
-%	di(label("age genes"),        'new editField'(  get_ageGenes,        set(set_ageGenes),       ebea.player.age.dialogChromosome)),
-%	di(label("energy genes"),     'new editField'(  get_energyGenes,     set(set_energyGenes),    ebea.player.energy.dialogChromosome)),
-%	di(label("selection genes"),  'new editField'(  get_selectionGenes,  set(set_selectionGenes), [di(label("selection"), ebea.player.selection.dialogChromosome)])),
-	di(label("selection genes"),  'new editField'(  get_selectionGenes,  set(set_selectionGenes), ebea.player.selection.chromosome.dialog)),
-	di(label("strategy genes"),   'new editField'(  get_strategyGenes,   set(set_strategyGenes),  DialogStrategyGenes))
-	].
-
-
 
 strategy(Player) = Result :-
 	Result = Player^chromosome^strategyGenes.
@@ -269,7 +209,8 @@ reproduce(Parameters, Parent, NextParent, NewID, MOffspring, !Distribution, !Ran
 			Parameters^selectionPar,
 			Parent,
 			NewBorn,
-			Offspring
+			Offspring,
+			!Random
 		), 
 		NextTraits = 'energyTrait :='(Parent^traits, NextEnergyTraits),
 		NextParent = 'traits :='(Parent, NextTraits),
@@ -277,45 +218,6 @@ reproduce(Parameters, Parent, NextParent, NewID, MOffspring, !Distribution, !Ran
 	else
 		NextParent = Parent,
 		MOffspring = no
-	).
-
-randomIDs(HowMany, Result, Players, !Random) :-
-	(if
-		HowMany =< 0
-	then
-		Result = []
-	else
-		rng.nextInt(0, list.length(Players) - 1, Index, !Random),
-		removeIndex(Index, Players, Player, RestPlayers),
-		Result = [Player^id | RestResult],
-		randomIDs(HowMany - 1, RestResult, RestPlayers, !Random)
-	).
-
-update(ID, UpdateFunc, Players, Result) :-
-	Players = [],
-	Result = []
-	;
-	Players = [Player | Rest],
-	(if
-		Player^id = ID
-	then
-		Result = [UpdateFunc(Player) | Rest]
-	else
-		update(ID, UpdateFunc, Rest, RestResult),
-		Result = [Player | RestResult]
-	).
-
-player(Players, ID) = Result :-
-	Players = [],
-	throw("ebea.player.player/2: there is no such player identification in the list")
-	;
-	Players = [Player | Rest],
-	(if
-		Player^id = ID
-	then
-		Result = Player
-	else
-		Result = player(Rest, ID)
 	).
 
 initAc = Result :-
@@ -335,19 +237,22 @@ foldChromosome(Player, AC) = Result :-
 		foldable.fold(Player^chromosome^strategyGenes, St)
 		).
 
+printAc(Stream, AC, !IO) :-
+	AC = ac(A, E, Se, St),
+	printable.print(Stream, A, !IO),
+	io.print(Stream, " ", !IO),
+	printable.print(Stream, E, !IO),
+	io.print(Stream, " ", !IO),
+	printable.print(Stream, Se, !IO),
+	io.print(Stream, " ", !IO),
+	printable.print(Stream, St, !IO).
+
 print(Stream, Player, !IO) :-
 	io.print(Stream, Player^id, !IO),
 	io.print(Stream, " ", !IO),
-	printChromosome(Stream, Player, !IO),
+	ebea.player.chromosome.print(Stream, Player^chromosome, !IO),
 	io.print(Stream, " ", !IO),
 	printTraits(Stream, Player, !IO).
-
-printChromosome(Stream, Player, !IO) :-
-	printable.print(Stream, Player^chromosome^energyGenes, !IO),
-	io.print(Stream, " ", !IO),
-	printable.print(Stream, Player^chromosome^selectionGenes, !IO),
-	io.print(Stream, " ", !IO),
-	printable.print(Stream, Player^chromosome^strategyGenes, !IO).
 
 printTraits(Stream, Player, !IO) :-
 	printable.print(Stream, Player^traits^ageTrait, !IO),
@@ -356,12 +261,6 @@ printTraits(Stream, Player, !IO) :-
 	io.print(Stream, " ", !IO),
 	printable.print(Stream, Player^traits^selectionTrait, !IO)
 	.
-
-parseChromosome(C) -->
-	ebea.player.age.parseChromosome(C^ageGenes),
-	ebea.player.energy.parseChromosome(C^energyGenes),
-	ebea.player.selection.chromosome.parse(C^selectionGenes),
-	parseable.parse(C^strategyGenes).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of private predicates and functions
@@ -381,7 +280,7 @@ numberGenes(Chromosome) = Result :-
 		+ chromosome.numberGenes(Chromosome^selectionGenes)
 		+ chromosome.numberGenes(Chromosome^strategyGenes).
 
-:- pred mutateGene(ebea.player.parameters(P), int, distribution, distribution, R, R, ebea.player.chromosome(CS), ebea.player.chromosome(CS))
+:- pred mutateGene(ebea.player.parameters(P), int, distribution, distribution, R, R, ebea.player.chromosome.chromosome(CS), ebea.player.chromosome.chromosome(CS))
 	<= (chromosome(CS, T, P), ePRNG(R)).
 :- mode mutateGene(in, in, in, out, in, out, in, out) is det.
 
@@ -448,20 +347,6 @@ removeIndex(Index, List, Element, Rest) :-
 	).
 
 
-:- pred printAc(io.output_stream, ebea.player.ac(A), io, io)
-	<= printable(A).
-:- mode printAc(in, in, di, uo) is det.
-
-
-printAc(Stream, AC, !IO) :-
-	AC = ac(A, E, Se, St),
-	printable.print(Stream, A, !IO),
-	io.print(Stream, " ", !IO),
-	printable.print(Stream, E, !IO),
-	io.print(Stream, " ", !IO),
-	printable.print(Stream, Se, !IO),
-	io.print(Stream, " ", !IO),
-	printable.print(Stream, St, !IO).
 
 
 
@@ -470,47 +355,6 @@ printAc(Stream, AC, !IO) :-
 
 
 
-:- func get_ageGenes(ebea.player.chromosome(CS)) = ebea.player.age.chromosome.
-
-get_ageGenes(P) = P^ageGenes.
-
-
-:- func set_ageGenes(ebea.player.chromosome(CS), ebea.player.age.chromosome) = ebea.player.chromosome(CS).
-
-set_ageGenes(P, V) = 'ageGenes :='(P, V).
-
-
-
-:- func get_energyGenes(ebea.player.chromosome(CS)) = ebea.player.energy.chromosome.
-
-get_energyGenes(P) = P^energyGenes.
-
-
-:- func set_energyGenes(ebea.player.chromosome(CS), ebea.player.energy.chromosome) = ebea.player.chromosome(CS).
-
-set_energyGenes(P, V) = 'energyGenes :='(P, V).
-
-
-
-:- func get_selectionGenes(ebea.player.chromosome(CS)) = ebea.player.selection.chromosome.chromosome.
-
-get_selectionGenes(P) = P^selectionGenes.
-
-
-:- func set_selectionGenes(ebea.player.chromosome(CS), ebea.player.selection.chromosome.chromosome) = ebea.player.chromosome(CS).
-
-set_selectionGenes(P, V) = 'selectionGenes :='(P, V).
-
-
-
-:- func get_strategyGenes(ebea.player.chromosome(CS)) = CS.
-
-get_strategyGenes(P) = P^strategyGenes.
-
-
-:- func set_strategyGenes(ebea.player.chromosome(CS), CS) = ebea.player.chromosome(CS).
-
-set_strategyGenes(P, V) = 'strategyGenes :='(P, V).
 
 
 

@@ -9,6 +9,17 @@
 
 :- interface.
 
+/**
+ * The probability and combination vectors used by this partner selection
+ * model.  Both vectors are stored in an array where each array element
+ * represents a probability and a combination.  Array elements are
+ * represented by type {@code slot}.
+
+ * <p> Probabilities are stored in integers.  A slot in index <i>i</i>
+ * contains the sum of probabilities from slot zero up to slot <i>i</i>.
+ * This permits using a binary search when selecting a combination.
+ */
+
 :- type probabilityCombinationVector == array(slot).
 
 :- type slot --->
@@ -17,8 +28,11 @@
 		combination :: combination
 	).
 
-:- type combination == list(int).
+:- type combination == list(ebea.population.players.key).
 
+:- inst pcv == bound(parterSelection(ground)).
+
+:- inst playerPCV == bound(player(ground, ground, ground, bound(traits(ground, ground, pcv)))).
 
 /**
  * initProbabilityCombinationVector(Quotient, Remainder, Index) = Result
@@ -64,9 +78,9 @@
  * @see search/6
   
  */
-:- pred select(int, list(player(C, T)), probabilityCombinationVector, R, R, int, list(int), list(player(C, T)))
+:- pred select(int, ebea.population.neighbours.neighbours, probabilityCombinationVector, R, R, int, list(key))
 	<= ePRNG(R).
-:- mode select(in, in, in, in, out, out, out, out) is det.
+:- mode select(in, in, in, in, out, out, out) is det.
 
 /**
  * updateProbCombVectors(Game, EnergyScaling, CombinationSize, Chromosome, SelectedCombinationIDs, Partners, SelectedSlot, Payoff, !Random, !ProbCombVectors)
@@ -83,7 +97,7 @@
  */
 :- pred updateProbCombVectors(
 	G, energyScaling,
-	int, ebea.player.selection.chromosome.chromosome, list(int), list(player(C, T)),
+	int, ebea.player.selection.chromosome.chromosome, list(key), ebea.population.neighbours.neighbours,
 	int, float,
 	R, R,
 	probabilityCombinationVector, probabilityCombinationVector
@@ -122,9 +136,28 @@
  * @see ebea.player.selection.round/7
  
  */
-:- pred checkForDeadPlayers(int, neighbours(C, T), list(int), slot, slot, R, R)
+:- pred checkForDeadPlayers(int, ebea.population.neighbours.neighbours, list(key), slot, slot, R, R)
 	<= ePRNG(R).
 :- mode checkForDeadPlayers(in, in, in, in, out, in, out) is det.
+
+
+/**
+ * copyPercentageCombinations(Percentage, Source, !Destiny)
+  
+ * Copy a percentage of combinations from slots in {@code Source} to {@code
+ * !Destiny}.  The probabilities in {@code !Destiny} remain unchanged.
+  
+ */
+% :- pred copyPercentageCombinations(int, probabilityCombinationVector, probabilityCombinationVector, probabilityCombinationVector, R, R)
+% 	<= ePRNG(R).
+% :- mode copyPercentageCombinations(in, in, array_di, array_uo, in, out) is det.
+% %:- mode copyPercentageCombinations(in, in, in, out, in, out) is det.
+
+
+:- pred copyPercentageCombinations(ebea.player.selection.parameters, player(C, T), player(C, T), player(C, T), R, R)
+	<= ePRNG(R).
+%:- mode copyPercentageCombinations(in, in(playerPCV), in(playerPCV), out, in, out) is det.
+:- mode copyPercentageCombinations(in, in, in, out, in, out) is det.
 
 
 /**
@@ -169,7 +202,7 @@ initProbabilityVector(Quotient, Remainder, Index) = Slot :-
 	Slot^probability = (Index + 1) * Quotient + Remainder,
 	Slot^combination = [].
 
-select(NumberPartners, Neighbours, ProbCombVectors, !Random, SelectedSlot, CombinationIDs, Combination) :-
+select(NumberPartners, Neighbours, ProbCombVectors, !Random, SelectedSlot, CombinationIDs) :-
 	% calculate TmpCombinationIDs
 	(if
 		array.size(ProbCombVectors) = 0
@@ -193,11 +226,9 @@ select(NumberPartners, Neighbours, ProbCombVectors, !Random, SelectedSlot, Combi
 	(if
 		TmpCombinationIDs = []
 	then
-		rng.randomElementsList(NumberPartners, Neighbours, Combination, !Random),
-		CombinationIDs = list.map(ebea.player.'ID', Combination)
+		ebea.population.neighbours.randomElements(NumberPartners, Neighbours, CombinationIDs, !Random)
 	else
-		CombinationIDs = TmpCombinationIDs,
-		Combination = list.map(ebea.player.player(Neighbours), CombinationIDs)
+		CombinationIDs = TmpCombinationIDs
 	).
 
 updateProbCombVectors(Game, EnergyScaling, CombinationSize, Chromosome, SelectedCombinationIDs, Partners, SelectedSlot, Payoff, !Random, !ProbCombVectors) :-
@@ -223,12 +254,12 @@ updateProbCombVectors(Game, EnergyScaling, CombinationSize, Chromosome, Selected
 			true
 		else
 			TP0 = array.lookup(!.ProbCombVectors, VectorSize - 1)^probability,
-			ebea.player.randomIDs(CombinationSize, NewCombination, Partners, !Random),
+			ebea.population.neighbours.randomElements(CombinationSize, Partners, NewCombinationIDs, !Random),
 			(if
 				array.size(!.ProbCombVectors) = 1
 			then
 				Slot^probability = array.lookup(!.ProbCombVectors, 0)^probability,
-				Slot^combination = NewCombination,
+				Slot^combination = NewCombinationIDs,
 				array.slow_set(0, Slot, !ProbCombVectors)
 				%array.set(0, Slot, !ProbCombVectors)
 			else
@@ -237,7 +268,7 @@ updateProbCombVectors(Game, EnergyScaling, CombinationSize, Chromosome, Selected
 				HowMuch = float.round_to_int(float(OldProbability) * (1.0 - Chromosome^probabilityUpdateFactor)),
 				Distribute = HowMuch / (array.size(!.ProbCombVectors) - 1),
 				Remainder = HowMuch rem (array.size(!.ProbCombVectors) - 1),
-				array.map_foldl(updateSlot(HowMuch, Distribute, Remainder, RemainderSlot, SelectedSlot, NewCombination), !ProbCombVectors, 0, _),
+				array.map_foldl(updateSlot(HowMuch, Distribute, Remainder, RemainderSlot, SelectedSlot, NewCombinationIDs), !ProbCombVectors, 0, _),
 				%
 				TP1 = array.lookup(!.ProbCombVectors, VectorSize - 1)^probability,
 				(if
@@ -282,18 +313,48 @@ checkForDeadPlayers(NumberPartners, Neighbours, DeadPlayerIDs, !Slot, !Random) :
 		list.member(ID, !.Slot^combination)
 	then
 		(if
-			list.length(Neighbours) < NumberPartners
+			ebea.population.neighbours.size(Neighbours) < NumberPartners
 		then
 			CombinationIDs = []
 		else
-			rng.randomElementsList(NumberPartners, Neighbours, CombinationPlayers, !Random),
-			list.map(ebea.player.'ID', CombinationPlayers) = CombinationIDs
+			ebea.population.neighbours.randomElements(NumberPartners, Neighbours, CombinationIDs, !Random)
 		),
 		!:Slot = 'combination :='(!.Slot, CombinationIDs)
 	else
 		true
 	).
 
+copyPercentageCombinations(Parameters, Parent, !Offspring, !Random) :-
+	(if
+		Parent^traits^selectionTrait = partnerSelection(ParentPCV),
+		!.Offspring^traits^selectionTrait = partnerSelection(OldPCV)
+	then
+		Remaining = int.min(
+			float.round_to_int(float(Parameters^poolSizePercentageTransmission * array.size(ParentPCV)) / 100.0),
+			array.size(OldPCV)),
+		(if
+			Remaining > 0
+		then
+			copyCombination(Remaining, array.size(ParentPCV) - 1, array.copy(ParentPCV), OldPCV, NewPCV, !Random),
+			!:Offspring = 'traits :='(
+				!.Offspring,
+				'selectionTrait :='(
+					!.Offspring^traits,
+					OffspringTrait
+				)
+			),
+			OffspringTrait = partnerSelection(NewPCV)
+		else
+			true
+		)
+	else
+		throw("copyPercentageCombinations/6: never reached")
+	).
+/*
+copyPercentageCombinations(Percentage, Source, !Destiny, !Random) :-
+	Remaining = int.min(Percentage * array.size(Source) / 100, array.size(!.Destiny)),
+	copyCombination(Remaining, array.size(Source) - 1, array.copy(Source), !Destiny, !Random).
+*/
 probability(ProbCombVectors, Index, Value) :-
 	(if
 		Index = 0
@@ -315,8 +376,37 @@ parse(PCV::out, ListOut::in, ListIn::out) :-
 	parseable.parseList(normalType, X, ListOut, ListIn),
 	PCV = array.from_list(X).
 
+:- import_module random.
 
 test(!IO) :-
+	io.print("Enter vector size and RNG seed:\n", !IO),
+	io.read_line_as_string(ILine0, !IO),
+	(if
+		ILine0 = ok(Line0),
+		string.words(Line0) = [SVectorSize, SSeed, SPercentage],
+		string.to_int(SVectorSize, VectorSize),
+		string.to_int(SSeed, Seed),
+		VectorSize > 0,
+		string.to_int(SPercentage, Percentage),
+		Percentage >= 0,
+		Percentage =< 100
+	then
+		random.init(Seed, Supply),
+		FuncGenerateParent =
+		(func(Index) = Result :-
+			Result = slot(Index, [ebea.population.players.int2key(Index), ebea.population.players.int2key(-1)])
+		),
+		array.generate(VectorSize, FuncGenerateParent) = PCVParent,
+		FuncGenerateOffspring =
+		(func(Index) = Result :-
+			Result = slot(Index, [ebea.population.players.int2key(Index)])
+		),
+		array.generate(VectorSize, FuncGenerateOffspring) = PCVOffspring,
+		testLoop(Percentage, 0, PCVParent, PCVOffspring, Supply, _, !IO)
+	else
+		true
+	).
+  /*
 	io.print("Enter vector size and total probability:\n", !IO),
 	io.read_line_as_string(ILine0, !IO),
 	(if
@@ -335,11 +425,47 @@ test(!IO) :-
 		testLoop(PCV, !IO)
 	else
 		true
-	).
+	).*/
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of private predicates and functions
+
+/**
+ * copyCombination(Remaining, Size, Source, !Destiny)
+
+ * Copy a random combination taken from slots {@code 0} to {@code Size} of
+ * array {@code Source}.  The combination is placed in position {@code
+ * Remaining-1} of {@code !Destiny}. Stops when {@code Remaining} is zero.
+  
+ */
+:- pred copyCombination(int, int, probabilityCombinationVector, probabilityCombinationVector, probabilityCombinationVector, R, R)
+	<= ePRNG(R).
+:- mode copyCombination(in, in, array_di, array_di, array_uo, in, out) is det.
+
+copyCombination(Remaining, Size, Source, !Destiny, !Random) :-
+	(if
+		Remaining = 0
+	then
+		true
+	else
+		rng.nextInt(0, Size, Index, !Random),
+		ASlot = array.lookup(Source, Index),
+		Combination = ASlot^combination,
+		array.lookup(!.Destiny, Remaining - 1, SlotToModify),
+%		ModifiedSlot = 'combination :='(SlotToModify, Combination),
+		ModifiedSlot = SlotToModify^combination := Combination,
+		array.set(Remaining - 1, ModifiedSlot, !Destiny),
+		(if
+			Index = Size
+		then
+			copyCombination(Remaining - 1, Size - 1, Source, !Destiny, !Random)
+		else
+			array.set(Index, array.lookup(Source, Size), Source, TmpSource),
+			array.set(Size, ASlot, TmpSource, NextSource),
+			copyCombination(Remaining - 1, Size - 1, NextSource, !Destiny, !Random)
+		)
+	).
 
 /**
  * search(Low, High, SelectedProbability, ProbCombVectors, Combination)
@@ -350,7 +476,7 @@ test(!IO) :-
  * represent the range where the search is.
 
  */
-:- pred search(int, int, int, probabilityCombinationVector, int, list(int)).
+:- pred search(int, int, int, probabilityCombinationVector, int, list(ebea.population.players.key)).
 :- mode search(in, in, in, in, out, out) is det.
 
 search(Low, High, SelectedProbability, ProbCombVectors, SelectedSlot, Combination) :-
@@ -468,6 +594,23 @@ testLoop(PCV, !IO) :-
 		ebea.player.selection.pcv.test(!IO)
 	).
 
+
+:- pred testLoop(int, int, probabilityCombinationVector, probabilityCombinationVector, R, R, io.state, io.state) <= ePRNG(R).
+:- mode testLoop(in, in, in, array_di, in, out, di, uo) is det.
+
+testLoop(Percentage, Trial, Parent, Offspring, !Random, !IO) :-
+	Remaining = int.min(Percentage * array.size(Parent) / 100, array.size(Offspring)),
+	copyCombination(Remaining, array.size(Parent) - 1, array.copy(Parent), Offspring, NewOffspring, !Random),
+%	copyPercentageCombinations(Percentage, Parent, Offspring, NewOffspring, !Random),
+	io.print(NewOffspring, !IO),
+	io.nl(!IO),
+	(if
+		Trial < 10
+	then
+		testLoop(Percentage, Trial + 1, Parent, NewOffspring, !Random, !IO)
+	else
+		true
+	).
 
 :- end_module ebea.player.selection.pcv.
 

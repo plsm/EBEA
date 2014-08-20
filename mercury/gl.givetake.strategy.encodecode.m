@@ -1,8 +1,8 @@
 /**
- * 
+ * Provides a predicate that encodes a strategy with a history of size one.
 
  * @author Pedro Mariano
- * @version 1.0 2014/02/ 7
+ * @version 1.0 2014/02/07
  */
 :- module gl.givetake.strategy.encodecode.
 

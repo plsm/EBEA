@@ -40,10 +40,17 @@
 	 * Return the number of players in a game.
 	 */
 	func numberPlayers(G) = int
-
-	% pred play(G, profile(S), R, R, payoffVector) <= ePRNG(R),
-	% mode play(in, in, in, out, out) is det
 ].
+
+/**
+ * Represents an asymmetric game where players have different sets of
+ * strategies.  In order to play a game there must be a valid strategy
+ * profile.  Players' position cannot be mixed has there can be <i>n</i>
+ * different sets of strategies.  In contrast with type-class {@code
+ * symmetricGame} there is an output parameter with type {@code
+ * maybe(payoffVector)}.  When the strategy profile is invalid, this
+ * parameter is unified with {@code no}.
+ */
 
 :- typeclass asymmetricGame(G, S) <= (abstractGame(G), (G -> S)) where
 [
@@ -53,10 +60,22 @@
 	mode playAsymmetric(in, in, in, out, out) is det
 ].
 
+:- typeclass asymmetricGame(G, S, A) <= (asymmetricGame(G, S), (G -> A)) where
+[
+	pred playAsymmetric(G, profile(S), R, R, maybe(payoffVector), maybe(actionVector(A))) <= ePRNG(R),
+	mode playAsymmetric(in, in, in, out, out, out) is det
+].
+
 :- typeclass symmetricGame(G, S) <= (abstractGame(G), (G -> S)) where
 [
 	pred playSymmetric(G, profile(S), R, R, payoffVector) <= ePRNG(R),
 	mode playSymmetric(in, in, in, out, out) is det
+].
+
+:- typeclass symmetricGame(G, S, A) <= (symmetricGame(G, S), (G -> A)) where
+[
+	pred playSymmetric(G, profile(S), R, R, payoffVector, actionVector(A)) <= ePRNG(R),
+	mode playSymmetric(in, in, in, out, out, out) is det
 ].
 
 
@@ -97,6 +116,10 @@
 	<= (symmetricGame(G, S), ePRNG(R)).
 :- mode playSymmetricBridge(in, in, in, out, out) is det.
 
+:- pred playSymmetricBridge(G, profile(S), R, R, maybe(payoffVector), maybe(actionVector(A)))
+	<= (symmetricGame(G, S, A), ePRNG(R)).
+:- mode playSymmetricBridge(in, in, in, out, out, out) is det.
+
 :- implementation.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -122,6 +145,9 @@ singleRole(_) = 1.
 
 playSymmetricBridge(Game, Profile, !Random, yes(Payoff)) :-
 	playSymmetric(Game, Profile, !Random, Payoff).
+
+playSymmetricBridge(Game, Profile, !Random, yes(Payoff), yes(ActionVector)) :-
+	playSymmetric(Game, Profile, !Random, Payoff, ActionVector).
 
 :- end_module game.
 

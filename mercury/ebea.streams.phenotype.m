@@ -10,14 +10,14 @@
 
 :- interface.
 
-:- import_module ebea.population.
+:- import_module ebea.population, ebea.population.players.
 :- import_module ebea.player, ebea.player.age, ebea.player.energy, ebea.player.selection.
 :- import_module parseable.iou.
 
 :- type iterationPhenotypicRecords --->
 	ipr(
-		iteration :: int,
-		list(playerPhenotypicRecord)
+		iteration  :: int,
+		phenotypes :: list(playerPhenotypicRecord)
 	).
 
 /**
@@ -30,7 +30,7 @@
  */
 :- type playerPhenotypicRecord --->
 	ppr(
-		id        :: int,
+		id        :: key,
 		age       :: ebea.player.age.trait,
 		energy    :: ebea.player.energy.trait,
 		selection :: ebea.player.selection.traits
@@ -53,6 +53,12 @@
 :- pred write(io.binary_output_stream, int, ebea.population.population(C, T), io.state, io.state).
 :- mode write(in, in, in, di, uo) is det.
 
+/**
+ * Reads the entire stream into a list.
+ */
+:- pred read(ebea.streams.inStreams, parseable.iou.ioResult(list(iterationPhenotypicRecords)), io.state, io.state).
+:- mode read(in(detailedBin), out, di, uo) is det.
+
 :- pred parse(iterationPhenotypicRecords, list(int), list(int)).
 :- mode parse(in, out, in) is det.
 :- mode parse(out, in, out) is semidet.
@@ -64,7 +70,7 @@
  * Fails if does not found.
   
  */
-:- pred search(int, list(playerPhenotypicRecord), playerPhenotypicRecord).
+:- pred search(key, list(playerPhenotypicRecord), playerPhenotypicRecord).
 :- mode search(in, in, out) is semidet.
 
 
@@ -100,6 +106,9 @@ write(Stream, Iteration, Population, !IO) :-
 	parseable.iou.write(Stream, ipr(Iteration, List), !IO)
 	.
 
+read(BinStream, Result, !IO) :-
+	parseable.iou.readAll(BinStream^bisPhenotype, 4096, no, Result, !IO).
+
 parse(ipr(Iteration, ListPlayerPhenotypicRecords)) -->
 	parseable.int32(Iteration),
 	parseable.parseList(withLength, ListPlayerPhenotypicRecords).
@@ -125,7 +134,8 @@ map_PlayerPhenotypicRecord(player(ID, _SiteIndex, _Chromosome, Traits)) = ppr(ID
 :- mode parse_playerPhenotypicRecord(out, in, out) is semidet.
 
 parse_playerPhenotypicRecord(ppr(ID, Age, Energy, Selection)) -->
-	parseable.int32(ID),
+	ebea.population.players.parseKey(ID),
+	%parseable.int32(ID),
 	ebea.player.age.parseTrait(Age),
 	ebea.player.energy.parseTrait(Energy),
 	ebea.player.selection.parseTraits(Selection)

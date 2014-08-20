@@ -131,13 +131,21 @@
 :- pred closeOutputStreams(outStreams, io, io).
 :- mode closeOutputStreams(in, di, uo) is det.
 
-/**
- * openInputStreams(Level, MFileNameSuffix, MStreams, !IO)
+% /**
+%  * openInputStreams(Level, MFileNameSuffix, MStreams, !IO)
   
- * Opens streams in input mode used by EBEA at the specified level.
+%  * Opens streams in input mode used by EBEA at the specified level.
+%  */
+% :- pred openInputStreams(level, maybe(string), maybe_error(inStreams), io.state, io.state).
+% :- mode openInputStreams(in, in, out, di, uo) is det.
+
+/**
+ * openInputStreams(Directory, Level, MFileNameSuffix, MStreams, !IO)
+  
+ * Opens streams in input mode used by EBEA at the specified level at the given directory.
  */
-:- pred openInputStreams(level, maybe(string), maybe_error(inStreams), io.state, io.state).
-:- mode openInputStreams(in, in, out, di, uo) is det.
+:- pred openInputStreams(string, level, maybe(string), maybe_error(inStreams), io.state, io.state).
+:- mode openInputStreams(in, in, in, out, di, uo) is det.
 
 /**
  * Closes the streams used by an Energy Based Evolutionary Algorithm run.
@@ -178,7 +186,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of exported predicates and functions
 
-openInputStreams(Level, MSuffix, IMStreams, !IO) :-
+openInputStreams(Directory, Level, MSuffix, IMStreams, !IO) :-
 	Level = detailedTxt,
 	io.open_input(filename("birth", MSuffix, csv), RStreamBirth, !IO),
 	(
@@ -218,14 +226,14 @@ openInputStreams(Level, MSuffix, IMStreams, !IO) :-
 	)
 	;
 	Level = detailedBin,
-	FileNameBirth = filename("birth", MSuffix, bin),
+	FileNameBirth = filename(Directory, "birth", MSuffix, bin),
 	io.open_binary_input(FileNameBirth, RStreamBirth, !IO),
 	(
 		RStreamBirth = error(Error1),
 		IMStreams = error(string.format("IO error opening `%s` file: %s", [s(FileNameBirth), s(io.error_message(Error1))]))
 		;
 		RStreamBirth = ok(SBirth),
-		FileNameDeath = filename("death", MSuffix, bin),
+		FileNameDeath = filename(Directory, "death", MSuffix, bin),
 		io.open_binary_input(FileNameDeath, RStreamDeath, !IO),
 		(
 			RStreamDeath = error(Error2),
@@ -233,7 +241,7 @@ openInputStreams(Level, MSuffix, IMStreams, !IO) :-
 			io.close_binary_input(SBirth, !IO)
 			;
 			RStreamDeath = ok(SDeath),
-			FileNamePhenotype = filename("phenotype", MSuffix, bin),
+			FileNamePhenotype = filename(Directory, "phenotype", MSuffix, bin),
 			io.open_binary_input(FileNamePhenotype, RStreamPhenotype, !IO),
 			(
 				RStreamPhenotype = error(Error3),
@@ -242,7 +250,7 @@ openInputStreams(Level, MSuffix, IMStreams, !IO) :-
 				io.close_binary_input(SBirth, !IO)
 				;
 				RStreamPhenotype = ok(SPhenotype),
-				FileNamePlayerProfile = filename("player-profile", MSuffix, bin),
+				FileNamePlayerProfile = filename(Directory, "player-profile", MSuffix, bin),
 				io.open_binary_input(FileNamePlayerProfile, RStreamPlayerProfile, !IO),
 				(
 					RStreamPlayerProfile = ok(StreamPlayerProfile),
@@ -513,6 +521,16 @@ filename(Base, yes(Suffix), csv) = Base ++ Suffix ++ ".csv".
 
 filename(Base, no,          bin) = Base           ++ ".bin".
 filename(Base, yes(Suffix), bin) = Base ++ Suffix ++ ".bin".
+
+/**
+ * Return the file name to open either for reading or writing.
+ */
+:- func filename(string, string, maybe(string), fileType) = string.
+
+filename(Directory, Base, no,          csv) = Directory ++ Base           ++ ".csv".
+filename(Directory, Base, yes(Suffix), csv) = Directory ++ Base ++ Suffix ++ ".csv".
+filename(Directory, Base, no,          bin) = Directory ++ Base           ++ ".bin".
+filename(Directory, Base, yes(Suffix), bin) = Directory ++ Base ++ Suffix ++ ".bin".
 
 
 :- end_module ebea.streams.

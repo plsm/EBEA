@@ -1,6 +1,6 @@
 /**
  * Provides types that are used to initialise the EBEA population.  These
- * types are aggregated in {@code parameters/1}.  There are two major
+ * types are aggregated in {@code configuration/2}.  There are two major
  * parameters, one for population geometry and the second for initial
  * players.  Geometry parameters dictate how many sites there are and how
  * they are connected.
@@ -8,7 +8,7 @@
  * @author Pedro Mariano
  * @version 1.0 2014/01/20
  */
-:- module ebea.population.parameters.
+:- module ebea.population.configuration.
 
 :- interface.
 
@@ -16,12 +16,22 @@
 :- import_module ebea.population.site.parameters.
 :- import_module list.
 
-:- type parameters(CS) --->
-	parameters(
-		geometry :: ebea.population.parameters.geometry ,
-		sites    :: list(ebea.population.site.parameters.parameters(CS)),
-		defaultCarryingCapacity :: int
-	) .
+%% ************************************************************************
+%% Represents the initial configuration of an EBEA population.  The user
+%% can specify the population geometry, the chromosomes in each site, the
+%% site's default carrying capacity, and the site update dynamics
+%%
+%% @param CS The game strategy and strategy genes.
+%%
+%% @param A The game actions.
+%%
+:- type configuration(CS, A) --->
+	configuration(
+		geometry                :: ebea.population.configuration.geometry ,
+		sites                   :: list(ebea.population.site.parameters.parameters(CS)) ,
+		defaultCarryingCapacity :: int ,
+		siteDynamics            :: ebea.population.site.dynamics(A)
+	).
 
 :- type neighbourhood --->
 	moore ;
@@ -45,17 +55,25 @@
 	closed .
 
 /**
- * Return a default value of {@code parameters}.
+ * Return a default value of {@code configuration}.
  */
-:- func default(CS) = ebea.population.parameters.parameters(CS).
+:- func default(CS) = ebea.population.configuration.configuration(CS, A).
 
-:- func dialog(CS, list(dialogItem(CS))) = list(dialogItem(ebea.population.parameters.parameters(CS))).
+:- func dialog(CS, list(dialogItem(CS))) = list(dialogItem(ebea.population.configuration.configuration(CS, A))).
 
-:- pred parse(ebea.population.parameters.parameters(CS), list(int), list(int))
+:- pred parse(ebea.population.configuration.configuration(CS, A), list(int), list(int))
 	<= parseable(CS).
 :- mode parse(in, out, in) is det.
 :- mode parse(out, in, out) is semidet.
 
+/**
+ * Return the initial population size.
+ */
+:- func populationSize(ebea.population.configuration.configuration(_, _)) = int.
+
+:- pred parse_geometry(geometry, list(int), list(int)).
+:- mode parse_geometry(in, out, in) is det.
+:- mode parse_geometry(out, in, out) is semidet.
 
 :- implementation.
 
@@ -65,18 +83,18 @@
 
 :- instance parseable(neighbourhood) where
 [
-	pred(parse/3) is ebea.population.parameters.parse_neighbourhood
+	pred(parse/3) is ebea.population.configuration.parse_neighbourhood
 ].
 
 :- instance parseable(geometry) where
 [
-	pred(parse/3) is ebea.population.parameters.parse_geometry
+	pred(parse/3) is ebea.population.configuration.parse_geometry
 ].
 
-:- instance parseable(ebea.population.parameters.parameters(CS))
+:- instance parseable(ebea.population.configuration.configuration(CS, A))
 	<= parseable(CS) where
 [
-	pred(parse/3) is ebea.population.parameters.parse
+	pred(parse/3) is ebea.population.configuration.parse
 ].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -88,7 +106,8 @@
 default(DefaultStrategyChromosome) = Result :-
 	Result^geometry = default_geometry,
 	Result^sites = [ebea.population.site.parameters.default(DefaultStrategyChromosome)],
-	Result^defaultCarryingCapacity = default_defaultCarryingCapacity.
+	Result^defaultCarryingCapacity = default_defaultCarryingCapacity,
+	Result^siteDynamics = static.
 
 dialog(DefaultStrategyChromosome, DialogStrategyChromosome) =
 	[
@@ -104,11 +123,35 @@ dialog(DefaultStrategyChromosome, DialogStrategyChromosome) =
 parse(P) -->
 	parse_geometry(P^geometry),
 	parseable.parseList(normalType, P^sites),
-	% {P = parameters(_, _, _)},
-	% {P^geometry = throw("TODO implement parsing")},
-	% {P^sites = throw("TODO implement parsing")},
-	parseable.int32(P^defaultCarryingCapacity)
+	parseable.int32(P^defaultCarryingCapacity),
+	{P^siteDynamics = throw("Implement siteDynamics parsing")}
 	.
+
+populationSize(Configuration) = list.foldl(Sum, Configuration^sites, 0) :-
+	Sum =
+	(func(Site, AC) = R :-
+		R = ebea.population.site.parameters.populationSize(Site) + AC
+	).
+/*													 [Site | Rest]) =
+	ebea.population.site.parameters.populationSize(Site)
+	+ ebea.population.parameters.populationSize(Rest)
+*/
+
+parse_geometry(P) -->
+	{P = wellmixed},
+	[0]
+	.
+
+parse_geometry(P) -->
+	{P = lattice(_, _, _, _)},
+	[1],
+	parseable.int32(P^xSize),
+	parseable.int32(P^ySize),
+	parse_neighbourhood(P^neighbourhood),
+	parse_boundary(P^boundary)
+	.
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of private predicates and functions
 
@@ -123,41 +166,41 @@ parse(P) -->
 % geometries(lattice(X, Y, N, B), 1, 1, lattice(X, Y, N, B)).
 
 
-:- func selectedGeometry(ebea.population.parameters.parameters(CS)) = maybe(currentChoice(geometry)).
+:- func selectedGeometry(ebea.population.configuration.configuration(CS, A)) = maybe(currentChoice(geometry)).
 
-selectedGeometry(Parameters) = yes(cc(Index, Parameters^geometry)) :-
-	Parameters^geometry = wellmixed,
+selectedGeometry(Configuration) = yes(cc(Index, Configuration^geometry)) :-
+	Configuration^geometry = wellmixed,
 	Index = 0
 	;
-	Parameters^geometry = lattice(_, _, _, _),
+	Configuration^geometry = lattice(_, _, _, _),
 	Index = 1
 	.
 
-:- func selectGeometry(ebea.population.parameters.parameters(CS), int) = setResult(selectChoice(ebea.population.parameters.parameters(CS), geometry)).
+:- func selectGeometry(ebea.population.configuration.configuration(CS, A), int) = setResult(selectChoice(ebea.population.configuration.configuration(CS, A), geometry)).
 
-selectGeometry(Parameters, Index) = ok(sc(NextParameters, Field)) :-
+selectGeometry(Configuration, Index) = ok(sc(NextConfiguration, Field)) :-
 	(if
-		Parameters^geometry = wellmixed,
+		Configuration^geometry = wellmixed,
 		Index = 0,
-		NP = Parameters,
-		F = Parameters^geometry
+		NP = Configuration,
+		F = Configuration^geometry
 		;
-		Parameters^geometry = lattice(_, _, _, _),
+		Configuration^geometry = lattice(_, _, _, _),
 		Index = 0,
-		NP = 'geometry :='(Parameters, F),
+		NP = 'geometry :='(Configuration, F),
 		F = wellmixed
 		;
-		Parameters^geometry = wellmixed,
+		Configuration^geometry = wellmixed,
 		Index = 1,
-		NP = 'geometry :='(Parameters, F),
+		NP = 'geometry :='(Configuration, F),
 		F = lattice(default_xSize, default_ySize, default_neighbourhood, default_boundary)
 		;
-		Parameters^geometry = lattice(_, _, _, _),
+		Configuration^geometry = lattice(_, _, _, _),
 		Index = 1,
-		NP = Parameters,
-		F = Parameters^geometry
+		NP = Configuration,
+		F = Configuration^geometry
 	then
-		NextParameters = NP,
+		NextConfiguration = NP,
 		Field = F
 	else
 		throw("selectGeometry/2: invalid index")
@@ -472,26 +515,6 @@ set_boundary(P, V) = R :-
 	.
 
 
-:- pred parse_geometry(geometry, list(int), list(int)).
-:- mode parse_geometry(in, out, in) is det.
-:- mode parse_geometry(out, in, out) is semidet.
-
-parse_geometry(P) -->
-	{P = wellmixed},
-	[0]
-	.
-
-parse_geometry(P) -->
-	{P = lattice(_, _, _, _)},
-	[1],
-	parseable.int32(P^xSize),
-	parseable.int32(P^ySize),
-	parse_neighbourhood(P^neighbourhood),
-	parse_boundary(P^boundary)
-	% {P^neighbourhood = throw("TODO implement parsing")},
-	% {P^boundary = throw("TODO implement parsing")}
-	.
-
 :- func default_sites = list(ebea.population.site.parameters.parameters(CS)).
 
 default_sites = [].
@@ -501,41 +524,41 @@ default_sites = [].
 default_defaultCarryingCapacity = 10.
 
 
-:- func get_geometry(ebea.population.parameters.parameters(CS)) = ebea.population.parameters.geometry.
+:- func get_geometry(ebea.population.configuration.configuration(CS, A)) = ebea.population.configuration.geometry.
 
 get_geometry(P) = P^geometry.
 
 
-:- func set_geometry(ebea.population.parameters.parameters(CS), ebea.population.parameters.geometry) = ebea.population.parameters.parameters(CS).
+:- func set_geometry(ebea.population.configuration.configuration(CS, A), ebea.population.configuration.geometry) = ebea.population.configuration.configuration(CS, A).
 
 set_geometry(P, V) = 'geometry :='(P, V).
 
 
 
-:- func get_sites(ebea.population.parameters.parameters(CS)) = list(ebea.population.site.parameters.parameters(CS)).
+:- func get_sites(ebea.population.configuration.configuration(CS, A)) = list(ebea.population.site.parameters.parameters(CS)).
 
 get_sites(P) = P^sites.
 
 
-:- func set_sites(ebea.population.parameters.parameters(CS), list(ebea.population.site.parameters.parameters(CS))) = ebea.population.parameters.parameters(CS).
+:- func set_sites(ebea.population.configuration.configuration(CS, A), list(ebea.population.site.parameters.parameters(CS))) = ebea.population.configuration.configuration(CS, A).
 
 set_sites(P, V) = 'sites :='(P, V).
 
 
 
-:- func get_defaultCarryingCapacity(ebea.population.parameters.parameters(CS)) = int.
+:- func get_defaultCarryingCapacity(ebea.population.configuration.configuration(CS, A)) = int.
 
 get_defaultCarryingCapacity(P) = P^defaultCarryingCapacity.
 
 
-:- func set_defaultCarryingCapacity(ebea.population.parameters.parameters(CS), int) = ebea.population.parameters.parameters(CS).
+:- func set_defaultCarryingCapacity(ebea.population.configuration.configuration(CS, A), int) = ebea.population.configuration.configuration(CS, A).
 
 set_defaultCarryingCapacity(P, V) = 'defaultCarryingCapacity :='(P, V).
 
 
 
 
-:- end_module ebea.population.parameters.
+:- end_module ebea.population.configuration.
 
 %%% Local Variables: 
 %%% mode: mercury

@@ -8,7 +8,7 @@
 
 :- interface.
 
-:- import_module rng, probability.
+:- import_module rng.%, probability.
 :- import_module bool.
 
 /**

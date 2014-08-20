@@ -89,16 +89,26 @@
 	noac.
 
 /**
+ * defaultParameters = Result
+
  * Return a default value of {@code parameters} that can be used when
  * constructing new values of this type.
  */
 :- func defaultParameters = ebea.player.energy.parameters.
 
 /**
+ * dialogParameters = Result
+
  * Return a dialog to display and edit values of {@code parameters} type.
  */
 :- func dialogParameters = list(dialogItem(ebea.player.energy.parameters)).
 
+/**
+ * defaultChromosome = Result
+
+ * Return a default value of {@code chromosome} that can be used when
+ * constructing new values of this type.
+ */
 :- func defaultChromosome = ebea.player.energy.chromosome.
 
 /**
@@ -113,7 +123,7 @@
 
 
 /**
- * stepPlayGame(EnergyParameters, Player, Partners, Payoffs, !NextRoundPopulation, !Random)
+ * stepPlayGame(EnergyParameters, Player, Partners, Payoffs, !NextRoundPopulation, !PlayerProfile, !Random)
 
  * Plays a game between {@code Player} and {@code Partners} and updates
  * their energy in {@code NextRoundPopulation}.  Parameters {@code Player}
@@ -126,14 +136,48 @@
 	player(C, T), list(player(C, T)),
 	maybe(array(float)),
 	population(C, T), population(C, T),
-	list(list(int)), list(list(int)),
+	list(list(key)), list(list(key)),
 	R, R)
 	<= (asymmetricGame(G, C), ePRNG(R)).
 :- mode stepPlayGame(in, in, in, in, out, in, out, in, out, in, out) is det.
 
+%% ************************************************************************
+%% stepPlayGame3(EnergyParameters, Player, Partners, Payoffs, !NextRoundPopulation, !PlayerProfile, !SiteActionAccumulator, !Random)
+%%
+%% Plays a game between {@code Player} and {@code Partners} and updates
+%% their energy in {@code NextRoundPopulation} using the {@code game/3}
+%% type-class.  Parameters {@code Player} and {@code Partners} are used to
+%% create the strategy profile.  We assume the game is symmetric.
+%%
+%% <p>The {@code game/3} type-class returns an array with the actions
+%% performed by the players.  This array is used to update the action
+%% accumulator of the selecting player site.
+%%
+%%
+:- pred stepPlayGame3(
+	ebea.player.energy.parameters :: in,
+	G                             :: in,
+	player(CS, T)                 :: in,
+	list(player(CS, T))           :: in,
+	maybe(array(float)) :: out,
+	population(CS, T)                       :: in,  population(CS, T)                       :: out,
+	list(list(ebea.population.players.key)) :: in,  list(list(ebea.population.players.key)) :: out,
+	R                                       :: in,  R                                       :: out,
+	array(AA) :: di,  array(AA) :: uo
+) is det
+	<= (
+	asymmetricGame(G, CS, A),
+	ePRNG(R),
+	foldable(A, AA)
+).
+
 /**
- * This predicate succeeds if the player does not have sufficient energy.
+ * stepSurvive(Parameters, Player, !Random, Dies)
+  
+ * Unifies {@code Dies} with {@code yes} if the player does not have
+ * sufficient energy.
  */
+
 :- pred stepSurvive(
 	ebea.player.energy.parameters, player(C, T),
 	R, R,
@@ -180,6 +224,7 @@
 
 :- import_module array.
 :- import_module parseable.
+:- import_module util.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Definition of exported types
@@ -298,6 +343,66 @@ stepPlayGame(
 		MPayoffs = no
 	).
 
+stepPlayGame3(	
+	EnergyParameters,
+	Game,
+	ForPlayer,
+	Partners,
+	MPayoffs,
+	!NextRoundPopulation,
+	!PlayerProfiles,
+	!Random,
+	!SiteActionAccumulator
+) :-
+	
+	NumberPlayers = game.numberPlayers(Game),
+	InitProfile =
+	(func(Index) = Element :-
+		(if
+			Index = 0
+		then
+			Element = ForPlayer^chromosome^strategyGenes
+		else
+			Partner = list.det_index0(Partners, Index - 1),
+			Element = Partner^chromosome^strategyGenes
+		)
+	),
+	Profile = array.generate(NumberPlayers, InitProfile),
+	PlayerProfile = [ForPlayer^id | list.map(ebea.player.'ID', Partners)],
+	!:PlayerProfiles = [PlayerProfile | !.PlayerProfiles],
+	game.playAsymmetric(Game, Profile, !Random, MPayoffs, MActions),
+	(	%
+		MPayoffs = yes(Payoffs),
+		MActions = yes(Actions),
+
+		UpdateEnergies =
+		(pred(Player::in, Payoff::in, NRPin::in, NRPout::out) is det :-
+			ebea.population.update(
+				Player^id,
+				ebea.player.energy.updateEnergy(
+					EnergyParameters^energyScaling,
+					Game,
+					Payoff
+				),
+				NRPin
+			) = NRPout
+		),
+		list.foldl_corresponding(UpdateEnergies, [ForPlayer | Partners], array.to_list(Payoffs), !NextRoundPopulation),
+		PreviousActionAccumulator = util.arrayUnsafeLookup(!.SiteActionAccumulator, ForPlayer^siteIndex),
+		array.foldl(foldable.fold, Actions, PreviousActionAccumulator) = NextActionAccumulator,
+		util.arrayUnsafeSet(ForPlayer^siteIndex, NextActionAccumulator, !SiteActionAccumulator)
+	;
+		MPayoffs = no,
+		MActions = no
+	;
+		MPayoffs = yes(_),
+		MActions = no,
+		throw("stepPlayGame3/13: invalid combination of MPayoffs and MActions")
+	;	
+		MPayoffs = no,
+		MActions = yes(_),
+		throw("stepPlayGame3/13: invalid combination of MPayoffs and MActions")
+	).
 
 stepSurvive(Parameters, Player, !Random, Death) :-
 	Parameters^energyScaling = scaled,

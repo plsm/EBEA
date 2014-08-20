@@ -12,25 +12,66 @@
 :- include_module parameters.
 :- import_module ebea.population.site.parameters.
 
+%% ************************************************************************
+%% Represents a site in an EBEA population.  A site has a state, the list
+%% with current players, and an array with adjacent sites.  A site state
+%% may change during an evolutionary run depending on the dynamics.  The
+%% list of players contains players' keys.  This list changes from
+%% iteration to iteration as players reproduce and die.  The array with
+%% adjacent sites contains site indexes.  These refer to the site array in
+%% type {@code population}.  This array does not change during an
+%% evolutionary run.
+%%
 :- type site --->
 	site(
-		carryingCapacity  :: float,
-		playerIDs         :: list(int),
+		state             :: ebea.population.site.state,
+		playerIDs         :: list(ebea.population.players.key),
 		neighbourSiteIdxs :: array(int)
 	).
+
+%% ************************************************************************
+%% The state of site which contains the data that can change during an
+%% iteration depending on a value of type {@code dynamics(A)}.
+%%
+%% @cons state(CarryingCapacity)
+%%
+:- type state --->
+	state(
+		carryingCapacity  :: float
+	).
+
+%% ************************************************************************
+%% Represents site dynamics.
+%%
+%% @cons static Site state does not change during an evolutionary run.
+%%
+%% @cons dynamic(F) Site state changes is given by function {@code F}.
+%% Given a site, it returns its next state.
+%%
+%% @param AA The game actions accumulator.
+%%
+:- type dynamics(AA) --->
+	static ;
+	dynamic(func(AA, ebea.population.site.site) = ebea.population.site.state)
+	.
+
+:- type updateState(AA) == (func(AA, ebea.population.site.site) = ebea.population.site.state).
 
 /**
  * Initialise the players in some site given the initial site state parameters.
  */
 :- pred initialisePlayers(
-	ebea.player.parameters(P), int,
-	initialPlayers(CS),
-	list(player(CS, T)), list(player(CS, T)),
-	list(player(CS, T)), list(player(CS, T)),
-	int, int,
-	R, R)
-	<= (chromosome(CS, T, P), ePRNG(R)).
-:- mode initialisePlayers(in, in, in, in, out, in, out, in, out, in, out) is det.
+	ebea.player.parameters(P) :: in,
+	int                       :: in,
+	initialPlayers(C)         :: in,
+	ebea.population.players.key           :: in, ebea.population.players.key           :: out,
+	list(ebea.population.players.key)     :: in, list(ebea.population.players.key)     :: out,
+	ebea.population.players.players(C, T) :: in, ebea.population.players.players(C, T) :: out,
+	R                                     :: in, R                                     :: out
+)
+	is det
+	<= (chromosome(C, T, P), ePRNG(R))
+.
 
 /**
  * Create the initial site given its initial state parameters.  The
@@ -39,51 +80,39 @@
  */
 
 :- pred createInitialSite(
-	ebea.player.parameters(P), ebea.population.site.parameters.parameters(C), maybe(int), maybe(list(int)),
-	site,
-	list(player(C, T)), list(player(C, T)),
-	int, int,
-	R, R)
-	<= (chromosome(C, T, P), ePRNG(R)).
-:- mode createInitialSite(in, in, in, in,  out,  in, out, in, out, in, out) is det.
-
+	ebea.player.parameters(P)                     :: in,
+	ebea.population.site.parameters.parameters(C) :: in,
+	maybe(int)                                    :: in,
+	maybe(list(int))                              :: in,
+	site :: out,
+	ebea.population.players.key           :: in, ebea.population.players.key           :: out,
+	ebea.population.players.players(C, T) :: in, ebea.population.players.players(C, T) :: out,
+	R                                     :: in, R                                     :: out
+)
+	is det
+	<= (chromosome(C, T, P), ePRNG(R))
+.
 
 /**
  * Create the initial site for a lattice population.
  */
 :- pred createLatticeInitialSite(
-	float, geometry, ebea.player.parameters(P),
-	int, site,
-	list(ebea.population.site.parameters.parameters(C)), list(ebea.population.site.parameters.parameters(C)),
-	list(player(C, T)), list(player(C, T)),
-	int, int,
-	R, R)
+	float                     :: in,
+	geometry                  :: in(lattice),
+	ebea.player.parameters(P) :: in,
+	int :: in, site :: out,
+	list(ebea.population.site.parameters.parameters(C)) :: in, list(ebea.population.site.parameters.parameters(C)) :: out,
+	ebea.population.players.key                         :: in, ebea.population.players.key                         :: out,
+	ebea.population.players.players(C, T)               :: in, ebea.population.players.players(C, T)               :: out,
+	R                                                   :: in, R                                                   :: out
+)
+	is det
 	<= (chromosome(C, T, P), ePRNG(R)).
-:- mode createLatticeInitialSite(
-	in, in(lattice), in,
-	in, out,
-	in, out, in, out, in, out, in, out) is det.
-
-
-
 
 /**
  * Return the number of players in the site.
  */
 :- func numberPlayers(site) = int.
-
-/**
- * neighbours(ArraySites, RestPlayers, Player, Neighbours)
-  
- * For each player in the population return a list with the neighbours.
- * This predicate is similar to {@code neighbours/3} but is amenable to
- * predicates from module {@code solutions}.
- */
-:- pred neighbours(array(site), list(player(C, P)), player(C, P), list(player(C, P))).
-:- mode neighbours(in, in, out, out) is nondet.
-%:- mode neighbours(in, in, in, out) is det.
-
-:- func neighbours(array(site), list(player(C, P)), player(C, P)) = list(player(C, P)).
 
 
 /**
@@ -96,14 +125,14 @@
 
 :- pred stepBirth(
 	ebea.player.parameters(P),
-	player(C, T), site,
+	player(C, T),
 	player(C, T),
 	distribution, distribution,
 	R, R,
-	int, int,
+	ebea.population.players.key, ebea.population.players.key,
 	list(player(C, T)), list(player(C, T)))
 	<= (ePRNG(R), chromosome(C, T, P)).
-:- mode stepBirth(in, in, in, out, in, out, in, out, in, out, in, out) is det.
+:- mode stepBirth(in, in, out, in, out, in, out, in, out, in, out) is det.
 
 
 
@@ -118,16 +147,30 @@
  */
 
 :- pred stepDeath(
-	ebea.population.parameters(P),
-	player(C, T), site,
-	R, R,
-	list(player(C, T)), list(player(C, T)),
-	list(player(C, T)), list(player(C, T)),
-	list(player(C, T)), list(player(C, T)),
-	list(player(C, T)), list(player(C, T))
-	)
-	<= (ePRNG(R), chromosome(C, T, P)).
-:- mode stepDeath(in, in, in, in, out, in, out, in, out, in, out, in, out) is det.
+	ebea.population.parameters(P) :: in,
+	population(C, T)              :: in,
+	player(C, T) :: in,
+	bool         :: out,
+	R                  :: in, R                  :: out,
+	list(player(C, T)) :: in, list(player(C, T)) :: out,
+	list(player(C, T)) :: in, list(player(C, T)) :: out,
+	list(player(C, T)) :: in, list(player(C, T)) :: out
+)
+	is det
+	<= (ePRNG(R), chromosome(C, T, P))
+.
+
+% :- pred stepDeath(
+% 	ebea.population.parameters(P),
+% 	player(C, T), site,
+% 	R, R,
+% 	list(player(C, T)), list(player(C, T)),
+% 	list(player(C, T)), list(player(C, T)),
+% 	list(player(C, T)), list(player(C, T)),
+% 	list(player(C, T)), list(player(C, T))
+% 	)
+% 	<= (ePRNG(R), chromosome(C, T, P)).
+% :- mode stepDeath(in, in, in, in, out, in, out, in, out, in, out, in, out) is det.
 
 
 % /**
@@ -146,10 +189,26 @@
 	<= ePRNG(R).
 :- mode placePlayers(in, in, out, array_di, array_uo, in, out) is det.
 
-:- pred removePlayers(list(player(C, T)), list(int), list(int), array(site), array(site)).
+/**
+ * For every player that has died removes its reference in its site.  The
+ * predicate also returns a list with players' keys.
+  
+ */
+:- pred removePlayers(list(player(C, T)), list(key), list(key), array(site), array(site)).
 :- mode removePlayers(in, in, out, array_di, array_uo) is det.
 
-
+%% ************************************************************************
+%% parseDynamics(ListUpdateState, Dynamics, !State)
+%%
+%% Parse site dynamics.
+%%
+:- pred parseDynamics(
+	pred(int, updateState(AA)),
+	dynamics(AA),
+	parseable.state, parseable.state
+).
+:- mode parseDynamics(in(pred(out, in)  is det),     in,  out, in)  is det.
+:- mode parseDynamics(in(pred(in,  out) is semidet), out, in,  out) is semidet.
 
 :- func fold_player(population(C, T), site, func(player(C, T), A) = A, A) = A.
 
@@ -160,6 +219,7 @@
 :- implementation.
 
 :- import_module ebea.player.age.
+:- import_module ebea.player.chromosome.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Definition of exported types
@@ -171,22 +231,22 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of exported predicates and functions
 
-initialisePlayers(PlayerParameters, SiteIndex, InitialPlayers, !SitePlayers, !ListPlayers, !ID, !Random) :-
+initialisePlayers(PlayerParameters, SiteIndex, InitialPlayers, !KeyGenerator, !SitePlayerKeys, !PopulationPlayers, !Random) :-
 	(if
 		InitialPlayers^quantity >= 0
 	then
-		list.foldl3(
+		list.foldl4(
 			makeCopy(PlayerParameters, SiteIndex, InitialPlayers^chromosome),
-			!.ID..(!.ID + InitialPlayers^quantity - 1),
-			!SitePlayers,
-			!ListPlayers,
-			!Random),
-		!:ID = !.ID + InitialPlayers^quantity
+			1..InitialPlayers^quantity,
+			!KeyGenerator,
+			!SitePlayerKeys,
+			!PopulationPlayers,
+			!Random)
 	else
-		throw("ebea.population.site.parameters.initialisePlayers/1: Invalid number of chromosome copies")
+		throw("ebea.population.site.parameters.initialisePlayers/11: Invalid number of chromosome copies")
 	).
 
-createInitialSite(PlayerParameters, SiteParameters, MSiteIndex, MSiteNeighbourhood, InitialSite, !ListPlayers, !ID, !Random) :-
+createInitialSite(PlayerParameters, SiteParameters, MSiteIndex, MSiteNeighbourhood, InitialSite, !KeyGenerator, !PopulationPlayers, !Random) :-
 	(
 		MSiteIndex = no,
 		SiteIndex = SiteParameters^id
@@ -196,18 +256,19 @@ createInitialSite(PlayerParameters, SiteParameters, MSiteIndex, MSiteNeighbourho
 	list.foldl4(
 		initialisePlayers(PlayerParameters, SiteIndex),
 		SiteParameters^chromosomes,
-		[], SitePlayers,
-		!ListPlayers,
-		!ID,
+		!KeyGenerator,
+		[], SitePlayerKeys,
+		!PopulationPlayers,
 		!Random),
-	InitialSite^carryingCapacity = float(SiteParameters^carryingCapacity),
-	InitialSite^playerIDs = list.map(ebea.player.'ID', SitePlayers),
 	(
 		MSiteNeighbourhood = no,
 		SiteNeighbourhood = SiteParameters^neighbourhood
 		;
 		MSiteNeighbourhood = yes(SiteNeighbourhood)
 	),
+	SiteState^carryingCapacity = float(SiteParameters^carryingCapacity),
+	InitialSite^state = SiteState,
+	InitialSite^playerIDs = SitePlayerKeys,
 	InitialSite^neighbourSiteIdxs = array.from_list(SiteNeighbourhood)
 	.
 
@@ -215,8 +276,8 @@ createLatticeInitialSite(
 	DefaultCarryingCapacity, Geometry, PlayerParameters,
 	SiteIndex, InitialSite,
 	!ListSiteParameters,
-	!ListPlayers,
-	!ID,
+	!KeyGenerator,
+	!PopulationPlayers,
 	!Random
 ) :-
 	(if
@@ -227,11 +288,12 @@ createLatticeInitialSite(
 		createInitialSite(
 			PlayerParameters, SiteParameters, no, yes(makeConnections(Geometry, SiteIndex)),
 			InitialSite,
-			!ListPlayers,
-			!ID,
+			!KeyGenerator,
+			!PopulationPlayers,
 			!Random)
 	else
-		InitialSite^carryingCapacity = DefaultCarryingCapacity,
+		SiteState^carryingCapacity = DefaultCarryingCapacity,
+		InitialSite^state = SiteState,
 		InitialSite^playerIDs = [],
 		InitialSite^neighbourSiteIdxs = array.from_list(makeConnections(Geometry, SiteIndex))
 	).
@@ -239,49 +301,50 @@ createLatticeInitialSite(
 	
 numberPlayers(Site) = list.length(Site^playerIDs).
 
-neighbours(ArraySites, Players, Player, Neighbours) :-
-	array.member(ArraySites, Site),
-	%
-	list.delete(Site^playerIDs, PlayerID, RestIDs),
-	Player = ebea.population.getPlayer(Players, PlayerID),
-	SiteNeighbours = list.map(ebea.population.getPlayer(Players), RestIDs),
-	%
-	array.foldl(AppendPlayersSite, Site^neighbourSiteIdxs, SiteNeighbours) = Neighbours,
-	AppendPlayersSite =
-	(func(I, AC) = R :-
-		S = array.lookup(ArraySites, I),
-		R = list.append(list.map(ebea.population.getPlayer(Players), S^playerIDs), AC)
-	).
+% neighbours(ArraySites, Players, Player, Neighbours) :-
+% 	array.member(ArraySites, Site),
+% 	%
+% 	list.delete(Site^playerIDs, PlayerID, RestIDs),
+% 	Player = ebea.population.getPlayer(Players, PlayerID),
+% 	SiteNeighbours = list.map(ebea.population.getPlayer(Players), RestIDs),
+% 	%
+% 	array.foldl(AppendPlayersSite, Site^neighbourSiteIdxs, SiteNeighbours) = Neighbours,
+% 	AppendPlayersSite =
+% 	(func(I, AC) = R :-
+% 		S = array.lookup(ArraySites, I),
+% 		R = list.append(list.map(ebea.population.getPlayer(Players), S^playerIDs), AC)
+% 	).
 
 
-neighbours(ArraySites, Players, Player) = Neighbours :-
-	array.lookup(ArraySites, Player^siteIndex) = Site,
-	%
-	list.delete_all(Site^playerIDs, Player^id) = RestIDs,
-	SiteNeighbours = list.map(ebea.population.getPlayer(Players), RestIDs),
-	%
-	array.foldl(AppendPlayersSite, Site^neighbourSiteIdxs, SiteNeighbours) = Neighbours,
-	AppendPlayersSite =
-	(func(I, AC) = R :-
-		S = array.lookup(ArraySites, I),
-		R = list.append(list.map(ebea.population.getPlayer(Players), S^playerIDs), AC)
-	).
+% neighbours(ArraySites, Players, Player) = Neighbours :-
+% 	array.lookup(ArraySites, Player^siteIndex) = Site,
+% 	%
+% 	list.delete_all(Site^playerIDs, Player^id) = RestIDs,
+% 	SiteNeighbours = list.map(ebea.population.getPlayer(Players), RestIDs),
+% 	%
+% 	array.foldl(AppendPlayersSite, Site^neighbourSiteIdxs, SiteNeighbours) = Neighbours,
+% 	AppendPlayersSite =
+% 	(func(I, AC) = R :-
+% 		S = array.lookup(ArraySites, I),
+% 		R = list.append(list.map(ebea.population.getPlayer(Players), S^playerIDs), AC)
+% 	).
 
-stepBirth(Parameters, Player, _Site, Parent, !Distribution, !Random, !NextID, !Nursery) :-
-	ebea.player.reproduce(Parameters, Player, Parent, !.NextID + 1, MOffspring, !Distribution, !Random),
+stepBirth(Parameters, Player, Parent, !Distribution, !Random, !NextID, !Nursery) :-
+	ebea.player.reproduce(Parameters, Player, Parent, !.NextID, MOffspring, !Distribution, !Random),
 	(
 		MOffspring = no
 		;
 		MOffspring = yes(Offspring),
-		!:NextID = !.NextID + 1,
+		ebea.population.players.nextKey(!NextID),
 		!:Nursery = [Offspring | !.Nursery]
 	)
-	.
+.
 
-stepDeath(Parameters, Player, Site, !Random, !Players,
+stepDeath(Parameters, Population, Player, Filter, !Random,
 	!CemeteryCarryingCapacity, !CemeteryOldAge, !CemeteryStarvation)
 :-
-	deathProbability(Site^carryingCapacity, numberPlayers(Site)) = Value,
+	Site = playerSite(Population, Player),
+	deathProbability(Site^state^carryingCapacity, numberPlayers(Site)) = Value,
 	rng.flipCoin(Value, DiesCC, !Random),
 	(if
 		DiesCC = yes
@@ -304,18 +367,22 @@ stepDeath(Parameters, Player, Site, !Random, !Players,
 			)
 		)
 	),
-	(
+	(	%
 		Dies = no,
-		list.cons(Player, !Players)
+		Filter = yes
 		;
-		Dies = yes(carryingCapacity),
-		list.cons(Player, !CemeteryCarryingCapacity)
+		Dies = yes(Cause),
+		Filter = no,
+		(	%
+			Cause = carryingCapacity,
+			list.cons(Player, !CemeteryCarryingCapacity)
 		;
-		Dies = yes(oldAge),
-		list.cons(Player, !CemeteryOldAge)
+			Cause = oldAge,
+			list.cons(Player, !CemeteryOldAge)
 		;
-		Dies = yes(starvation),
-		list.cons(Player, !CemeteryStarvation)
+			Cause = starvation,
+			list.cons(Player, !CemeteryStarvation)
+		)
 	).
 
 placePlayers(MigrationProbability, ListPlayers, MappedPlayers, !ArraySites, !Random) :-
@@ -371,7 +438,7 @@ fold_player(Population, Site, Func, AC) = Result :-
 	list.foldl(BridgeFunc, Site^playerIDs, AC) = Result,
 	BridgeFunc =
 	(func(I, A) = R :-
-		ebea.population.getPlayer(Population^players, I) = P,
+		ebea.population.players.player(Population^players, I) = P,
 		R = Func(P, A)
 	).
 
@@ -404,21 +471,78 @@ debug(!IO) :-
 		true
 	).
 
+parseDynamics(MapUpdateState, Dynamics) -->
+	{Dynamics = static},
+	[0]
+	;
+	{Dynamics = dynamic(UF)},
+	[1, Code],
+	{MapUpdateState(Code, UF)}
+	.
+
+/*
+:- pred parseDynamicsUpdateFunction(
+	list(updateState(AA)),
+	int,
+	updateState(AA),
+	parseable.state, parseable.state
+).
+:- mode parseDynamicsUpdateFunction(in, in, in, out, in) is det.
+:- mode parseDynamicsUpdateFunction(in, in, out, in, out) is semidet.
+
+parseDynamicsUpdateFunction(
+	ListUpdateState :: in,
+	Index           :: in,
+	Result          :: out,
+	!.State :: in,  !:State :: out
+) :-
+	!.State = [Code | !:State],
+	ListUpdateState = [AnUpdateState | RestUpdateState],
+	(if
+		Code = Index
+	then
+		AnUpdateState = Result
+	else
+		parseDynamicsUpdateFunction(RestUpdateState, Index + 1, Result, !State)
+	).
+
+parseDynamicsUpdateFunction(
+	ListUpdateState :: in,
+	Index           :: in,
+	Result          :: in,
+	!.State :: out,  !:State :: in
+) :-
+	ListUpdateState = [AnUpdateState | RestUpdateState],
+	(if
+		AnUpdateState = Result
+	then
+		!.State = [Index | !:State]
+	else
+		parseDynamicsUpdateFunction(RestUpdateState, Index + 1, Result, !State)
+	).
+*/
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of private predicates and functions
 
 :- pred makeCopy(
-	ebea.player.parameters(P), int, ebea.player.chromosome(C), int,
-	list(player(C, T)), list(player(C, T)),
-	list(player(C, T)), list(player(C, T)),
-	R, R)
-	<= (chromosome(C, T, P), ePRNG(R)).
-:- mode makeCopy(in, in, in, in, in, out, in, out, in, out) is det.
+	ebea.player.parameters(P)            :: in,
+	int                                  :: in,
+	ebea.player.chromosome.chromosome(C) :: in,
+	int                                  :: in,
+	ebea.population.players.key           :: in, ebea.population.players.key           :: out,
+	list(ebea.population.players.key)     :: in, list(ebea.population.players.key)     :: out,
+	ebea.population.players.players(C, T) :: in, ebea.population.players.players(C, T) :: out,
+	R                                     :: in, R                                     :: out
+)
+	is det
+	<= (chromosome(C, T, P), ePRNG(R))
+.
 
-makeCopy(PlayerParameters, SiteIndex, Chromosome, PlayerID, !SitePlayers, !ListPlayers, !Random) :-
-	ebea.player.init(PlayerParameters, Chromosome, PlayerID, SiteIndex, NewPlayer, !Random),
-	!:ListPlayers = [NewPlayer | !.ListPlayers],
-	!:SitePlayers = [NewPlayer | !.SitePlayers]
+makeCopy(PlayerParameters, SiteIndex, Chromosome, _, !KeyGenerator, !SitePlayerKeys, !PopulationPlayers, !Random) :-
+	ebea.player.init(PlayerParameters, Chromosome, !.KeyGenerator, SiteIndex, NewPlayer, !Random),
+	list.cons(!.KeyGenerator, !SitePlayerKeys),
+	ebea.population.players.insert(NewPlayer, !KeyGenerator, !PopulationPlayers)
 	.
 
 % :- pred ixy(geometry, int, int, int).

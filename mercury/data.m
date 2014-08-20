@@ -2,13 +2,13 @@
  * 
 
  * @author Pedro Mariano
- * @version 1.0 2013/12/ 7
+ * @version 1.0 2013/12/07
  */
 :- module data.
 
 :- interface.
 
-:- include_module config, prng.
+:- include_module config, prng, seed.
 :- include_module util.
 
 :- type games --->

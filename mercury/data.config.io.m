@@ -25,7 +25,13 @@
 
 :- implementation.
 
-:- import_module ebea.population.site, ebea.population.site.parameters.
+:- include_module filterV1000, filterV1001, filterV1002, filterV1003, filterV1004.
+
+:- import_module data.config.io.filterV1000, data.config.io.filterV1001,
+data.config.io.filterV1002, data.config.io.filterV1003,
+data.config.io.filterV1004.
+
+:- import_module ebea.player.chromosome, ebea.population.site, ebea.population.site.parameters.
 :- import_module parseable.
 :- import_module exception, float.
 
@@ -35,28 +41,15 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Definition of private types
 
-:- type config_file --->
-	config_v1003(
-		data.prng.supplyParameter,        %  1 random
-		int,                              %  2 numberRuns
-		int,                              %  3 numberIterations
-		ebea.streams.level,               %  4 level
-		ebea.population.dynamic,          %  5 dynamic
-		probability,                      %  6 mutationProbability
-		probability,                      %  7 migrationProbability
-		ebea.player.age.parameters,       %  8 ageParameters
-		ebea.player.energy.parameters,    %  9 energyParameters
-		ebea.player.selection.parameters, % 10 selectionParameters
-		games,                            % 11 selectedGame
-		config_2x2,                       % 12 cfg_2x2
-		config_battlesexes,               % 13 battlesexes
-		config_centipede,                 % 14 centipede
-		config_givetake,                  % 15 givetake
-		config_investment,                % 16 investment
-		config_pgp,                       % 17 pgp
-		'config_pgp+pa',                  % 18 pgp+pa
-		config_ultimatum                  % 19 ultimatum
-	) ;
+:- type configFile --->
+	configFileV1000(data.config.io.filterV1000.configFile) ;
+	configFileV1001(data.config.io.filterV1001.configFile) ;
+	configFileV1002(data.config.io.filterV1002.configFile) ;
+	configFileV1003(data.config.io.filterV1003.configFile) ;
+	configFileV1004(data.config.io.filterV1004.configFile)
+	.
+
+/*						
 	config_v1001(
 		data.prng.supplyParameter,         %  1 random
 		int,                               %  2 numberRuns
@@ -67,14 +60,14 @@
 		probability,                       %  7 migrationProbability
 		ebea.player.age.parameters,        %  8 ageParameters
 		ebea.player.energy.parameters,     %  9 energyParameters
-		ebea.player.selection.parameters,  % 10 selectionParameters
-		games_old_v1001,                     % 11 selectedGame
-		config_2x2,                        % 12 cfg_2x2
-		config_battlesexes,                % 13 battlesexes
-		config_centipede,                  % 14 centipede
-		config_pgp,                        % 15 pgp
-		'config_pgp+pa',                   % 16 'pgp+pa'
-		config_ultimatum                   % 17 ultimatum
+		ebea_player_selection_parameters_v1002,  % 10 selectionParameters
+		games_old_v1001,                         % 11 selectedGame
+		gameConfig_old_v1003_2x2,                    % 12 cfg_2x2
+		gameConfig_old_v1003_battlesexes,            % 13 battlesexes
+		gameConfig_old_v1003_centipede,              % 14 centipede
+		gameConfig_old_v1003_pgp,                    % 15 pgp
+		'gameConfig_old_v1003_pgp+pa',               % 16 'pgp+pa'
+		gameConfig_old_v1003_ultimatum               % 17 ultimatum
 	) ;
 	config_v1000(
 		data.prng.supplyParameter,			 %  1 random
@@ -86,7 +79,7 @@
 		float,									 %  7 mutationProbability
 		ebea.player.age.parameters,		 %  8 ageParameters
 		ebea.player.energy.parameters,	 %  9 energyParameters
-		ebea.player.selection.parameters, % 10 selectionParameters
+		ebea_player_selection_parameters_v1002, % 10 selectionParameters
 		games_old_v1001,							 % 11 selectedGame
 		config_old_v1000_2x2,				 % 12 cfg_2x2
 		config_old_v1000_battlesexes,	 % 13 battlesexes
@@ -95,28 +88,10 @@
 		'config_old_v1000_pgp+pa',		 % 16 pgp+pa
 		config_old_v1000_ultimatum		 % 19 ultimatum
 	 ).
+*/
 
 
-:- type games_old_v1001 --->
-	'2x2' ;
-	battlesexes ;
-	centipede ;
-	pgp ;
-	'pgp+pa' ;
-	ultimatum.
 
-:- type config_old_v1000(G, CS, P) --->
-	config_old_v1000(
-		G,                                   %  game
-		P,                                   % parameters
-		list(initialPlayers_old_v1000(CS)) % initialPopulation
-	).
-
-:- type initialPlayers_old_v1000(CS) --->
-	initialPlayers_old_v1000(
-		int,                       % quantity
-		ebea.player.chromosome(CS) % chromosome 
-	).
 
 :- type chromosome --->
 	random ;
@@ -132,19 +107,10 @@
 	.
 
 
-:- type config_old_v1000_2x2         == config_old_v1000(gl.'2x2'.game.game,       gl.'2x2'.strategy.strategy,       gl.'2x2'.parameters.parameters).
-:- type config_old_v1000_battlesexes == config_old_v1000(gl.battlesexes.game.game, gl.battlesexes.strategy.strategy, gl.battlesexes.parameters.parameters).
-:- type config_old_v1000_centipede   == config_old_v1000(gl.centipede.game.game,   gl.centipede.strategy.strategy,   gl.centipede.parameters.parameters).
-:- type config_old_v1000_pgp         == config_old_v1000(gl.pgp.game.game,         gl.pgp.strategy.strategy,         gl.pgp.parameters.parameters).
-:- type 'config_old_v1000_pgp+pa'    == config_old_v1000(gl.'pgp+pa'.game.game,    gl.'pgp+pa'.strategy.strategy,    gl.'pgp+pa'.parameters.parameters).
-:- type config_old_v1000_ultimatum   == config_old_v1000(gl.ultimatum.game.game,   gl.ultimatum.strategy.strategy,   gl.ultimatum.parameters.parameters).
 
-:- instance parseable(initialPlayers_old_v1000(CS))
-	<= parseable(CS)
-	where
-	[
-	 pred(parse/3) is parse_initialPlayers_old_v1000
-	 ].
+
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of exported predicates and functions
@@ -173,7 +139,7 @@ read(mercury, Filename, MConfig, !IO) :-
 		io.read(Stream, IConfig, !IO),
 		(
 			IConfig = ok(Config),
-			MConfig = ok(map(Config))
+			MConfig = ok(data.config.io.map(Config))
 			;
 			IConfig = eof,
 			MConfig = error("end-of-file reached while reading config file")
@@ -245,50 +211,18 @@ write(binary, Filename, Config, MErrors, !IO) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of private predicates and functions
 
-:- pred parse(config_file, list(int), list(int)).
+:- pred parse(data.config.io.configFile, list(int), list(int)).
 :- mode parse(in, out, in) is det.
 :- mode parse(out, in, out) is semidet.
 
-parse(C) -->
-	{C = config_v1000(
-		Random,
-		NumberRuns,
-		NumberIterations,
-		Level,
-		CarryingCapacity,
-		Dynamic,
-		MutationProbability,
-		AgeParameters,
-		EnergyParameters,
-		SelectionParameters,
-		SelectedGame,
-		Cfg_2x2,
-		BattleSexes,
-		Centipede,
-		PGP,
-		PGP_PA,
-		Ultimatum
-	)},
-	[0],
-	data.prng.parse(Random),
-	parseable.int32(NumberRuns),
-	parseable.int32(NumberIterations),
-	ebea.streams.parse(Level),
-	parseable.float32(CarryingCapacity),
-	ebea.population.parseDynamic(Dynamic),
-	parseable.float32(MutationProbability),
-	ebea.player.age.parseParameters(AgeParameters),
-	ebea.player.energy.parseParameters(EnergyParameters),
-	ebea.player.selection.parseParameters(SelectionParameters),
-	parseGames_v1001(SelectedGame),
-	parse_GameConfig_old_v1000(Cfg_2x2),
-	parse_GameConfig_old_v1000(BattleSexes),
-	parse_GameConfig_old_v1000(Centipede),
-	parse_GameConfig_old_v1000(PGP),
-	parse_GameConfig_old_v1000(PGP_PA),
-	parse_GameConfig_old_v1000(Ultimatum)
-	.
+parse(configFileV1000(C)) -->	[0],	data.config.io.filterV1000.parse(C).
+parse(configFileV1001(C)) -->	[1],	data.config.io.filterV1001.parse(C).
+parse(configFileV1002(C)) -->	[2],	data.config.io.filterV1002.parse(C).
+parse(configFileV1003(C)) -->	[3],	data.config.io.filterV1003.parse(C).
+parse(configFileV1004(C)) -->	[4],	data.config.io.filterV1004.parse(C).
 
+
+/*
 parse(C) -->
 	{C = config_v1001(
 		Random,
@@ -318,92 +252,21 @@ parse(C) -->
 	probability.parse(MigrationProbability),
 	ebea.player.age.parseParameters(AgeParameters),
 	ebea.player.energy.parseParameters(EnergyParameters),
-	ebea.player.selection.parseParameters(SelectionParameters),
+	ebea_player_selection_parseParameters_v1002(SelectionParameters),
 	parseGames_v1001(SelectedGame),
-	parse_GameConfig(Cfg_2x2),
-	parse_GameConfig(BattleSexes),
-	parse_GameConfig(Centipede),
-	parse_GameConfig(PGP),
-	parse_GameConfig(PGP_PA),
-	parse_GameConfig(Ultimatum)
+	parse_GameConfig_old_v1003(Cfg_2x2),
+	parse_GameConfig_old_v1003(BattleSexes),
+	parse_GameConfig_old_v1003(Centipede),
+	parse_GameConfig_old_v1003(PGP),
+	parse_GameConfig_old_v1003(PGP_PA),
+	parse_GameConfig_old_v1003(Ultimatum)
 	.
-
-parse(C) -->
-	{C = config_v1003(
-		Random,
-		NumberRuns,
-		NumberIterations,
-		Level,
-		Dynamic,
-		MutationProbability,
-		MigrationProbability,
-		AgeParameters,
-		EnergyParameters,
-		SelectionParameters,
-		SelectedGame,
-		Cfg_2x2,
-		BattleSexes,
-		Centipede,
-		GiveTake,
-		Investment,
-		PGP,
-		PGP_PA,
-		Ultimatum)},
-	[2],
-	data.prng.parse(Random),
-	parseable.int32(NumberRuns),
-	parseable.int32(NumberIterations),
-	ebea.streams.parse(Level),
-	ebea.population.parseDynamic(Dynamic),
-	probability.parse(MutationProbability),
-	probability.parse(MigrationProbability),
-	ebea.player.age.parseParameters(AgeParameters),
-	ebea.player.energy.parseParameters(EnergyParameters),
-	ebea.player.selection.parseParameters(SelectionParameters),
-	parseGames(SelectedGame),
-	parse_GameConfig(Cfg_2x2),
-	parse_GameConfig(BattleSexes),
-	parse_GameConfig(Centipede),
-	parse_GameConfig(GiveTake),
-	parse_GameConfig(Investment),
-	parse_GameConfig(PGP),
-	parse_GameConfig(PGP_PA),
-	parse_GameConfig(Ultimatum)
-	.
+*/
 
 
-:- pred parse_GameConfig(gameConfig(G, CS, P), list(int), list(int))
-	<= (parseable(G), parseable(CS), parseable(P)).
-:- mode parse_GameConfig(in, out, in) is det.
-:- mode parse_GameConfig(out, in, out) is semidet.
 
-parse_GameConfig(Config) -->
-	parseable.parse(Config^game),
-	parseable.parse(Config^parameters),
-	ebea.population.parameters.parse(Config^initialPopulation)
-	.
 
-:- pred parse_GameConfig_old_v1000(config_old_v1000(G, CS, P), list(int), list(int))
-	<= (parseable(G), parseable(CS), parseable(P)).
-:- mode parse_GameConfig_old_v1000(in, out, in) is det.
-:- mode parse_GameConfig_old_v1000(out, in, out) is semidet.
 
-parse_GameConfig_old_v1000(Config) -->
-	{Config = config_old_v1000(Game, Parameters, InitialPopulation)},
-	parseable.parse(Game),
-	parseable.parse(Parameters),
-	parseable.parseList(normalType, InitialPopulation)
-	.
-:- pred parse_initialPlayers_old_v1000(initialPlayers_old_v1000(CS), list(int), list(int))
-	<= parseable(CS).
-:- mode parse_initialPlayers_old_v1000(in, out, in) is det.
-:- mode parse_initialPlayers_old_v1000(out, in, out) is semidet.
-
-parse_initialPlayers_old_v1000(InitialPlayers) -->
-	{InitialPlayers = initialPlayers_old_v1000(Quantity, Chromosome)},
-	parseable.int32(Quantity),
-	ebea.player.parseChromosome(Chromosome)
-	.
 
 
 /**
@@ -411,54 +274,30 @@ parse_initialPlayers_old_v1000(InitialPlayers) -->
  * internal representation.
  */
 
-:- func map(config_file) = config.
+:- func map(data.config.io.configFile) = config.
 
-map(config_v1000(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17)) = Result :-
-	Result^random = A1,
-	Result^numberRuns = A2,
-	Result^numberIterations = A3,
-	Result^level = A4,
-	Result^dynamic = A6,
-	Result^mutationProbability = probability.init(A7),
-	Result^migrationProbability = probability.zero,
-	Result^ageParameters = A8,
-	Result^energyParameters = A9,
-	Result^selectionParameters = A10,
-	Result^selectedGame = mapGames_v1001(A11),
-	Result^cfg_2x2 = map_v1000(A5, A12),
-	Result^battlesexes = map_v1000(A5, A13),
-	Result^centipede = map_v1000(A5, A14),
-	Result^givetake = gameConfig(
-		gl.givetake.game.default,
-		gl.givetake.parameters.default,
-		ebea.population.parameters.default(gl.givetake.strategy.default)
-		),
-	Result^investment = gameConfig(
-		gl.investment.game.default,
-		gl.investment.parameter.default,
-		ebea.population.parameters.default(gl.investment.strategy.default)
-		),
-	Result^pgp = map_v1000(A5, A15),
-	Result^'pgp+pa' = map_v1000(A5, A16),
-	Result^ultimatum = map_v1000(A5, A17)
-	.
+map(configFileV1000(C)) = data.config.io.filterV1000.map(C).
+map(configFileV1001(C)) = data.config.io.filterV1001.map(C).
+map(configFileV1002(C)) = data.config.io.filterV1002.map(C).
+map(configFileV1003(C)) = data.config.io.filterV1003.map(C).
+map(configFileV1004(C)) = data.config.io.filterV1004.map(C).
 
-map(config_v1001(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17)) =
-	config(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, mapGames_v1001(A11), A12, A13, A14, B1, B2, A15, A16, A17) :-
+/*
+map(config_v1001(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10_in, A11, A12, A13, A14, A15, A16, A17)) =
+	config(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10_out, mapGames_v1001(A11), A12, A13, A14, B1, B2, A15, A16, A17) :-
 	B1 = gameConfig(
 		gl.givetake.game.default,
 		gl.givetake.parameters.default,
-		ebea.population.parameters.default(gl.givetake.strategy.default)
+		ebea.population.configuration.default(gl.givetake.strategy.default)
 	),
 	B2 = gameConfig(
 		gl.investment.game.default,
 		gl.investment.parameter.default,
-		ebea.population.parameters.default(gl.investment.strategy.default)
-	)
+		ebea.population.configuration.default(gl.investment.strategy.default)
+	),
+	A10_out = map_ebea_player_selection_parseParameters_v1002(A10_in)
 	.
 
-map(config_v1003(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19)) =
-	config(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19).
 
 
 /**
@@ -467,56 +306,14 @@ map(config_v1003(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A1
  * map/1}.
  */
 
-:- func pam(data.config.config) = config_file.
+:- func pam(data.config.config) = data.config.io.configFile.
 
 pam(config(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19)) =
-	config_v1003(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19).
-
-
-:- func mapGames_v1001(games_old_v1001) = games.
-
-mapGames_v1001('2x2')       = '2x2'.
-mapGames_v1001(battlesexes) = battlesexes.
-mapGames_v1001(centipede)   = centipede.
-mapGames_v1001(pgp)         = pgp.
-mapGames_v1001('pgp+pa')    = 'pgp+pa'.
-mapGames_v1001(ultimatum)   = ultimatum.
+	configFileV1004(configFile(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19)).
 
 
 
-:- func map_v1000(float, config_old_v1000(G, CS, P)) = gameConfig(G, CS, P).
 
-map_v1000(CarryingCapacity, config_old_v1000(A1, A2, A3)) = Result :-
-	Result^game = A1,
-	Result^parameters = A2,
-	Result^initialPopulation = IP,
-	IP^geometry = wellmixed,
-	IP^sites = [Site],
-	IP^defaultCarryingCapacity = float.round_to_int(CarryingCapacity),
-	
-	Site^id = 0,
-	Site^carryingCapacity = float.round_to_int(CarryingCapacity),
-	Site^chromosomes = list.map(Map, A3),
-	Site^neighbourhood = [],
-	
-	Map =
-	(func(X) = R :-
-		X = initialPlayers_old_v1000(B1, B2),
-		R^quantity = B1,
-		R^chromosome = B2
-	)
-	.
-
-:- pred parseGames_v1001(games_old_v1001, list(int), list(int)).
-:- mode parseGames_v1001(in, out, in) is det.
-:- mode parseGames_v1001(out, in, out) is semidet.
-
-parseGames_v1001('2x2')       --> [0].
-parseGames_v1001(battlesexes) --> [1].
-parseGames_v1001(centipede)   --> [2].
-parseGames_v1001(pgp)         --> [3].
-parseGames_v1001('pgp+pa')    --> [4].
-parseGames_v1001(ultimatum)   --> [5].
 
 :- end_module data.config.io.
 

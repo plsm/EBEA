@@ -1,16 +1,21 @@
 /**
- * 
+ * Provides types that represent birth data stored in binary format.  The
+ * stream with birth data is composed of records.  Each record represents
+ * the births occurred during an iteration.  If there was no births in an
+ * iteration, nothing is written.  The record contains the iteration number
+ * and a list with data of where the birth occurred (site index), player
+ * key and chromosome.
 
  * @author Pedro Mariano
- * @version 1.0 2014/03/ 8
+ * @version 1.0 2014/03/08
  */
 :- module ebea.streams.birth.
 
 :- interface.
 
-:- import_module ebea.player.
-:- import_module game.
+:- import_module ebea.player, ebea.player.chromosome, ebea.population, ebea.population.players.
 :- import_module parseable.iou.
+:- import_module foldable.
 
 :- type iterationBirthRecords(C) --->
 	ibr(
@@ -20,9 +25,9 @@
 
 :- type playerBirthRecord(C) --->
 	pbr(
-		id         :: int,
+		id         :: key,
 		siteIndex  :: int,
-		chromosome :: ebea.player.chromosome(C)
+		chromosome :: chromosome(C)
 	).
 
 :- instance parseable(iterationBirthRecords(C)) <= parseable(C).
@@ -34,7 +39,7 @@
 :- pred read(
 	io.binary_input_stream, int,
 	parseable.iou.delayedResult(io.result(iterationBirthRecords(C))),
-	maybe(iterationBirthRecords(C)), maybe(iterationBirthRecords(C)),
+	parseable.iou.advancedResult(iterationBirthRecords(C)), parseable.iou.advancedResult(iterationBirthRecords(C)),
 	parseable.iou.cache, parseable.iou.cache,
 	io.state, io.state
 	)
@@ -49,6 +54,37 @@
 :- pred write(io.binary_output_stream, int, list(ebea.player.player(C, T)), io.state, io.state)
 	<= parseable(C).
 :- mode write(in, in, in, di, uo) is det.
+
+/**
+ * Write the information about the players that born in the given
+ * iteration.  If there are no births, nothing is written.
+  
+ */
+:- func foldInit(ebea.player.player(C, T), list(playerBirthRecord(C))) = list(playerBirthRecord(C)).
+
+:- pred writeInit(io.binary_output_stream, list(playerBirthRecord(C)), io.state, io.state)
+	<= parseable(C).
+:- mode writeInit(in, in, di, uo) is det.
+
+
+/**
+ * Reads the entire stream into a list.
+ */
+:- pred read(ebea.streams.inStreams, parseable.iou.ioResult(list(iterationBirthRecords(C))), io.state, io.state)
+	<= parseable(C).
+:- mode read(in(detailedBin), out, di, uo) is det.
+
+/**
+ * Fold all players' chromosome.
+ */
+:- func foldlAll(list(playerBirthRecord(C))) = ebea.player.ac(A)
+	<= foldable(C, A).
+
+/**
+ * Fold all players' chromosome that were born at the given site.
+ */
+:- func foldlSite(list(playerBirthRecord(C)), int) = ebea.player.ac(A)
+	<= foldable(C, A).
 
 
 % /**
@@ -79,11 +115,23 @@
  * Fails if does not found.
   
  */
-:- pred search(int, list(playerBirthRecord(C)), playerBirthRecord(C)).
+:- pred search(key, list(playerBirthRecord(C)), playerBirthRecord(C)).
 :- mode search(in, in, out) is semidet.
 
+:- pred work_search(key, list(playerBirthRecord(C)), playerBirthRecord(C)).
+:- mode work_search(in, in, out) is semidet.
+
+/**
+ * Return the number of births at the given site.
+ */
+:- func birthsAtSite(list(playerBirthRecord(C)), int) = int.
+
+:- pred table_reset_for_search_3(io.state, io.state).
+:- mode table_reset_for_search_3(di, uo) is det.
 
 :- implementation.
+
+:- import_module int.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Definition of exported types
@@ -105,7 +153,25 @@
 % Implementation of exported predicates and functions
 
 read(Stream, Iteration, DIResult, !MAdvancedResult, !Cache, !IO) :-
-	!.MAdvancedResult = yes(AdvancedResult),
+	!.MAdvancedResult = no,
+	parseable.iou.read(Stream, 4096, no, !Cache, MIResult, !IO),
+%	io.format("At %d read %s\n", [i(Iteration), s(string(MIResult))], !IO),
+	(
+		MIResult = ok(ok(AResult)),
+		read(Stream, Iteration, DIResult, result(AResult), !:MAdvancedResult, !Cache, !IO)
+		;
+		MIResult = ok(eof),
+		!:MAdvancedResult = eof,
+		DIResult = ok(eof)
+		;
+		MIResult = ok(error(Error)),
+		DIResult = ok(error(Error))
+		;
+		MIResult = parseError,
+		DIResult = parseError
+	)
+	;
+	!.MAdvancedResult = result(AdvancedResult),
 %	io.format("Checking %d against %s\n", [i(Iteration), s(string(AdvancedResult))], !IO),
 	(if
 		AdvancedResult^iteration = Iteration
@@ -116,22 +182,9 @@ read(Stream, Iteration, DIResult, !MAdvancedResult, !Cache, !IO) :-
 		DIResult = delayed
 	)
 	;
-	!.MAdvancedResult = no,
-	parseable.iou.read(Stream, 4096, no, !Cache, MIResult, !IO),
-%	io.format("At %d read %s\n", [i(Iteration), s(string(MIResult))], !IO),
-	(
-		MIResult = ok(ok(AResult)),
-		read(Stream, Iteration, DIResult, yes(AResult), !:MAdvancedResult, !Cache, !IO)
-		;
-		MIResult = ok(eof),
-		DIResult = ok(eof)
-		;
-		MIResult = ok(error(Error)),
-		DIResult = ok(error(Error))
-		;
-		MIResult = parseError,
-		DIResult = parseError
-	).
+	!.MAdvancedResult = eof,
+	DIResult = ok(eof)
+	.
 
 write(Stream, Iteration, Births, !IO) :-
 	Births = []
@@ -143,6 +196,34 @@ write(Stream, Iteration, Births, !IO) :-
 	% list.foldl(io.write_byte(Stream), Bytes, !IO)
 	.
 
+foldInit(Player, AC) = [map_playerBirthRecord(Player) | AC].
+
+writeInit(Stream, List, !IO) :-
+	parseable.iou.write(Stream, ibr(-1, List), !IO).
+
+read(BinStream, Result, !IO) :-
+	parseable.iou.readAll(BinStream^bisBirth, 4096, no, Result, !IO).
+
+foldlAll(List) = Result :-
+	Fold =
+	(func(PBR, AC) = R :-
+		ebea.player.chromosome.fold(PBR^chromosome, AC) = R
+	),
+	Result = list.foldl(Fold, List, ebea.player.initAc).
+
+foldlSite(List, SiteIndex) = Result :-
+	Fold =
+	(func(PBR, AC) = R :-
+		(if
+			SiteIndex = PBR^siteIndex
+		then
+			ebea.player.chromosome.fold(PBR^chromosome, AC) = R
+		else
+			R = AC
+		)
+	),
+	Result = list.foldl(Fold, List, ebea.player.initAc).
+
 % readInitialPopulation(Stream, Game, DIResult, MAdvancedResult, Cache, !IO) :-
 % 	read(Stream, -1, DIResult, no, MAdvancedResult, parseable.iou.cacheInit, Cache, !IO).
 
@@ -150,18 +231,81 @@ parse(ibr(Iteration, PlayerBirthRecords)) -->
 	parseable.int32(Iteration),
 	parseable.parseList(withLength, PlayerBirthRecords).
 
-search(ID, [H | T], R) :-
+search(ID, L, R) :-
+	memo_search(ID, L, R).
+
+table_reset_for_search_3(!IO) :-
+	table_reset_for_memo_search_3(!IO).
+
+% search(ID, [H | T], R) :-
+% 	(if
+% 		H^id = ID
+% 	then
+% 		R = H
+% 	else
+% 		search(ID, T, R)
+% 	).
+
+birthsAtSite([], _) = 0.
+birthsAtSite([Record | Rest], SiteIndex) =
+	(if
+		Record^siteIndex = SiteIndex
+	then
+		1
+	else
+		0
+	) + birthsAtSite(Rest, SiteIndex).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Implementation of private predicates and functions
+
+:- pragma memo(memo_search/3, [fast_loose, allow_reset]).
+
+:- pred memo_search(ebea.population.players.key, list(playerBirthRecord(C)), playerBirthRecord(C)).
+:- mode memo_search(in, in, out) is semidet.
+
+memo_search(ID, L, R) :-
+	work_search(ID, L, R).
+
+%:- pred work_search(int, list(playerBirthRecord(C)), playerBirthRecord(C)).
+%:- mode work_search(in, in, out) is semidet.
+
+work_search(ID, [H | T], R) :-
 	(if
 		H^id = ID
 	then
 		R = H
 	else
-		search(ID, T, R)
+		work_search(ID, T, R)
 	).
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Implementation of private predicates and functions
 
+% :- pred readStream(
+% 	io.binary_input_stream :: in,
+% 	parseable.iou.ioResult(list(iterationBirthRecords(C))) :: out,
+% 	parseable.iou.cache            :: in, parseable.iou.cache            :: out,
+% 	list(iterationBirthRecords(C)) :: in, list(iterationBirthRecords(C)) :: out,
+% 	io.state                       :: di, io.state                       :: uo
+% ) is det
+% 	<= parseable(C).
+
+% readStream(Stream, Result, !Cache, !List, !IO) :-
+% 	parseable.iou.read(Stream, 4096, no, !Cache, MIResult, !IO),
+% 	(	%
+% 		MIResult = ok(ok(AResult)),
+% 		list.cons(AResult, !List),
+% 		readStream(Stream, Result, !Cache, !List, !IO)
+% 		;
+% 		MIResult = ok(eof),
+% 		Result = ok(list.reverse(!.List))
+% 		;
+% 		MIResult = ok(error(Error)),
+% 		Result = error(Error)
+% 		;
+% 		MIResult = parseError,
+% 		Result = parseError
+% 	).
+	
 :- func map_playerBirthRecord(player(C, T)) = playerBirthRecord(C).
 
 map_playerBirthRecord(player(ID, SiteIndex, Chromosome, _Traits)) = pbr(ID, SiteIndex, Chromosome).
@@ -172,9 +316,9 @@ map_playerBirthRecord(player(ID, SiteIndex, Chromosome, _Traits)) = pbr(ID, Site
 :- mode parse_playerBirthRecord(out, in, out) is semidet.
 
 parse_playerBirthRecord(pbr(ID, SiteIndex, Chromosome)) -->
-	parseable.int32(ID),
+	ebea.population.players.parseKey(ID),
 	parseable.int32(SiteIndex),
-	ebea.player.parseChromosome(Chromosome).
+	ebea.player.chromosome.parse(Chromosome).
 
 :- end_module ebea.streams.birth.
 

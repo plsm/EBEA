@@ -2,20 +2,13 @@
  * 
 
  * @author Pedro Mariano
- * @version 1.0 2013/12/30
+ * @version 1.0 2014/03/31
  */
-:- module build_player.
+:- module tools.opinionDynamics.
 
 :- interface.
 
-:- import_module io.
-
-:- pred main(io.state, io.state).
-:- mode main(di, uo) is det.
-
 :- implementation.
-
-:- import_module ebea, ebea.player, ebea.player.age, ebea.player.energy, ebea.player.opinion, ebea.player.selection.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Definition of exported types
@@ -26,12 +19,10 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of exported predicates and functions
 
-main(!IO).
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of private predicates and functions
 
-:- end_module build_player.
+:- end_module tools.opinionDynamics.
 
 %%% Local Variables: 
 %%% mode: mercury

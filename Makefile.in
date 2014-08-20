@@ -1,0 +1,117 @@
+
+MMC = mmc
+
+MFLAGS_COMMON = \
+--make                                                               \
+--output-compile-error-lines  500                                    \
+--max-error-line-width        120                                    \
+--search-directory            @lib_mc4ap@/lib/mercury/ints/          \
+--mercury-library-directory   @lib_mc4ap@/lib/mercury/               \
+--search-directory            @lib_mercury_utils@/lib/mercury/ints/  \
+--mercury-library-directory   @lib_mercury_utils@/lib/mercury/       \
+--mercury-library             mercury_utils
+
+MFLAGS_JAVA_GRADE = \
+--java-classpath   @lib_mc4ap@/lib/mercury/lib/java/ui_swing.jar               \
+--java-classpath   @lib_mercury_utils@/lib/mercury/lib/java/mercury_utils.jar  \
+--mercury-library  ui_swing
+
+MFLAGS_OTHER_GRADES = \
+--mercury-library  ui_console
+
+JAVAC = javac
+
+JAR = jar
+
+################################################################################
+# STANDARD GNU TARGETS
+
+.PHONY: all
+all: build
+
+.PHONY: build
+build:
+	$(MAKE) build-console
+ifeq (@use_swing@, yes)
+	$(MAKE) build-swing
+endif
+
+.PHONY: install
+install:
+	$(MAKE) install-console
+ifeq (@use_swing@, yes)
+	$(MAKE) install-swing
+endif
+
+install-html:
+install-dvi:
+install-pdf:
+install-ps:
+
+uninstall:
+
+
+install-strip:
+
+# clean targets
+
+.PHONY: clean
+clean:
+	cd mercury ; rm -f *.err *~ *.mh ; rm -fr Mercury
+	cd java ; rm -f *~
+	rm -f manifest.mf
+
+distclean: clean
+	rm -fr ./autom4te.cache/
+	rm -f ./config.log ./config.status
+	rm -f ./configure ./Makefile
+	rm -f ./mercury/ui_swing.jar
+
+mostlyclean: clean
+
+maintainer-clean:
+	@echo 'This command is intended for maintainers to use; it'
+	@echo 'deletes files that may need special tools to rebuild.'
+	$(MAKE) clean
+
+TAGS:
+
+# documentation targets
+
+info:
+
+dvi:
+html:
+pdf:
+ps:
+
+dist:
+
+check:
+
+################################################################################
+# SPECIFIC TARGETS
+
+# targets for the console version
+
+build-console:
+	cd ./mercury/ ; $(MMC) $(MFLAGS_COMMON) $(MFLAGS_OTHER_GRADES) EBEAtk_console
+
+install-console:
+	cd ./mercury/ ; cp EBEAtk_console $(PREFIX)/bin
+
+# targets for the swing version
+
+build-swing:
+	cd ./mercury/ ; $(MMC) $(MFLAGS_COMMON) $(MFLAGS_JAVA_GRADE) --grade java EBEAtk_swing
+
+install-swing: manifest.mf
+#	cd ./mercury/ ; $(MMC) $(MFLAGS_COMMON) --install-prefix $(PREFIX) --grade java --no-libgrade --libgrade java libui_swing.install
+#	cd ./mercury/Mercury/classs/ ; $(JAR) umf ../../../manifest.mf $(PREFIX)/lib/mercury/lib/java/ui_swing.jar $$(find ui data -name '*.class')
+
+manifest.mf:
+	@echo "Extension-Name: mc4ap"                        > manifest.mf
+	@echo "Implementation-Title: @PACKAGE_NAME@"        >> manifest.mf
+	@echo "Implementation-Version: @PACKAGE_VERSION@"   >> manifest.mf
+	@echo "Implementation-Vendor: Pedro Mariano"        >> manifest.mf
+	@echo "Implementation-URL: @PACKAGE_URL@"           >> manifest.mf

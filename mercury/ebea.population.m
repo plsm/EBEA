@@ -6,31 +6,77 @@
  * EBEA.
 
  * @author Pedro Mariano
- * @version 1.0 2012/07/ 3
+ * @version 1.0 2012/07/03
  */
 :- module ebea.population.
 
 :- interface.
 
-:- include_module players, parameters.
-:- include_module site.
+:- include_module neighbours, configuration, players, site.
 
-:- import_module ebea.population.parameters.
+:- import_module ebea.population.neighbours, ebea.population.configuration,
+ebea.population.players, ebea.population.site.
 :- import_module chromosome, ebea.player, rng, rng.distribution, parseable.
 :- import_module array, char, io, list, maybe.
 
-:- type population(C, T).% == list(player(C, P)).
-
-:- type neighbours(C, T) == list(player(C, T)).
-
 /**
- * Parameters that govern the population dynamics include the carrying capacity.
+ * The players in a population are stored in a list.  An
+ * integer is used to generate the next player's identification.  The
+ * population structure is represented by an array of sites.  Each site
+ * contains a list of players' identification and an array of integers
+ * representing neighbour sites indexes.
+
+ * <p> When players select partners to play game we use the population
+ * structure to retrieve tuples with player and his potential partners.
+ * After playing the game we update the list of players.
+
+ * <p> In the birth and death step we process the players to obtain a list
+ * of newborn players and a list of players' identification corresponding
+ * to the dead ones.  The list of newborn players and the list with
+ * players' identification are used to update the sites.
+
+ * <p> When we need to process the players we fold the list of players.
+
+ * <p> When we need to process player neighbours tuples we fold the array
+ * of sites using the list of players to map ids to players.
+
+ * <p> 
+  
  */
+:- type population(C, P) --->
+	pop(
+		sites   :: array(site),
+		players :: ebea.population.players.players(C, P),
+		nextID  :: ebea.population.players.key
+	).
+
+%% ************************************************************************
+%% Parameters that govern population dynamics.  These include the behaviour
+%% of players meaning ageing, reproduction and partner selection.
+%%
+%% @param P Parameters the govern the game played by players
+%%
 :- type parameters(P) --->
 	p(
 	  migrationProbability :: float,
 	  dynamic              :: dynamic,
-	  playerParameters     :: ebea.player.parameters(P)).
+	  playerParameters     :: ebea.player.parameters(P)
+	).
+
+%% ************************************************************************
+%% Parameters that govern population dynamics.  These include the behaviour
+%% of players meaning ageing, reproduction and partner selection.
+%%
+%% @param P Parameters the govern the game played by players
+%%
+%% @param A The action accumulator.
+%%
+:- type parameters(P, A) --->
+	p(
+		base         :: ebea.population.parameters(P),
+		siteDynamics :: ebea.population.site.dynamics(A)
+	).
+
 
 /**
  * Represents the round dynamic.  How the next population is calculated
@@ -62,7 +108,7 @@
 :- inst playerDeath == bound(oldAge ; starvation).
 
 
-:- pred createInitialPopulation(ebea.player.parameters(P), ebea.population.parameters.parameters(C), population(C, T), R, R)
+:- pred createInitialPopulation(ebea.player.parameters(P), ebea.population.configuration.configuration(C, A), population(C, T), R, R)
 	<= (chromosome(C, T, P), ePRNG(R)).
 :- mode createInitialPopulation(in, in, out, in, out) is det.
 
@@ -72,19 +118,13 @@
  */
 :- func size(population(C, P)) = int.
 
-% NOT USED
-% /**
-%  * Return a list with the players in the population.
-%  */
-% :- func players(population(C, P)) = list(player(C, P)).
-
 /**
  * Return the player's identification last used.
  */
-:- func lastID(population(C, P)) = int.
+:- func lastID(population(C, P)) = ebea.population.players.key.
 
 
-:- func players(population(C, P)) = list(player(C, P)).
+%:- func players(population(C, P)) = list(player(C, P)).
 
 
 
@@ -111,9 +151,23 @@
 	R, R,
 	population(C, T), population(C, T),
 	list(player(C, T)),
-	list(int), list(int), list(int))
+	list(key), list(key), list(key))
 	<= (ePRNG(R), chromosome(C, T, P)).
 :- mode stepBirthDeath(in, in, out, in, out, in, out, out, out, out, out) is det.
+
+%% ************************************************************************
+%% stepUpdateSitesState(SiteDynamics, SiteActionAccumulator, !Population)
+%%
+%% For each site update its site using the given game actions accumulator
+%% and closure.
+%%
+%% @param AA The game actions accumulator.
+%%
+:- pred stepUpdateSitesState(
+	ebea.population.site.dynamics(AA) :: in,
+	array(AA)                         :: in,
+	population(C, T) :: in,  population(C, T) :: out
+) is det.
 
 /**
  * Return the player with the given identification.  Throws an exception if
@@ -132,7 +186,7 @@
   
  * TODO: migrate to new population type
  */
-:- func update(int, func(player(C, T)) = player(C, T), population(C, T)) = population(C, T).
+:- func update(key, func(player(C, T)) = player(C, T), population(C, T)) = population(C, T).
 
 /**
  * update(ID, Player, !Population)
@@ -142,7 +196,7 @@
   
  * TODO: migrate to new population type
  */
-:- pred update(int, func(player(C, T)) = player(C, T), population(C, T), population(C, T)).
+:- pred update(key, func(player(C, T)) = player(C, T), population(C, T), population(C, T)).
 :- mode update(in, in, in, out) is det.
 
 /**
@@ -152,11 +206,11 @@
  * to {@code Result}.
 
 */
-:- func fold(func(player(C, P), A) = A, population(C, P), A) = A.
+:- func fold_players(func(player(C, P), A) = A, population(C, P), A) = A.
 
-:- pred fold(pred(player(C, P), A, A), population(C, P), A, A).
-:- mode fold(in(pred(in, in, out) is det), in, in, out) is det.
-:- mode fold(in(pred(in, di, uo) is det), in, di, uo) is det.
+:- pred fold_players(pred(player(C, P), A, A), population(C, P), A, A).
+:- mode fold_players(in(pred(in, in, out) is det), in, in, out) is det.
+:- mode fold_players(in(pred(in, di, uo) is det), in, di, uo) is det.
 
 :- pred fold_sites(func(player(C, P), A) = A, population(C, P), A, array(A)).
 :- mode fold_sites(in, in, in, out) is det.
@@ -170,8 +224,8 @@
  * update their state.
   
  */
-:- pred map_player(func(player(C, P)) = player(C, P), population(C, P), population(C, P)).
-:- mode map_player(in, in, out) is det.
+:- pred map_players(func(player(C, P)) = player(C, P), population(C, P), population(C, P)).
+:- mode map_players(in, in, out) is det.
 
 /**
  * Apply the given closure and transform all the players in the population.
@@ -189,15 +243,15 @@
 % :- mode fold2_Player(in(pred(in, in, out, in, out) is det), in, in, out, in, out) is det.
 % :- mode fold2_Player(in(pred(in, in, out, di, uo) is det), in, in, out, di, uo) is det.
 
-/**
- * fold2_PlayerNeighbour(Pred, Population, !Accumulator1, !Accumulator2)
+% /**
+%  * fold2_PlayerNeighbour(Pred, Population, !Accumulator1, !Accumulator2)
   
- * Iterate through all pairs where a pair is a player and his neighbours
- * calling {@code Pred} with the two accumulators.
+%  * Iterate through all pairs where a pair is a player and his neighbours
+%  * calling {@code Pred} with the two accumulators.
   
- */
-:- pred fold2_PlayerNeighbour(pred(player(C, T), list(player(C, T)), A, A, B, B), population(C, T), A, A, B, B).
-:- mode fold2_PlayerNeighbour(in(pred(in, in, in, out, in, out) is det), in, in, out, in, out) is det.
+%  */
+% :- pred fold2_PlayerNeighbour(pred(player(C, T), list(player(C, T)), A, A, B, B), population(C, T), A, A, B, B).
+% :- mode fold2_PlayerNeighbour(in(pred(in, in, in, out, in, out) is det), in, in, out, in, out) is det.
 
 /**
  * fold3_PlayerNeighbour(Pred, Population, !Accumulator1, !Accumulator2, !Accumulator3)
@@ -206,8 +260,12 @@
  * calling {@code Pred} with the two accumulators.
   
  */
-:- pred fold3_PlayerNeighbour(pred(player(C, T), list(player(C, T)), A1, A1, A2, A2, A3, A3), population(C, T), A1, A1, A2, A2, A3, A3).
+:- pred fold3_PlayerNeighbour(pred(player(C, T), neighbours, A1, A1, A2, A2, A3, A3), population(C, T), A1, A1, A2, A2, A3, A3).
 :- mode fold3_PlayerNeighbour(in(pred(in, in, in, out, in, out, in, out) is det), in, in, out, in, out, in, out) is det.
+
+:- pred fold4_PlayerNeighbour(pred(player(C, T), neighbours, A1, A1, A2, A2, A3, A3, A4, A4), population(C, T), A1, A1, A2, A2, A3, A3, A4, A4).
+:- mode fold4_PlayerNeighbour(in(pred(in, in, in, out, in, out, in, out, di, uo) is det), in, in, out, in, out, in, out, di, uo) is det.
+
 
 /**
  * mapfold_PlayerNeighbour(Pred, !Population, !Accumulator1)
@@ -216,7 +274,7 @@
  * and the accumulator.
   
  */
-:- pred mapfold_PlayerNeighbour(pred(player(C, T), neighbours(C, T), player(C, T), A, A), population(C, T), population(C, T), A, A).
+:- pred mapfold_PlayerNeighbour(pred(player(C, T), ebea.population.neighbours.neighbours, player(C, T), A, A), population(C, T), population(C, T), A, A).
 :- mode mapfold_PlayerNeighbour(in(pred(in, in, out, in, out) is det), in, out, in, out) is det.
 
 /**
@@ -275,43 +333,13 @@
 :- implementation.
 
 
-:- import_module ebea.population.site, ebea.population.site.parameters.
+:- import_module ebea.population.players, ebea.population.site, ebea.population.site.parameters.
 :- import_module chromosome, ebea.player.energy, ebea.player.selection.
 :- import_module array, bitmap, bool, exception, float, int, math, solutions, string.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Definition of exported types
 
-/**
- * The players in a population are stored in a list.  An
- * integer is used to generate the next player's identification.  The
- * population structure is represented by an array of sites.  Each site
- * contains a list of players' identification and an array of integers
- * representing neighbour sites indexes.
-
- * <p> When players select partners to play game we use the population
- * structure to retrieve tuples with player and his potential partners.
- * After playing the game we update the list of players.
-
- * <p> In the birth and death step we process the players to obtain a list
- * of newborn players and a list of players' identification corresponding
- * to the dead ones.  The list of newborn players and the list with
- * players' identification are used to update the sites.
-
- * <p> When we need to process the players we fold the list of players.
-
- * <p> When we need to process player neighbours tuples we fold the array
- * of sites using the list of players to map ids to players.
-
- * <p> 
-  
- */
-:- type population(C, P) --->
-	pop(
-		sites   :: array(site),
-		players :: list(player(C, P)),
-		nextID  :: int
-	).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Definition of private types
@@ -328,34 +356,39 @@ createInitialPopulation(PlayerParameters, Parameters, Population, !Random) :-
 		throw("ebea.population.createInitialPopulation/5: no sites")
 		;
 		Parameters^sites = [Site | _],
+		ebea.population.players.init(EmptyPlayers, InitialKey),
 		list.foldl4(
 			ebea.population.site.initialisePlayers(PlayerParameters, 0),
 			Site^chromosomes,
-			[], _,
-			[], InitialPlayers,
-			0, ID,
+			InitialKey, NextKey,
+			[], SitePlayerKeys,
+			EmptyPlayers, PopulationPlayers,
 			!Random),
-		SingleSite = site(float(Site^carryingCapacity), list.map(ebea.player.'ID', InitialPlayers), array.init(0, -1)),
-		Population = pop(array.init(1, SingleSite), list.reverse(InitialPlayers), ID)
+		SiteState^carryingCapacity = float(Site^carryingCapacity),
+		SingleSite = site(SiteState, SitePlayerKeys, array.init(0, -1)),
+		Population = pop(array.init(1, SingleSite), PopulationPlayers, NextKey)
 	)
 	;
 	Geometry = lattice(_, _, _, _),
 	SiteIndexes = 0..(Geometry^xSize * Geometry^ySize - 1),
+	ebea.population.players.init(EmptyPlayers, InitialKey),
 	list.map_foldl4(
 		ebea.population.site.createLatticeInitialSite(
-			float(Parameters^defaultCarryingCapacity), Geometry, PlayerParameters),
-		SiteIndexes, InitialSites,
+			float(Parameters^defaultCarryingCapacity),
+			Geometry,
+			PlayerParameters),
+		SiteIndexes,      InitialSites,
 		Parameters^sites, _,
-		[], InitialPlayers,
-		0, ID,
+		InitialKey,       NextKey,
+		EmptyPlayers,     PopulationPlayers,
 		!Random),
-	Population = pop(array.from_list(InitialSites), list.reverse(InitialPlayers), ID)
+	Population = pop(array.from_list(InitialSites), PopulationPlayers, NextKey)
 	).
 
 
 
 
-size(Population) = list.length(Population^players).
+size(Population) = ebea.population.players.size(Population^players).
 
 lastID(Population) = Population^nextID.
 
@@ -368,16 +401,17 @@ stepBirthDeath(
 	CemeteryIDsCarryingCapacity, CemeteryIDsOldAge, CemeteryIDsStarvation)
 :-
 	Parameters^dynamic = birthPlusDeath,
-	mapfold4_PlayerSite(
-		ebea.population.site.stepBirth(Parameters^playerParameters), Population, MappedPlayers,
+	ebea.population.players.mapFold4(
+		ebea.population.site.stepBirth(Parameters^playerParameters),
+		Population^players, MappedPlayers,
 		!Distribution,
 		!Random,
 		Population^nextID, NextID,
 		[], Nursery),
-	fold5_PlayerSite(
-		ebea.population.site.stepDeath(Parameters), pop(Population^sites, MappedPlayers, -1),
+	ebea.population.players.filterFold4(
+		ebea.population.site.stepDeath(Parameters, Population),
+		MappedPlayers, SurvivingPlayers,
 		!Random,
-		[], SurvivingPlayers,
 		[], CemeteryCarryingCapacity,
 		[], CemeteryOldAge,
 		[], CemeteryStarvation),
@@ -386,21 +420,22 @@ stepBirthDeath(
 	ebea.population.site.removePlayers(CemeteryCarryingCapacity, [], CemeteryIDsCarryingCapacity, Sites0, Sites1),
 	ebea.population.site.removePlayers(CemeteryOldAge, [], CemeteryIDsOldAge, Sites1, Sites2),
 	ebea.population.site.removePlayers(CemeteryStarvation, [], CemeteryIDsStarvation, Sites2, NextSites),
-	NextPlayers = list.append(SurvivingPlayers, Newborn)
+	NextPlayers = ebea.population.players.append(SurvivingPlayers, Newborn)
 	;
 	Parameters^dynamic = birthThenDeath,
-	mapfold4_PlayerSite(
-		ebea.population.site.stepBirth(Parameters^playerParameters), Population, MappedPlayers,
+	ebea.population.players.mapFold4(
+		ebea.population.site.stepBirth(Parameters^playerParameters),
+		Population^players, MappedPlayers,
 		!Distribution,
 		!Random,
 		Population^nextID, NextID,
 		[], Nursery),
 	ebea.population.site.placePlayers(Parameters^migrationProbability, Nursery, Newborn, Population^sites, Sites0, !Random),
-	NewPlayers = list.append(Newborn, MappedPlayers),
-	fold5_PlayerSite(
-		ebea.population.site.stepDeath(Parameters), pop(Sites0, NewPlayers, NextID),
+	NewPlayers = ebea.population.players.append(MappedPlayers, Newborn),
+	ebea.population.players.filterFold4(
+		ebea.population.site.stepDeath(Parameters, pop(Sites0, NewPlayers, NextID)),
+		NewPlayers, SurvivingPlayers,
 		!Random,
-		[], SurvivingPlayers,
 		[], CemeteryCarryingCapacity,
 		[], CemeteryOldAge,
 		[], CemeteryStarvation),
@@ -410,15 +445,16 @@ stepBirthDeath(
 	NextPlayers = SurvivingPlayers
 	;
 	Parameters^dynamic = deathThenBirth,
-	fold5_PlayerSite(
-		ebea.population.site.stepDeath(Parameters), Population,
+	ebea.population.players.filterFold4(
+		ebea.population.site.stepDeath(Parameters, Population),
+		Population^players, SurvivingPlayers,
 		!Random,
-		[], SurvivingPlayers,
 		[], CemeteryCarryingCapacity,
 		[], CemeteryOldAge,
 		[], CemeteryStarvation),
-	mapfold4_PlayerSite(
-		ebea.population.site.stepBirth(Parameters^playerParameters), pop(Population^sites, SurvivingPlayers, Population^nextID), MappedPlayers,
+	ebea.population.players.mapFold4(
+		ebea.population.site.stepBirth(Parameters^playerParameters),
+		SurvivingPlayers, MappedPlayers,
 		!Distribution,
 		!Random,
 		Population^nextID, NextID,
@@ -427,21 +463,35 @@ stepBirthDeath(
 	ebea.population.site.removePlayers(CemeteryCarryingCapacity, [], CemeteryIDsCarryingCapacity, Sites0, Sites1),
 	ebea.population.site.removePlayers(CemeteryOldAge, [], CemeteryIDsOldAge, Sites1, Sites2),
 	ebea.population.site.removePlayers(CemeteryStarvation, [], CemeteryIDsStarvation, Sites2, NextSites),
-	NextPlayers = list.append(MappedPlayers, Newborn)
+	NextPlayers = ebea.population.players.append(MappedPlayers, Newborn)
+	.
+
+stepUpdateSitesState(SiteDynamics, SiteActionAccumulator, !Population) :-
+	SiteDynamics = static
+	;
+	SiteDynamics = dynamic(UpdateFunc),
+	UpdateSite =
+	(pred(OldSite::in, NewSite::out, Index::in, NextIndex::out) is det :-
+		NextIndex = Index + 1,
+		array.lookup(SiteActionAccumulator, Index) = AA,
+		NewSite = 'state :='(OldSite, UpdateFunc(AA, OldSite))
+	),
+	array.map_foldl(UpdateSite, !.Population^sites, NewSites, 0, _),
+	!:Population = 'sites :='(!.Population, NewSites)
 	.
 
 update(ID, PlayerFunc, Population) = Result :-
 	Result = 'players :='(Population, NextPlayers),
-	ebea.player.update(ID, PlayerFunc, Population^players, NextPlayers).
+	ebea.population.players.update(ID, PlayerFunc, Population^players, NextPlayers).
 
 update(ID, PlayerFunc, Population, Result) :-
 	update(ID, PlayerFunc, Population) = Result.
 
-fold(Func, Population, AC) = Result :-
-	list.foldl(Func, Population^players, AC) = Result.
+fold_players(Func, Population, AC) = Result :-
+	ebea.population.players.fold(Func, Population^players, AC) = Result.
 
-fold(Pred, Population, !AC) :-
-	list.foldl(Pred, Population^players, !AC).
+fold_players(Pred, Population, !AC) :-
+	ebea.population.players.fold(Pred, Population^players, !AC).
 
 fold_sites(Func, Population, AC, array.from_list(Result)) :-
 	array.to_list(Population^sites) = LSites,
@@ -453,26 +503,29 @@ fold_sites(Func, Population, AC, array.from_list(Result)) :-
 %	array.init(array.size(Population^sites), AC) = Result
 	.
 
-map_player(Closure, !Population) :-
-	list.map(Closure, !.Population^players) = NextPlayers,
+map_players(Closure, !Population) :-
+	ebea.population.players.map(Closure, !.Population^players) = NextPlayers,
 	!:Population = 'players :='(!.Population, NextPlayers).
 
 transform_player(Closure, Population) = Result :-
-	list.map(Closure, Population^players) = Result.
+	ebea.population.players.transform(Closure, Population^players) = Result.
 
-fold2_PlayerNeighbour(Pred, Population, !Accumulator1, !Accumulator2) :-
-	promise_equivalent_solutions [!:Accumulator1, !:Accumulator2]
-		solutions.unsorted_aggregate2(ebea.population.neighbours(Population), Fold2_PlayerNeighbour, !Accumulator1, !Accumulator2),
-	Fold2_PlayerNeighbour =
-	(pred({Player, Neighbours}::in, Acc1::in, NextAcc1::out, Acc2::in, NextAcc2::out) is det :-
-		Pred(Player, Neighbours, Acc1, NextAcc1, Acc2, NextAcc2)
-	).
+% fold2_PlayerNeighbour(Pred, Population, !Accumulator1, !Accumulator2) :-
+% 	promise_equivalent_solutions [!:Accumulator1, !:Accumulator2]
+% 		solutions.unsorted_aggregate2(ebea.population.neighbours(Population), Fold2_PlayerNeighbour, !Accumulator1, !Accumulator2),
+% 	Fold2_PlayerNeighbour =
+% 	(pred({Player, Neighbours}::in, Acc1::in, NextAcc1::out, Acc2::in, NextAcc2::out) is det :-
+% 		Pred(Player, Neighbours, Acc1, NextAcc1, Acc2, NextAcc2)
+% 	).
 
 fold3_PlayerNeighbour(Pred, Population, !Accumulator1, !Accumulator2, !Accumulator3) :-
-	list.foldl3(fold3_real_PlayerNeighbour(Pred, Population), Population^players, !Accumulator1, !Accumulator2, !Accumulator3).
+	ebea.population.players.fold3(fold3_real_PlayerNeighbour(Pred, Population), Population^players, !Accumulator1, !Accumulator2, !Accumulator3).
+
+fold4_PlayerNeighbour(Pred, Population, !Accumulator1, !Accumulator2, !Accumulator3, !Accumulator4) :-
+	ebea.population.players.fold4(fold4_real_PlayerNeighbour(Pred, Population), Population^players, !Accumulator1, !Accumulator2, !Accumulator3, !Accumulator4).
 
 mapfold_PlayerNeighbour(Pred, PopulationIn, PopulationOut, !Accumulator) :-
-	list.map_foldl(mapfold_real_PlayerNeighbour(Pred, PopulationIn), PopulationIn^players, MappedPlayers, !Accumulator),
+	ebea.population.players.mapFold(mapfold_real_PlayerNeighbour(Pred, PopulationIn), PopulationIn^players, MappedPlayers, !Accumulator),
 	PopulationOut = 'players :='(PopulationIn, MappedPlayers).
 
 stringDynamic("birth+death", birthPlusDeath).
@@ -568,30 +621,31 @@ parseDeath(carryingCapacity) --> [0].
 parseDeath(oldAge)           --> [1].
 parseDeath(starvation)       --> [2].
 
-debug(Population, !IO) :-
-	Population = pop(Sites, _Players, _NextID),
-	PredPrintSites =
-	(pred(Site::in, Idxin::in, Idxout::out, IOdi::di, IOuo::uo) is det :-
-		io.format("Site #%d\n  This site has a carrying capacity of %f\n  Players in this site:%s\n  Neighbouring sites:%s\n",
-			[i(Idxin), f(Site^carryingCapacity), s(PlayersSite), s(NeighbouringSites)], IOdi, IOuo),
-		list.foldl(FuncJoinInt, Site^playerIDs, "") = PlayersSite,
-		array.foldl(FuncJoinInt, Site^neighbourSiteIdxs, "") = NeighbouringSites,
-		Idxout = Idxin + 1
-	),
-	array.foldl2(PredPrintSites, Sites, 0, _, !IO),
-	PredPrintPlayerNeighbours =
-	(pred(PlayerNeighbours::in, IOdi::di, IOuo::uo) is det :-
-		PlayerNeighbours = {Player, Neighbours},
-		list.map(ebea.player.'ID', Neighbours) = ListIDs,
-		io.format("Player %s\n has neighbours%s\n", [s(string(Player)), s(list.foldl(FuncJoinInt, ListIDs, ""))], IOdi, IOuo)
-	),
-	solutions.aggregate(neighbours(Population), PredPrintPlayerNeighbours, !IO),
-	io.print("\n END DEBUG\n", !IO),
-	true,
-	FuncJoinInt =
-	(func(Int, Str) = Result :-
-		Result = string.format(" %d%s", [i(Int), s(Str)])
-	).
+debug(_Population, !IO) :-
+	true.
+	% Population = pop(Sites, _Players, _NextID),
+	% PredPrintSites =
+	% (pred(Site::in, Idxin::in, Idxout::out, IOdi::di, IOuo::uo) is det :-
+	% 	io.format("Site #%d\n  This site has a carrying capacity of %f\n  Players in this site:%s\n  Neighbouring sites:%s\n",
+	% 		[i(Idxin), f(Site^carryingCapacity), s(PlayersSite), s(NeighbouringSites)], IOdi, IOuo),
+	% 	list.foldl(FuncJoinInt, Site^playerIDs, "") = PlayersSite,
+	% 	array.foldl(FuncJoinInt, Site^neighbourSiteIdxs, "") = NeighbouringSites,
+	% 	Idxout = Idxin + 1
+	% ),
+	% array.foldl2(PredPrintSites, Sites, 0, _, !IO),
+	% PredPrintPlayerNeighbours =
+	% (pred(PlayerNeighbours::in, IOdi::di, IOuo::uo) is det :-
+	% 	PlayerNeighbours = {Player, Neighbours},
+	% 	list.map(ebea.player.'ID', Neighbours) = ListIDs,
+	% 	io.format("Player %s\n has neighbours%s\n", [s(string(Player)), s(list.foldl(FuncJoinInt, ListIDs, ""))], IOdi, IOuo)
+	% ),
+	% solutions.aggregate(neighbours(Population), PredPrintPlayerNeighbours, !IO),
+	% io.print("\n END DEBUG\n", !IO),
+	% true,
+	% FuncJoinInt =
+	% (func(Int, Str) = Result :-
+	% 	Result = string.format(" %d%s", [i(Int), s(Str)])
+	% ).
 
 
 
@@ -602,62 +656,66 @@ debug(Population, !IO) :-
 
 playerSite(Population, Player) = array.lookup(Population^sites, Player^siteIndex).
 
-/**
- * Update the players in the given population using the player and its site.
- */
-:- pred mapfold4_PlayerSite(
-	pred(player(C, T), site, player(C, T), T1, T1, T2, T2, T3, T3, T4, T4),
-	population(C, T), list(player(C, T)),
-	T1, T1, T2, T2, T3, T3, T4, T4).
-:- mode mapfold4_PlayerSite(in(pred(in, in, out, in, out, in, out, in, out, in, out) is det), in, out, in, out, in, out, in, out, in, out) is det.
+% /**
+%  * Update the players in the given population using the player and its site.
+%  */
+% :- pred mapfold4_PlayerSite(
+% 	pred(player(C, T), site, player(C, T), T1, T1, T2, T2, T3, T3, T4, T4),
+% 	population(C, T), list(player(C, T)),
+% 	T1, T1, T2, T2, T3, T3, T4, T4).
+% :- mode mapfold4_PlayerSite(in(pred(in, in, out, in, out, in, out, in, out, in, out) is det), in, out, in, out, in, out, in, out, in, out) is det.
 
-mapfold4_PlayerSite(Pred, Population, MappedPlayers, !Accumulator1, !Accumulator2, !Accumulator3, !Accumulator4) :-
-	list.map_foldl4(MapFold, Population^players, MappedPlayers, !Accumulator1, !Accumulator2, !Accumulator3, !Accumulator4),
-	MapFold =
-	(pred(Pla::in, Alp::out, Acc1::in, Cca1::out, Acc2::in, Cca2::out, Acc3::in, Cca3::out, Acc4::in, Cca4::out) is det :-
-		Pred(Pla, playerSite(Population, Pla), Alp, Acc1, Cca1, Acc2, Cca2, Acc3, Cca3, Acc4, Cca4)
-	).
+% mapfold4_PlayerSite(Pred, Population, MappedPlayers, !Accumulator1, !Accumulator2, !Accumulator3, !Accumulator4) :-
+% 	list.map_foldl4(MapFold, Population^players, MappedPlayers, !Accumulator1, !Accumulator2, !Accumulator3, !Accumulator4),
+% 	MapFold =
+% 	(pred(Pla::in, Alp::out, Acc1::in, Cca1::out, Acc2::in, Cca2::out, Acc3::in, Cca3::out, Acc4::in, Cca4::out) is det :-
+% 		Pred(Pla, playerSite(Population, Pla), Alp, Acc1, Cca1, Acc2, Cca2, Acc3, Cca3, Acc4, Cca4)
+% 	).
 
-:- pred fold5_PlayerSite(
-	pred(player(C, T), site, T1, T1, T2, T2, T3, T3, T4, T4, T5, T5),
-	population(C, T),
-	T1, T1,
-	T2, T2,
-	T3, T3,
-	T4, T4,
-	T5, T5).
-:- mode fold5_PlayerSite(in(pred(in, in, in, out, in, out, in, out, in, out, in, out) is det), in, in, out, in, out, in, out, in, out, in, out) is det.
+% :- pred fold5_PlayerSite(
+% 	pred(player(C, T), site, T1, T1, T2, T2, T3, T3, T4, T4, T5, T5),
+% 	population(C, T),
+% 	T1, T1,
+% 	T2, T2,
+% 	T3, T3,
+% 	T4, T4,
+% 	T5, T5).
+% :- mode fold5_PlayerSite(in(pred(in, in, in, out, in, out, in, out, in, out, in, out) is det), in, in, out, in, out, in, out, in, out, in, out) is det.
 
-fold5_PlayerSite(Pred, Population, !Accumulator1, !Accumulator2, !Accumulator3, !Accumulator4, !Accumulator5) :-
-	list.foldl5(Fold, Population^players, !Accumulator1, !Accumulator2, !Accumulator3, !Accumulator4, !Accumulator5),
-	Fold =
-	(pred(P::in, Acc1::in, Cca1::out, Acc2::in, Cca2::out, Acc3::in, Cca3::out, Acc4::in, Cca4::out, Acc5::in, Cca5::out) is det :-
-		Pred(P, playerSite(Population, P), Acc1, Cca1, Acc2, Cca2, Acc3, Cca3, Acc4, Cca4, Acc5, Cca5)
-	).
+% fold5_PlayerSite(Pred, Population, !Accumulator1, !Accumulator2, !Accumulator3, !Accumulator4, !Accumulator5) :-
+% 	list.foldl5(Fold, Population^players, !Accumulator1, !Accumulator2, !Accumulator3, !Accumulator4, !Accumulator5),
+% 	Fold =
+% 	(pred(P::in, Acc1::in, Cca1::out, Acc2::in, Cca2::out, Acc3::in, Cca3::out, Acc4::in, Cca4::out, Acc5::in, Cca5::out) is det :-
+% 		Pred(P, playerSite(Population, P), Acc1, Cca1, Acc2, Cca2, Acc3, Cca3, Acc4, Cca4, Acc5, Cca5)
+% 	).
 
-/**
- * For each player in the population return a list with the neighbours.
- * These neighbours are the potential game partners or if reproduction is
- * sexual they can be used in a genetic crossover operator.
- */
-:- pred neighbours(population(C, P), player(C, P), list(player(C, P))).
-:- mode neighbours(in, out, out) is nondet.
+% /**
+%  * For each player in the population return a list with the neighbours.
+%  * These neighbours are the potential game partners or if reproduction is
+%  * sexual they can be used in a genetic crossover operator.
 
-neighbours(pop(Structure, Players, _), Player, Neighbours) :-
-	ebea.population.site.neighbours(Structure, Players, Player, Neighbours).
+%  * TODO move to module ebea.population.neighbours
+%  */
+% :- pred neighbours(population(C, P), player(C, P), list(player(C, P))).
+% :- mode neighbours(in, out, out) is nondet.
 
-/**
- * neighbours(Population, PlayerNeighbours)
+% neighbours(pop(Structure, Players, _), Player, Neighbours) :-
+% 	ebea.population.site.neighbours(Structure, Players, Player, Neighbours).
+
+% /**
+%  * neighbours(Population, PlayerNeighbours)
   
- * For each player in the population return a list with the neighbours.
- * This predicate is similar to {@code neighbours/3} but is amenable to
- * predicates from module {@code solutions}.
- */
-:- pred neighbours(population(C, P), {player(C, P), list(player(C, P))}).
-:- mode neighbours(in, out) is nondet.
+%  * For each player in the population return a list with the neighbours.
+%  * This predicate is similar to {@code neighbours/3} but is amenable to
+%  * predicates from module {@code solutions}.
 
-neighbours(Population, {Player, Neighbours}) :-
-	neighbours(Population, Player, Neighbours).
+%  * TODO move to module ebea.population.neighbours
+%  */
+% :- pred neighbours(population(C, P), {player(C, P), list(player(C, P))}).
+% :- mode neighbours(in, out) is nondet.
+
+% neighbours(Population, {Player, Neighbours}) :-
+% 	neighbours(Population, Player, Neighbours).
 
 
 
@@ -666,11 +724,11 @@ neighbours(Population, {Player, Neighbours}) :-
  * fold3_real_PlayerNeighbour(Pred, Population, Player, !Accumulator1, !Accumulator2, !Accumulator3)
   
  * Iterate through all pairs where a pair is a player and his neighbours
- * calling {@code Pred} with the two accumulators.
+ * calling {@code Pred} with the three accumulators.
   
  */
 :- pred fold3_real_PlayerNeighbour(
-	pred(player(C, T), list(player(C, T)), A1, A1, A2, A2, A3, A3),
+	pred(player(C, T), neighbours, A1, A1, A2, A2, A3, A3),
 	population(C, T),
 	player(C, T),
 	A1, A1,
@@ -684,8 +742,29 @@ neighbours(Population, {Player, Neighbours}) :-
 	in, out) is det.
 
 fold3_real_PlayerNeighbour(Pred, Population, Player, !Accumulator1, !Accumulator2, !Accumulator3) :-
-	ebea.population.site.neighbours(Population^sites, Population^players, Player) = Neighbours,
+	ebea.population.neighbours.init(Population^sites, Player) = Neighbours,
 	Pred(Player, Neighbours, !Accumulator1, !Accumulator2, !Accumulator3).
+
+%% ************************************************************************
+%% fold4_real_PlayerNeighbour(Pred, Population, Player, !Accumulator1, !Accumulator2, !Accumulator3, !Accumulator4)
+%%
+%% Iterate through all pairs where a pair is a player and his neighbours
+%% calling {@code Pred} with the four accumulators.
+%%
+:- pred fold4_real_PlayerNeighbour(
+	pred(player(C, T), neighbours, A1, A1, A2, A2, A3, A3, A4, A4)
+		:: in(pred(in, in, in, out, in, out, in, out, di, uo) is det),
+	population(C, T) :: in,
+	player(C, T)     :: in,
+	A1 :: in,  A1 :: out,
+	A2 :: in,  A2 :: out,
+	A3 :: in,  A3 :: out,
+	A4 :: di,  A4 :: uo
+) is det.
+
+fold4_real_PlayerNeighbour(Pred, Population, Player, !Accumulator1, !Accumulator2, !Accumulator3, !Accumulator4) :-
+	ebea.population.neighbours.init(Population^sites, Player) = Neighbours,
+	Pred(Player, Neighbours, !Accumulator1, !Accumulator2, !Accumulator3, !Accumulator4).
 
 
 
@@ -696,11 +775,12 @@ fold3_real_PlayerNeighbour(Pred, Population, Player, !Accumulator1, !Accumulator
  * and the accumulator.
   
  */
-:- pred mapfold_real_PlayerNeighbour(pred(player(C, T), neighbours(C, T), player(C, T), A, A), population(C, T), player(C, T), player(C, T), A, A).
+:- pred mapfold_real_PlayerNeighbour(pred(player(C, T), ebea.population.neighbours.neighbours, player(C, T), A, A), population(C, T), player(C, T), player(C, T), A, A).
 :- mode mapfold_real_PlayerNeighbour(in(pred(in, in, out, in, out) is det), in, in, out, in, out) is det.
 
 mapfold_real_PlayerNeighbour(Pred, Population, Player, MappedPlayer, !Accumulator) :-
-	ebea.population.site.neighbours(Population^sites, Population^players, Player) = Neighbours,
+%	ebea.population.site.neighbours(Population^sites, Population^players, Player) = Neighbours,
+	ebea.population.neighbours.init(Population^sites, Player) = Neighbours,
 	Pred(Player, Neighbours, MappedPlayer, !Accumulator).
 	
 
@@ -891,72 +971,72 @@ deathProbability(CarryingCapacity, PopulationSize) = Result :-
 
 
 
-/**
- * playerPop(ID, Population) = Result.
+% /**
+%  * playerPop(ID, Population) = Result.
   
- * Auxiliary function that returns the player in list {@code Population}
- * with identification {@code ID}.  Throws an exception if there is no such
- * player.
- */
+%  * Auxiliary function that returns the player in list {@code Population}
+%  * with identification {@code ID}.  Throws an exception if there is no such
+%  * player.
+%  */
 
-:- func playerPop(int, list(player(C, P))) = player(C, P).
+% :- func playerPop(int, list(player(C, P))) = player(C, P).
 
-playerPop(ID, Population) = Result :-
-	Population = [Head | Tail],
-	(if
-		Head^id = ID
-	then
-		Result = Head
-	else
-		Result = playerPop(ID, Tail)
-	)
-	;
-	Population = [],
-	throw("ebea.population.playerPop/2: population does not have player id").
+% playerPop(ID, Population) = Result :-
+% 	Population = [Head | Tail],
+% 	(if
+% 		Head^id = ID
+% 	then
+% 		Result = Head
+% 	else
+% 		Result = playerPop(ID, Tail)
+% 	)
+% 	;
+% 	Population = [],
+% 	throw("ebea.population.playerPop/2: population does not have player id").
 
-:- func getPlayer(list(player(C, P)), int) = player(C, P).
+% :- func getPlayer(list(player(C, P)), int) = player(C, P).
 
-getPlayer(Population, ID) = Result :-
-	Population = [Head | Tail],
-	(if
-		Head^id = ID
-	then
-		Result = Head
-	else
-		Result = getPlayer(Tail, ID)
-	)
-	;
-	Population = [],
-	throw(string.format("ebea.population.getPlayer/2: population does not have player id %d", [i(ID)]) `with_type` string).
+% getPlayer(Population, ID) = Result :-
+% 	Population = [Head | Tail],
+% 	(if
+% 		Head^id = ID
+% 	then
+% 		Result = Head
+% 	else
+% 		Result = getPlayer(Tail, ID)
+% 	)
+% 	;
+% 	Population = [],
+% 	throw(string.format("ebea.population.getPlayer/2: population does not have player id %d", [i(ID)]) `with_type` string).
 
-/**
- * updatePop(ID, Player, Population) = Result
+% /**
+%  * updatePop(ID, Player, Population) = Result
   
- * Auxiliary function that updates the player in list {@code Population}
- * with identification {@code ID}.  The new value of the player is {@code
- * Player}.
+%  * Auxiliary function that updates the player in list {@code Population}
+%  * with identification {@code ID}.  The new value of the player is {@code
+%  * Player}.
   
- */
-:- func updatePop(int, player(C, P), list(player(C, P))) = list(player(C, P)).
+%  */
+% :- func updatePop(int, player(C, P), list(player(C, P))) = list(player(C, P)).
 
-updatePop(ID, Player, Population) = Result :-
-	Population = [],
-	Result = []
-	;
-	Population = [Head | Rest],
-	(if
-		Head^id = ID
-	then
-		Result = [Player | Rest]
-	else
-		Result = [Head | updatePop(ID, Player, Rest)]
-	).
+% updatePop(ID, Player, Population) = Result :-
+% 	Population = [],
+% 	Result = []
+% 	;
+% 	Population = [Head | Rest],
+% 	(if
+% 		Head^id = ID
+% 	then
+% 		Result = [Player | Rest]
+% 	else
+% 		Result = [Head | updatePop(ID, Player, Rest)]
+% 	).
 
-:- func join(list(player(C, T)), list(player(C, T))) = list(player(C, T))
-	<= chromosome(C, T, P).
+% :- func join(list(player(C, T)), list(player(C, T))) = list(player(C, T))
+% 	<= chromosome(C, T, P).
 
-join([], A) = A.
-join([P | R], L) = [P | join(R, L)].
+% join([], A) = A.
+% join([P | R], L) = [P | join(R, L)].
 
 
 :- end_module ebea.population.

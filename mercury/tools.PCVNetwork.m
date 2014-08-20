@@ -48,7 +48,7 @@
 :- func dialog_parameters = list(dialogItem(tools.'PCVNetwork'.parameters)).
 
 /**
- * runTool(Config, Parameters, Feedback, !IO)
+ * runTool(Config, Parameters, Directory, Feedback, !IO)
   
  * Run the tool on the files produced by the given configuration.
  * Parameter {@code Parameters} controls the data that is shown in the
@@ -60,16 +60,22 @@
  * means field {@code level} must be {@code detailedBin}.
   
  */
-:- pred runTool(data.config.config, tools.'PCVNetwork'.parameters, string, io.state, io.state).
-:- mode runTool(in, in, out, di, uo) is det.
+:- pred runTool(data.config.config, tools.'PCVNetwork'.parameters, string, string, io.state, io.state).
+:- mode runTool(in, in, in, out, di, uo) is det.
 
 :- implementation.
 
 :- import_module data.util.
 :- import_module game, printable.
-:- import_module ebea, ebea.player, ebea.player.selection, ebea.player.selection.pcv, ebea.population, ebea.population.parameters, ebea.streams, ebea.streams.birth, ebea.streams.phenotype.
+
+:- import_module ebea, ebea.player, ebea.player.selection,
+ebea.player.selection.pcv, ebea.population, ebea.population.configuration,
+ebea.population.players, ebea.streams, ebea.streams.birth,
+ebea.streams.death, ebea.streams.phenotype.
+
 :- import_module parseable, parseable.iou.
 :- import_module util.
+:- import_module tools.utils.
 :- import_module array, exception, int, maybe, set, solutions, string.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -101,7 +107,7 @@ dialog_parameters =
 	di(label("filename prefix"),          updateFieldString(   get_fileNamePrefix,         set(set_fileNamePrefix)))
 	].
 
-runTool(Data, Parameters, Feedback, !IO) :-
+runTool(Data, Parameters, Directory, Feedback, !IO) :-
 	data.util.gameConfig(Data) = gcex(Game, _, InitialPopulation),
 	Level = Data^level,
 	(
@@ -114,7 +120,7 @@ runTool(Data, Parameters, Feedback, !IO) :-
 			RunIndexes = set.intersect(set.from_list(1..Data^numberRuns), set.from_list(Parameters^runs))
 		),
 		set.fold2(
-			createProbabilityCombinationVectorsNetworksForRun_s1(Data, Game, InitialPopulation, Parameters),
+			createProbabilityCombinationVectorsNetworksForRun_s1(Data, Game, InitialPopulation, Parameters, Directory),
 			RunIndexes,
 			[], FeedbackAsList,
 			!IO),
@@ -146,17 +152,18 @@ runTool(Data, Parameters, Feedback, !IO) :-
  
  */
 :- pred createProbabilityCombinationVectorsNetworksForRun_s1(
-	data.config.config            :: in,
-	G                             :: in,
-	ebea.population.parameters.parameters(C) :: in,
-	tools.'PCVNetwork'.parameters :: in,
-	int                           :: in,
+	data.config.config                                 :: in,
+	G                                                  :: in,
+	ebea.population.configuration.configuration(CS, A) :: in,
+	tools.'PCVNetwork'.parameters                      :: in,
+	string                                             :: in,
+	int                                                :: in,
 	list(string) :: in, list(string) :: out,
 	io.state     :: di, io.state     :: uo
 ) is det <= (
-	asymmetricGame(G, C),
-	parseable(C),
-	printable(C)
+	asymmetricGame(G, CS),
+	parseable(CS),
+	printable(CS)
 ).
 
 createProbabilityCombinationVectorsNetworksForRun_s1(
@@ -164,11 +171,12 @@ createProbabilityCombinationVectorsNetworksForRun_s1(
 	Game,
 	InitialPopulation,
 	Parameters,
+	Directory,
 	RunIndex,
 	!FeedbackAsList,
 	!IO
 ) :-
-	ebea.streams.openInputStreams(Data^level, yes(string.format("_R%d", [i(RunIndex)])), IMStreams, !IO),
+	ebea.streams.openInputStreams(Directory, Data^level, yes(string.format("_R%d", [i(RunIndex)])), IMStreams, !IO),
 	(
 		IMStreams = ok(S),
 		(if
@@ -197,18 +205,18 @@ createProbabilityCombinationVectorsNetworksForRun_s1(
 	.
 
 :- pred createProbabilityCombinationVectorsNetworksForRun_s2(
-	data.config.config                       :: in,
-	G                                        :: in,
-	ebea.population.parameters.parameters(C) :: in,
-	tools.'PCVNetwork'.parameters            :: in,
-	ebea.streams.inStreams                   :: in(detailedBin),
-	int                                      :: in,
+	data.config.config                                 :: in,
+	G                                                  :: in,
+	ebea.population.configuration.configuration(CS, A) :: in,
+	tools.'PCVNetwork'.parameters                      :: in,
+	ebea.streams.inStreams                             :: in(detailedBin),
+	int                                                :: in,
 	list(string)           :: in, list(string) :: out,
 	io.state               :: di, io.state     :: uo
 ) is det <= (
-	asymmetricGame(G, C),
-	parseable(C),
-	printable(C)
+	asymmetricGame(G, CS),
+	parseable(CS),
+	printable(CS)
 ).
 
 createProbabilityCombinationVectorsNetworksForRun_s2(
@@ -230,17 +238,21 @@ createProbabilityCombinationVectorsNetworksForRun_s2(
 		;
 		RIIterationBirthRecords = ok(ok(IterationBirthRecords)),
 		IterationBirthRecords = ibr(_, ListBirthRecords),
+		Parameters = parameters(_, _, _, _, Players, _, _),
+		ThisPlayersToProcess = set.from_list(list.map(ebea.population.players.int2key, Players)),
 		createProbabilityCombinationVectorsNetworksForRunIteration(
 			Data,
 			Game,
-%			InitialPopulation,
 			Parameters,
 			Streams,
 			RunIndex,
+			ThisPlayersToProcess,
 			0,
 			ListBirthRecords, _,
 			InitialBirthAdvancedResult, FinalBirthAdvancedResult,
 			InitialBirthCache,          FinalBirthCache,
+			no,                         FinalDeathAdvancedResult,
+			parseable.iou.cacheInit,    FinalDeathCache,
 			parseable.iou.cacheInit,    FinalPhenotypeCache,
 			!FeedbackAsList,
 			!IO
@@ -248,6 +260,10 @@ createProbabilityCombinationVectorsNetworksForRun_s2(
 		io.print(FinalBirthAdvancedResult, !IO),
 		io.nl(!IO),
 		io.print(FinalBirthCache, !IO),
+		io.nl(!IO),
+		io.print(FinalDeathAdvancedResult, !IO),
+		io.nl(!IO),
+		io.print(FinalDeathCache, !IO),
 		io.nl(!IO),
 		io.print(FinalPhenotypeCache, !IO),
 		io.nl(!IO)
@@ -342,9 +358,14 @@ createProbabilityCombinationVectorsNetworksForRun_s2(
 	tools.'PCVNetwork'.parameters   :: in,
 	ebea.streams.inStreams          :: in(detailedBin),
 	int                             :: in,
+	set.set(key)                    :: in,
 	int                             :: in,
 	list(playerBirthRecord(C))      :: in, list(playerBirthRecord(C))      :: out,
-	maybe(iterationBirthRecords(C)) :: in, maybe(iterationBirthRecords(C)) :: out,
+	parseable.iou.advancedResult(iterationBirthRecords(C)) :: in,
+	parseable.iou.advancedResult(iterationBirthRecords(C)) :: out,
+	parseable.iou.cache             :: in, parseable.iou.cache             :: out,
+	parseable.iou.advancedResult(iterationDeathRecords) :: in,
+	parseable.iou.advancedResult(iterationDeathRecords) :: out,
 	parseable.iou.cache             :: in, parseable.iou.cache             :: out,
 	parseable.iou.cache             :: in, parseable.iou.cache             :: out,
 	list(string)                    :: in, list(string)                    :: out,
@@ -361,10 +382,13 @@ createProbabilityCombinationVectorsNetworksForRunIteration(
 	Parameters,
 	Streams,
 	RunIndex,
+	ThisPlayersToProcess,
 	IterationIndex,
 	!ListBirthRecords,
 	!BirthAdvancedResult,
 	!BirthCache,
+	!DeathAdvancedResult,
+	!DeathCache,
 	!PhenotypeCache,
 	!FeedbackAsList,
 	!IO
@@ -373,10 +397,10 @@ createProbabilityCombinationVectorsNetworksForRunIteration(
 	io.format("\rIteration %d", [i(IterationIndex)], !IO),
 	io.flush_output(io.stdout_stream, !IO),
 	ebea.streams.phenotype.read(Streams^bisPhenotype, RIIterationPhenotypicRecords, !PhenotypeCache, !IO),
-	(	% switch RIIterationPhenotypicRecords,
+	(	/* switch */
 		RIIterationPhenotypicRecords = ok(ok(IterationPhenotypicRecords)),
 		ebea.streams.birth.read(Streams^bisBirth, IterationIndex, RIIterationBirthRecords, !BirthAdvancedResult, !BirthCache, !IO),
-		(	% switch RIIterationBirthRecords
+		(	/* switch */
 			(
 				RIIterationBirthRecords = delayed
 				;
@@ -386,32 +410,67 @@ createProbabilityCombinationVectorsNetworksForRunIteration(
 				;
 				RIIterationBirthRecords = ok(eof)
 			),
-			IterationPhenotypicRecords = ipr(_, ListPlayerPhenotypicRecord),
-			list.foldl2(
-				createProbabilityCombinationVectorsNetworkForRunIterationPlayer(
-					Parameters,
-					RunIndex,
-					IterationIndex,
-					!.ListBirthRecords,
-					ListPlayerPhenotypicRecord
+			ebea.streams.death.read(Streams^bisDeath, IterationIndex, RIIterationDeathRecords, !DeathAdvancedResult, !DeathCache, !IO),
+			(	% switch
+				(	%
+					RIIterationDeathRecords = delayed,
+					NextPlayersToProcess = ThisPlayersToProcess
+				;	
+					RIIterationDeathRecords = ok(ok(IterationDeathRecords)),
+					S1 = set.difference(ThisPlayersToProcess, set.from_list(IterationDeathRecords^carryingCapacity)),
+					S2 = set.difference(S1, set.from_list(IterationDeathRecords^oldAge)),
+					S3 = set.difference(S2, set.from_list(IterationDeathRecords^starvation)),
+					NextPlayersToProcess = S3
+				;	
+					RIIterationDeathRecords = ok(eof),
+					NextPlayersToProcess = ThisPlayersToProcess
 				),
-				Parameters^players,
-				!FeedbackAsList,
-				!IO
-			),
-			createProbabilityCombinationVectorsNetworksForRunIteration(
-				Data,
-				Game,
-				Parameters,
-				Streams,
-				RunIndex,
-				IterationIndex + 1,
-				!ListBirthRecords,
-				!BirthAdvancedResult,
-				!BirthCache,
-				!PhenotypeCache,
-				!FeedbackAsList,
-				!IO)
+				IterationPhenotypicRecords = ipr(_, ListPlayerPhenotypicRecord),
+				set.fold2(
+					createProbabilityCombinationVectorsNetworkForRunIterationPlayer(
+						Parameters,
+						RunIndex,
+						IterationIndex,
+						!.ListBirthRecords,
+						ListPlayerPhenotypicRecord
+					),
+					ThisPlayersToProcess,
+					!FeedbackAsList,
+					!IO
+				),
+				(if
+					set.empty(NextPlayersToProcess)
+				then
+					true
+				else
+					createProbabilityCombinationVectorsNetworksForRunIteration(
+						Data,
+						Game,
+						Parameters,
+						Streams,
+						RunIndex,
+						NextPlayersToProcess,
+						IterationIndex + 1,
+						!ListBirthRecords,
+						!BirthAdvancedResult,
+						!BirthCache,
+						!DeathAdvancedResult,
+						!DeathCache,
+						!PhenotypeCache,
+						!FeedbackAsList,
+						!IO)
+				)
+			;
+				RIIterationDeathRecords = ok(error(Error)),
+				list.cons(
+					string.format("io error while reading death file: %s", [s(io.error_message(Error))]),
+					!FeedbackAsList)
+			;	
+				RIIterationDeathRecords = parseError,
+				list.cons(
+					"parse error while reading death file",
+					!FeedbackAsList)
+			)
 		;	
 			RIIterationBirthRecords = ok(error(Error)),
 			list.cons(string.format("io error while reading birth file: %s", [s(io.error_message(Error))]), !FeedbackAsList)
@@ -453,7 +512,7 @@ createProbabilityCombinationVectorsNetworksForRunIteration(
 	int                           :: in,
 	list(playerBirthRecord(C))    :: in,
 	list(playerPhenotypicRecord)  :: in,
-	int                           :: in,
+	key                           :: in,
 	list(string)                  :: in, list(string) :: out,
 	io.state                      :: di, io.state     :: uo
 ) is det <= (
@@ -477,16 +536,16 @@ createProbabilityCombinationVectorsNetworkForRunIterationPlayer(
 		FileName = string.format("%s_R%d_P%d_T%d.dot",
 			[s(Parameters^fileNamePrefix),
 			 i(RunIndex),
-			 i(PlayerID),
+			 i(key2int(PlayerID)),
 			 i(IterationIndex)]),
 		io.open_output(FileName, IStream, !IO),
 		(	% switch IStream
 			IStream = ok(DotStream),
 			PartnersID = solutions.solutions(playerIDNet(PCV)),
 			/* write dot file */
-			tools.printGraphVizHeader(DotStream, !IO),
+			tools.utils.printGraphVizHeader(DotStream, !IO),
 			list.foldl(
-				printGraphVizNode(DotStream, Parameters^printSelectionGenes, Parameters^printStrategyGenes, ListBirthRecords),
+				tools.utils.printGraphVizNode(DotStream, Parameters^printSelectionGenes, Parameters^printStrategyGenes, ListBirthRecords),
 				[PlayerID | PartnersID],
 				!IO),
 			int.fold_up(printEdges(DotStream, Parameters, PlayerID, PCV), 0, array.size(PCV) - 1, !IO),
@@ -496,7 +555,7 @@ createProbabilityCombinationVectorsNetworkForRunIterationPlayer(
 			CmdPng = string.format("dot -Tpng -o\"%s_R%d_P%d_T%d.png\" \"%s\"",
 				[s(Parameters^fileNamePrefix),
 				 i(RunIndex),
-				 i(PlayerID),
+				 i(key2int(PlayerID)),
 				 i(IterationIndex),
 				 s(FileName)]),
 			util.callSystem(CmdPng, !IO)
@@ -515,11 +574,11 @@ createProbabilityCombinationVectorsNetworkForRunIterationPlayer(
  * playerIDNet(PlayerProfileNetwork, ID)
 
  * Unify {@code ID} with a player ID taken from a combination vector.  It
- *  is a vector that is part of a probability and combination vectors
- *  stored in {@code phenotype} stream.
+ * is a vector that is part of a probability and combination vectors stored
+ * in {@code phenotype} stream.
  */
 
-:- pred playerIDNet(probabilityCombinationVector, int).
+:- pred playerIDNet(probabilityCombinationVector, key).
 :- mode playerIDNet(in, out) is nondet.
 
 playerIDNet(PCV, ID) :-
@@ -536,7 +595,7 @@ playerIDNet(PCV, ID) :-
 :- pred printEdges(
 	io.output_stream              :: in,
 	tools.'PCVNetwork'.parameters :: in,
-	int                           :: in,
+	key                           :: in,
 	probabilityCombinationVector  :: in,
 	int                           :: in,
 	io.state                      :: di, io.state     :: uo
@@ -553,11 +612,11 @@ printEdges(DotStream, Parameters, PlayerID, PCV, SlotIndex, !IO) :-
 :- pred printAnEdge(
 	io.output_stream              :: in,
 	tools.'PCVNetwork'.parameters :: in,
+	key                           :: in,
 	int                           :: in,
 	int                           :: in,
-	int                           :: in,
-	int                           :: in,
-	io.state                      :: di, io.state     :: uo
+	key                           :: in,
+	io.state :: di, io.state     :: uo
 ) is det.
 
 printAnEdge(Stream, _Parameters, PlayerID, Probability, SlotIndex, PartnerID, !IO) :-

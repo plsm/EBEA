@@ -4,7 +4,7 @@
  * iteration.  The player may die of old age if EBEA is run in that mode.
 
  * @author Pedro Mariano
- * @version 1.0 2013/06/ 4
+ * @version 1.0 2013/06/04
  */
 :- module ebea.player.age.
 

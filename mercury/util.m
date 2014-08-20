@@ -9,7 +9,7 @@
 :- interface.
 
 %:- import_module scanable.
-:- import_module bool, io, list, maybe, string.
+:- import_module array, bool, io, list, maybe, string.
 
 /**
  * comment(Words)
@@ -65,6 +65,17 @@
  */
 :- pred callSystem(string, io, io).
 :- mode callSystem(in, di, uo) is det.
+
+:- func arrayInitUnique(int, T) = array(T).
+:- mode arrayInitUnique(in, in) = uo is det.
+
+:- pred arrayInitUnique(int::in, T::in, array(T)::uo) is det.
+
+:- func arrayUnsafeLookup(array(T), int) = T.
+:- mode arrayUnsafeLookup(ui, in) = out is det.
+
+:- pred arrayUnsafeSet(int, T, array(T), array(T)).
+:- mode arrayUnsafeSet(in, in, di, uo) is det.
 
 :- implementation.
 
@@ -227,6 +238,93 @@ callSystem(Command, !IO) :-
 		IResult = error(Error),
 		io.format("Calling command `%s` resulted in the following error:\n%s\n", [s(Command), s(io.error_message(Error))], !IO)
 	).
+
+arrayInitUnique(Size, Item) = Result :-
+	arrayInitUnique(Size, Item, Result).
+
+:- pragma foreign_proc("C",
+    arrayInitUnique(Size::in, Item::in, Array::uo),
+    [will_not_call_mercury, promise_pure, thread_safe, will_not_modify_trail,
+        does_not_affect_liveness,
+        sharing(yes(int, T, array(T)), [
+            cel(Item, []) - cel(Array, [T])
+        ])
+    ],
+"
+    ML_alloc_array(Array, Size + 1, MR_ALLOC_ID);
+    ML_init_array(Array, Size, Item);
+").
+
+:- pragma foreign_proc("Java",
+    arrayInitUnique(Size::in, Item::in, Array::uo),
+    [will_not_call_mercury, promise_pure, thread_safe],
+"
+    Array = jmercury.array.ML_new_array(Size, Item, true);
+").
+
+
+:- pragma foreign_proc("C",
+    arrayUnsafeLookup(Array::ui, Index::in) = (Item::out),
+    [will_not_call_mercury, promise_pure, thread_safe, will_not_modify_trail,
+        does_not_affect_liveness,
+        sharing(yes(array(T), int, T), [
+            cel(Array, [T]) - cel(Item, [])
+        ])
+    ],
+"
+    Item = Array->elements[Index];
+").
+
+:- pragma foreign_proc("Java",
+    arrayUnsafeLookup(Array::ui, Index::in) = (Item::out),
+    [will_not_call_mercury, promise_pure, thread_safe],
+"
+    if (Array instanceof int[]) {
+        Item = ((int[]) Array)[Index];
+    } else if (Array instanceof double[]) {
+        Item = ((double[]) Array)[Index];
+    } else if (Array instanceof char[]) {
+        Item = ((char[]) Array)[Index];
+    } else if (Array instanceof boolean[]) {
+        Item = ((boolean[]) Array)[Index];
+    } else {
+        Item = ((Object[]) Array)[Index];
+    }
+").
+
+
+:- pragma foreign_proc("C",
+    arrayUnsafeSet(Index::in, Item::in, Array0::di, Array::uo),
+    [will_not_call_mercury, promise_pure, thread_safe, will_not_modify_trail,
+        does_not_affect_liveness,
+        sharing(yes(int, T, array(T), array(T)), [
+            cel(Array0, []) - cel(Array, []),
+            cel(Item, [])   - cel(Array, [T])
+        ])
+    ],
+"
+    Array0->elements[Index] = Item; /* destructive update! */
+    Array = Array0;
+").
+
+:- pragma foreign_proc("Java",
+    arrayUnsafeSet(Index::in, Item::in, Array0::di, Array::uo),
+    [will_not_call_mercury, promise_pure, thread_safe],
+"
+    if (Array0 instanceof int[]) {
+        ((int[]) Array0)[Index] = (Integer) Item;
+    } else if (Array0 instanceof double[]) {
+        ((double[]) Array0)[Index] = (Double) Item;
+    } else if (Array0 instanceof char[]) {
+        ((char[]) Array0)[Index] = (Character) Item;
+    } else if (Array0 instanceof boolean[]) {
+        ((boolean[]) Array0)[Index] = (Boolean) Item;
+    } else {
+        ((Object[]) Array0)[Index] = Item;
+    }
+    Array = Array0;         /* destructive update! */
+").
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of private predicates and functions
