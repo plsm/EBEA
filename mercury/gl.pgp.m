@@ -10,8 +10,8 @@
 :- interface.
 :- import_module userInterface.
 
-:- include_module game, strategy, parameters, factory.
-:- import_module gl.pgp.game, gl.pgp.strategy, gl.pgp.factory, gl.pgp.parameters.
+:- include_module game, action, strategy, parameters, factory.
+:- import_module gl.pgp.game, gl.pgp.action, gl.pgp.strategy, gl.pgp.factory, gl.pgp.parameters.
 
 :- import_module unit.
 
@@ -29,7 +29,9 @@
 
 :- instance abstractGame(game).
 :- instance symmetricGame(game, strategy).
+:- instance symmetricGame(game, strategy, action).
 :- instance asymmetricGame(game, strategy).
+:- instance asymmetricGame(game, strategy, action).
 
 :- instance chromosome(strategy, unit, parameters).
 
@@ -60,10 +62,20 @@
 	pred(playSymmetric/5)          is gl.pgp.play
 ].
 
+:- instance symmetricGame(game, strategy, action) where
+[
+	pred(playSymmetric/6)          is gl.pgp.play
+].
+
 :- instance asymmetricGame(game, strategy) where
 [
 	func(numberRoles/1)    is game.singleRole,
 	pred(playAsymmetric/5) is game.playSymmetricBridge
+].
+
+:- instance asymmetricGame(game, strategy, action) where
+[
+	pred(playAsymmetric/6)          is game.playSymmetricBridge
 ].
 
 :- instance chromosome(strategy, unit, parameters) where
@@ -228,7 +240,54 @@ play(Game, Profile, !Random, Payoffs) :-
 	),
 	array.generate_foldl(Game^players, PayoffPred, Payoffs, list.reverse(Actions), _).
 
+:- pred play(game, array(strategy), R, R, array(float), actionVector(action))
+	<= ePRNG(R).
+:- mode play(in, in, in, out, out, out) is det.
 
+play(Game, Profile, !Random, Payoffs, ActionVector) :-
+	% compute the contribution of each player to the good
+	ComputeActionPred =
+	(	pred(Index::in, Action::out, !.Rnd::in, !:Rnd::out) is det :-
+		array.lookup(Profile, Index) = Strategy,
+		(
+			Strategy = prob(ContributeProbability),
+			rng.flipCoin(ContributeProbability, Contributes, !Rnd)
+		;
+			Strategy = dete(Contributes)
+		),
+		(
+			Contributes = no,
+			Action = defect
+		;
+			Contributes = yes,
+			Action = cooperate
+		)
+	),
+	array.generate_foldl(Game^players, ComputeActionPred, ActionVector, !Random),
+	% compute the number of contributors
+	ComputeContributorsFunc =
+	(	func(Action, AC) = Result :-
+		Action = defect,
+		Result = AC
+	;
+		Action = cooperate,
+		Result = AC + 1.0
+	),
+	array.foldl(ComputeContributorsFunc, ActionVector, 0.0) = NumberContributors,
+	% compute players' payoff based on their action and number of contributors
+	PayoffFunc =
+	(func(Index) = Result :-
+		array.lookup(ActionVector, Index) = Action,
+		(
+			Action = defect,
+			Result = NumberContributors * Game^good / float(Game^players)
+			;
+			Action = cooperate,
+			Result = NumberContributors * Game^good / float(Game^players) - Game^provisionCost
+		)
+	),
+	array.generate(Game^players, PayoffFunc) = Payoffs
+	.
 
 /**
  * The result of developing a Public Good Provision chromosome is itself.

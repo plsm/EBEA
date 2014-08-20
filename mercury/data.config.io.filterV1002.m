@@ -134,7 +134,7 @@ map(configFile(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10_in, A11, A12, A13, A14, A
 		mapGameConfig(A14),
 		mapGameConfig(A15),
 		mapGameConfig(A16),
-		mapGameConfig(A17),
+		data.config.io.filterV1003.mapGameConfigPGP(A17),
 		mapGameConfig(A18),
 		mapGameConfig(A19)
 	) :-

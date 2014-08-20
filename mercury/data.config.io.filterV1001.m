@@ -1,5 +1,9 @@
 /**
- * 
+ * First version of the configuration file format.
+
+ * The user can select six games: 2-player 2-action games, battle of sexes,
+ * centipede, public good provision, public good provision with punishment
+ * and abstaining, and ultimatum.  Only has panmictic population.
 
  * @author Pedro Mariano
  * @version 1.0 2014/08/13
@@ -131,7 +135,7 @@ map(configFile(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10_in, A11, A12, A13, A14, A
 		mapGameConfig(A14),
 		B1,
 		B2,
-		mapGameConfig(A15),
+		data.config.io.filterV1003.mapGameConfigPGP(A15),
 		mapGameConfig(A16),
 		mapGameConfig(A17))
 :-

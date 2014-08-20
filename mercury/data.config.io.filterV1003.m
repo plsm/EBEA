@@ -1,5 +1,6 @@
 /**
- * 
+ * Configuration file format used in the simulations of the MABS 2014 and
+ * WCCS 2014 papers.
 
  * @author Pedro Mariano
  * @version 1.0 2014/08/13
@@ -21,9 +22,20 @@
 :- type gameConfigV1003_centipede   == gameConfigV1003(gl.centipede.game.game,   gl.centipede.strategy.strategy,   gl.centipede.parameters.parameters).
 :- type gameConfigV1003_givetake    == gameConfigV1003(gl.givetake.game.game,    gl.givetake.strategy.strategy,    gl.givetake.parameters.parameters).
 :- type gameConfigV1003_investment  == gameConfigV1003(gl.investment.game.game,  gl.investment.strategy.strategy,  gl.investment.parameter.parameter).
-:- type gameConfigV1003_pgp         == gameConfigV1003(gl.pgp.game.game,         gl.pgp.strategy.strategy,         gl.pgp.parameters.parameters).
+:- type gameConfigV1003_pgp         == gameConfigV1003(gl.pgp.game.game,         gl.pgp.strategy.strategy,         gl_pgp_parameters).
 :- type 'gameConfigV1003_pgp+pa'    == gameConfigV1003(gl.'pgp+pa'.game.game,    gl.'pgp+pa'.strategy.strategy,    gl.'pgp+pa'.parameters.parameters).
 :- type gameConfigV1003_ultimatum   == gameConfigV1003(gl.ultimatum.game.game,   gl.ultimatum.strategy.strategy,   gl.ultimatum.parameters.parameters).
+
+%% ****************************************************************
+%% Previous version of type {@code gl.pgp.parameters.parameters}.
+%%
+:- type gl_pgp_parameters --->
+	parameters(
+		stdev::float
+	).
+
+:- instance parseable(gl_pgp_parameters).
+
 
 :- pred parse(configFileV1003, list(int), list(int)).
 :- mode parse(in,  out, in)  is det.
@@ -36,7 +48,9 @@
 
 :- func map(configFileV1003) = config.
 
-:- func mapGameConfig(gameConfigV1003(G, CS, P)) = gameConfig(G, CS, P, A).
+:- func mapGameConfig(gameConfigV1003(G, CS, P)) = data.config.gameConfig(G, CS, P, AA).
+
+:- func mapGameConfigPGP(gameConfigV1003_pgp) = data.config.config_pgp.
 
 :- implementation.
 
@@ -73,6 +87,12 @@
 		ebea_population_configuration_configuration(CS)  % initialPopulation
 	).
 
+:- instance parseable(gl_pgp_parameters) where
+[
+	pred(parse/3) is parse_gl_pgp_parameters
+].
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Definition of private types
 
@@ -85,6 +105,7 @@
 		list(ebea.population.site.parameters.parameters(CS)) , % 2 Sites
 		int                                                    % 3 DefaultCarryingCapacity
 	).
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of exported predicates and functions
@@ -155,7 +176,7 @@ map(configFile(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15,
 		mapGameConfig(A14),
 		mapGameConfig(A15),
 		mapGameConfig(A16),
-		mapGameConfig(A17),
+		data.config.io.filterV1003.mapGameConfigPGP(A17),
 		mapGameConfig(A18),
 		mapGameConfig(A19)
 	).
@@ -165,6 +186,20 @@ mapGameConfig(gameConfig(Game, Parameters, Configuration)) = Result :-
 	Result = gameConfig(
 		Game,
 		Parameters,
+		configuration(
+			Geometry,
+			Sites,
+			DefaultCarryingCapacity,
+			static
+		)
+	).
+
+mapGameConfigPGP(gameConfig(Game, Parameters, Configuration)) = Result :-
+	Parameters = parameters(StdDev),
+	Configuration = configuration(Geometry, Sites, DefaultCarryingCapacity),
+	Result = gameConfig(
+		Game,
+		parameters(StdDev),
 		configuration(
 			Geometry,
 			Sites,
@@ -188,6 +223,15 @@ parse_ebea_population_configuration_configuration(P) -->
 	parseable.int32(DefaultCarryingCapacity)
 	.
 
+
+:- pred parse_gl_pgp_parameters(gl_pgp_parameters, list(int), list(int)).
+:- mode parse_gl_pgp_parameters(in, out, in) is det.
+:- mode parse_gl_pgp_parameters(out, in, out) is semidet.
+
+parse_gl_pgp_parameters(P) -->
+	{P = parameters(StdDev)},
+	parseable.float32(StdDev)
+	.
 
 :- end_module data.config.io.filterV1003.
 

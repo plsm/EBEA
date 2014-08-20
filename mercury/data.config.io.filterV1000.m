@@ -65,7 +65,7 @@
 :- type gameConfig_2x2         == gameConfigV1000(gl.'2x2'.game.game,       gl.'2x2'.strategy.strategy,       gl.'2x2'.parameters.parameters).
 :- type gameConfig_battlesexes == gameConfigV1000(gl.battlesexes.game.game, gl.battlesexes.strategy.strategy, gl.battlesexes.parameters.parameters).
 :- type gameConfig_centipede   == gameConfigV1000(gl.centipede.game.game,   gl.centipede.strategy.strategy,   gl.centipede.parameters.parameters).
-:- type gameConfig_pgp         == gameConfigV1000(gl.pgp.game.game,         gl.pgp.strategy.strategy,         gl.pgp.parameters.parameters).
+:- type gameConfig_pgp         == gameConfigV1000(gl.pgp.game.game,         gl.pgp.strategy.strategy,         gl_pgp_parameters).
 :- type 'gameConfig_pgp+pa'    == gameConfigV1000(gl.'pgp+pa'.game.game,    gl.'pgp+pa'.strategy.strategy,    gl.'pgp+pa'.parameters.parameters).
 :- type gameConfig_ultimatum   == gameConfigV1000(gl.ultimatum.game.game,   gl.ultimatum.strategy.strategy,   gl.ultimatum.parameters.parameters).
 
@@ -153,7 +153,7 @@ map(configFile(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15,
 			gl.investment.parameter.default,
 			ebea.population.configuration.default(gl.investment.strategy.default)
 		),
-		mapGameConfig(A5, A15),
+		data.config.io.filterV1000.mapGameConfigPGP(A5, A15),
 		mapGameConfig(A5, A16),
 		mapGameConfig(A5, A17)
 	).
@@ -189,6 +189,31 @@ parseInitialPlayers(InitialPlayers) -->
 mapGameConfig(CarryingCapacity, gameConfig(A1, A2, A3)) = Result :-
 	Result^game = A1,
 	Result^parameters = A2,
+	Result^initialPopulation = IP,
+	IP^geometry = wellmixed,
+	IP^sites = [Site],
+	IP^defaultCarryingCapacity = float.round_to_int(CarryingCapacity),
+	IP^siteDynamics = static,
+	
+	Site^id = 0,
+	Site^carryingCapacity = float.round_to_int(CarryingCapacity),
+	Site^chromosomes = list.map(Map, A3),
+	Site^neighbourhood = [],
+	
+	Map =
+	(func(X) = R :-
+		X = initialPlayers(B1, B2),
+		R^quantity = B1,
+		R^chromosome = B2
+	)
+	.
+
+:- func mapGameConfigPGP(float, gameConfig_pgp) = gameConfig(gl.pgp.game.game, gl.pgp.strategy.strategy, gl.pgp.parameters.parameters, gl.pgp.action.accumulator).
+
+mapGameConfigPGP(CarryingCapacity, gameConfig(A1, Parameters, A3)) = Result :-
+	Parameters = parameters(StdDev),
+	Result^game = A1,
+	Result^parameters = parameters(StdDev),
 	Result^initialPopulation = IP,
 	IP^geometry = wellmixed,
 	IP^sites = [Site],

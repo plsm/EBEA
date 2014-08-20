@@ -55,6 +55,8 @@
 	dynamic(func(AA, ebea.population.site.site) = ebea.population.site.state)
 	.
 
+:- type updateState(AA) == (func(AA, ebea.population.site.site) = ebea.population.site.state).
+
 /**
  * Initialise the players in some site given the initial site state parameters.
  */
@@ -195,7 +197,18 @@
 :- pred removePlayers(list(player(C, T)), list(key), list(key), array(site), array(site)).
 :- mode removePlayers(in, in, out, array_di, array_uo) is det.
 
-
+%% ************************************************************************
+%% parseDynamics(ListUpdateState, Dynamics, !State)
+%%
+%% Parse site dynamics.
+%%
+:- pred parseDynamics(
+	pred(int, updateState(AA)),
+	dynamics(AA),
+	parseable.state, parseable.state
+).
+:- mode parseDynamics(in(pred(out, in)  is det),     in,  out, in)  is det.
+:- mode parseDynamics(in(pred(in,  out) is semidet), out, in,  out) is semidet.
 
 :- func fold_player(population(C, T), site, func(player(C, T), A) = A, A) = A.
 
@@ -457,6 +470,57 @@ debug(!IO) :-
 	else
 		true
 	).
+
+parseDynamics(MapUpdateState, Dynamics) -->
+	{Dynamics = static},
+	[0]
+	;
+	{Dynamics = dynamic(UF)},
+	[1, Code],
+	{MapUpdateState(Code, UF)}
+	.
+
+/*
+:- pred parseDynamicsUpdateFunction(
+	list(updateState(AA)),
+	int,
+	updateState(AA),
+	parseable.state, parseable.state
+).
+:- mode parseDynamicsUpdateFunction(in, in, in, out, in) is det.
+:- mode parseDynamicsUpdateFunction(in, in, out, in, out) is semidet.
+
+parseDynamicsUpdateFunction(
+	ListUpdateState :: in,
+	Index           :: in,
+	Result          :: out,
+	!.State :: in,  !:State :: out
+) :-
+	!.State = [Code | !:State],
+	ListUpdateState = [AnUpdateState | RestUpdateState],
+	(if
+		Code = Index
+	then
+		AnUpdateState = Result
+	else
+		parseDynamicsUpdateFunction(RestUpdateState, Index + 1, Result, !State)
+	).
+
+parseDynamicsUpdateFunction(
+	ListUpdateState :: in,
+	Index           :: in,
+	Result          :: in,
+	!.State :: out,  !:State :: in
+) :-
+	ListUpdateState = [AnUpdateState | RestUpdateState],
+	(if
+		AnUpdateState = Result
+	then
+		!.State = [Index | !:State]
+	else
+		parseDynamicsUpdateFunction(RestUpdateState, Index + 1, Result, !State)
+	).
+*/
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of private predicates and functions

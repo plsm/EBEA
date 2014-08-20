@@ -116,6 +116,10 @@
 	<= (symmetricGame(G, S), ePRNG(R)).
 :- mode playSymmetricBridge(in, in, in, out, out) is det.
 
+:- pred playSymmetricBridge(G, profile(S), R, R, maybe(payoffVector), maybe(actionVector(A)))
+	<= (symmetricGame(G, S, A), ePRNG(R)).
+:- mode playSymmetricBridge(in, in, in, out, out, out) is det.
+
 :- implementation.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -141,6 +145,9 @@ singleRole(_) = 1.
 
 playSymmetricBridge(Game, Profile, !Random, yes(Payoff)) :-
 	playSymmetric(Game, Profile, !Random, Payoff).
+
+playSymmetricBridge(Game, Profile, !Random, yes(Payoff), yes(ActionVector)) :-
+	playSymmetric(Game, Profile, !Random, Payoff, ActionVector).
 
 :- end_module game.
 

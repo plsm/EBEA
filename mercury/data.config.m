@@ -20,7 +20,7 @@
 :- import_module gl.centipede,   gl.centipede.game,   gl.centipede.strategy,   gl.centipede.parameters.
 :- import_module gl.givetake,    gl.givetake.game,    gl.givetake.strategy,    gl.givetake.parameters.
 :- import_module gl.investment,  gl.investment.game,  gl.investment.strategy,  gl.investment.parameter.
-:- import_module gl.pgp,         gl.pgp.game,         gl.pgp.strategy,         gl.pgp.parameters.
+:- import_module gl.pgp,         gl.pgp.game,         gl.pgp.strategy,         gl.pgp.parameters,        gl.pgp.action.
 :- import_module gl.'pgp+pa',    gl.'pgp+pa'.game,    gl.'pgp+pa'.strategy,    gl.'pgp+pa'.parameters.
 :- import_module gl.ultimatum,   gl.ultimatum.game,   gl.ultimatum.strategy,   gl.ultimatum.parameters.
 
@@ -130,7 +130,7 @@ ebea.player.age, ebea.player.energy, ebea.player.selection.
 :- type config_centipede    == gameConfig(gl.centipede.game.game,   gl.centipede.strategy.strategy,   gl.centipede.parameters.parameters,   unit).
 :- type config_givetake     == gameConfig(gl.givetake.game.game,    gl.givetake.strategy.strategy,    gl.givetake.parameters.parameters,    unit).
 :- type config_investment   == gameConfig(gl.investment.game.game,  gl.investment.strategy.strategy,  gl.investment.parameter.parameter,    unit).
-:- type config_pgp          == gameConfig(gl.pgp.game.game,         gl.pgp.strategy.strategy,         gl.pgp.parameters.parameters,         unit).
+:- type config_pgp          == gameConfig(gl.pgp.game.game,         gl.pgp.strategy.strategy,         gl.pgp.parameters.parameters,         gl.pgp.action.accumulator).
 :- type 'config_pgp+pa'     == gameConfig(gl.'pgp+pa'.game.game,    gl.'pgp+pa'.strategy.strategy,    gl.'pgp+pa'.parameters.parameters,    unit).
 :- type config_ultimatum    == gameConfig(gl.ultimatum.game.game,   gl.ultimatum.strategy.strategy,   gl.ultimatum.parameters.parameters,   unit).
 
@@ -523,7 +523,7 @@ runVS3(RunMode, Config, Streams, !Random, !IO) :-
 		runVS4Game2(background, Config, Config^investment, Streams, !Random, !IO)
 	;
 		Config^selectedGame = pgp,
-		runVS4Game2(background, Config, Config^pgp, Streams, !Random, !IO)
+		runVS4Game3(background, Config, Config^pgp, Streams, !Random, !IO)
 	;
 		Config^selectedGame = 'pgp+pa',
 		runVS4Game2(background, Config, Config^'pgp+pa', Streams, !Random, !IO)
@@ -548,7 +548,7 @@ runVS3(RunMode, Config, Streams, !Random, !IO) :-
 	runVS4Game2(interactively(FirstPred, IteraPred, FinalPred), Config, Config^investment, Streams, !Random, !IO)
 	;
 	RunMode = pgp(FirstPred, IteraPred, FinalPred),
-	runVS4Game2(interactively(FirstPred, IteraPred, FinalPred), Config, Config^pgp, Streams, !Random, !IO)
+	runVS4Game3(interactively(FirstPred, IteraPred, FinalPred), Config, Config^pgp, Streams, !Random, !IO)
 	;
 	RunMode = 'pgp+pa'(FirstPred, IteraPred, FinalPred),
 	runVS4Game2(interactively(FirstPred, IteraPred, FinalPred), Config, Config^'pgp+pa', Streams, !Random, !IO)
@@ -623,7 +623,6 @@ runVS4Game2(RunMode, AllConfig, GameConfig, Streams, !Random, !IO) :-
 	foldable(CS, ACS),
 	foldable(A, AA),
 	parseable(CS),
-	parseable(A),
 	printable(CS),
 	printable(T),
 	printable(ACS)
