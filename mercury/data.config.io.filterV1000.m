@@ -208,7 +208,7 @@ mapGameConfig(CarryingCapacity, gameConfig(A1, A2, A3)) = Result :-
 	)
 	.
 
-:- func mapGameConfigPGP(float, gameConfig_pgp) = gameConfig(gl.pgp.game.game, gl.pgp.strategy.strategy, gl.pgp.parameters.parameters, gl.pgp.action.accumulator).
+:- func mapGameConfigPGP(float, gameConfig_pgp) = gameConfig(gl.pgp.game.game, gl.pgp.strategy.strategy, gl.pgp.parameters.parameters, gl.pgp.action.updateSiteState).
 
 mapGameConfigPGP(CarryingCapacity, gameConfig(A1, Parameters, A3)) = Result :-
 	Parameters = parameters(StdDev),

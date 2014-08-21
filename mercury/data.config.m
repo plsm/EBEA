@@ -118,12 +118,11 @@ ebea.player.age, ebea.player.energy, ebea.player.selection.
 		ultimatum(   processPred, interactivePred, processPred )
 	).
 
-:- type gameConfig(G, CS, P, D) --->
+:- type gameConfig(G, CS, P, MU) --->
 	gameConfig(
 		game              :: G,
 		parameters        :: P,
-		initialPopulation :: initialPopulation(CS, D)
-%		initialPopulation :: ebea.population.configuration.configuration(CS, AA)
+		initialPopulation :: ebea.population.configuration.configuration(CS, MU)
 	).
 
 :- type config_2x2          == gameConfig(gl.'2x2'.game.game,       gl.'2x2'.strategy.strategy,       gl.'2x2'.parameters.parameters,       unit).
@@ -162,32 +161,8 @@ ebea.player.age, ebea.player.energy, ebea.player.selection.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Definition of exported types
 
-:- type initialPopulation(CS, D) --->
-	initialPopulation(
-		geometry                :: ebea.population.configuration.geometry ,
-		sites                   :: list(ebea.population.site.parameters.parameters(CS)) ,
-		defaultCarryingCapacity :: int ,
-		siteDynamics            :: siteDynamics(D)
-	).
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Definition of private types
-
-%% ************************************************************************
-%% Represents site dynamics.  This type is mapped to {@code
-%% ebea.population.site.dynamics/1}.
-%%
-%% @cons static Site state does not change during an evolutionary run.
-%%
-%% @cons dynamic(T) Site's state changes.
-%%
-%% @param T An enumerated type that is mapped to an appropriate site's
-%% state update function.
-%%
-:- type siteDynamics(T) --->
-	static ;
-	dynamic(T)
-	.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of exported predicates and functions
@@ -480,7 +455,7 @@ runVS3(RunMode, Config, Streams, !Random, !IO) :-
 		runVS4Game2(background, Config, Config^investment, Streams, !Random, !IO)
 	;
 		Config^selectedGame = pgp,
-		runVS4Game3(background, Config, Config^pgp, Streams, !Random, !IO)
+		runVS4Game3(background, Config, Config^pgp, Streams, gl.pgp.action.mapUpdateSiteState, !Random, !IO)
 	;
 		Config^selectedGame = 'pgp+pa',
 		runVS4Game2(background, Config, Config^'pgp+pa', Streams, !Random, !IO)
@@ -505,7 +480,7 @@ runVS3(RunMode, Config, Streams, !Random, !IO) :-
 	runVS4Game2(interactively(FirstPred, IteraPred, FinalPred), Config, Config^investment, Streams, !Random, !IO)
 	;
 	RunMode = pgp(FirstPred, IteraPred, FinalPred),
-	runVS4Game3(interactively(FirstPred, IteraPred, FinalPred), Config, Config^pgp, Streams, !Random, !IO)
+	runVS4Game3(interactively(FirstPred, IteraPred, FinalPred), Config, Config^pgp, Streams, gl.pgp.action.mapUpdateSiteState, !Random, !IO)
 	;
 	RunMode = 'pgp+pa'(FirstPred, IteraPred, FinalPred),
 	runVS4Game2(interactively(FirstPred, IteraPred, FinalPred), Config, Config^'pgp+pa', Streams, !Random, !IO)
@@ -566,11 +541,11 @@ runVS4Game2(RunMode, AllConfig, GameConfig, Streams, !Random, !IO) :-
 %% for games that implement the {@code asymmetricGame/3} type-class.
 %%
 :- pred runVS4Game3(
-	ebea.core.runMode(CS, T) :: in(ebea.core.runMode),
-	config                   :: in,
-	gameConfig(G, CS, P, AA) :: in,
-	ebea.streams.outStreams  :: in,
-	pred(int, D, updateState(AA)) :: in(pred(out, in, out) is det),
+	ebea.core.runMode(CS, T)   :: in(ebea.core.runMode),
+	config                     :: in,
+	gameConfig(G, CS, P, MU)   :: in,
+	ebea.streams.outStreams    :: in,
+	func(MU) = updateState(AA) :: in,
 	R        :: in,  R        :: out,
 	io.state :: di,  io.state :: uo
 ) is det
@@ -604,8 +579,7 @@ runVS4Game3(RunMode, AllConfig, GameConfig, Streams, MapUpdateState, !Random, !I
 		PopulationParameters^siteDynamics = static
 	;
 		SiteDynamics = dynamic(D),
-		MapUpdateState(_, D, UpdateState),
-		GameConfig^initialPopulation^siteDynamics = dynamic(UpdateState)
+		PopulationParameters^siteDynamics = dynamic(MapUpdateState(D))
 	),
 
 	ebea.population.createInitialPopulation(
@@ -674,7 +648,7 @@ runVS4Game3(RunMode, AllConfig, GameConfig, Streams, MapUpdateState, !Random, !I
 % 	).
 
 
-:- func dialog(list(dialogItem(G)), list(dialogItem(P)), list(dialogItem(CS)), CS) = list(dialogItem(gameConfig(G, CS, P, A))).
+:- func dialog(list(dialogItem(G)), list(dialogItem(P)), list(dialogItem(CS)), CS) = list(dialogItem(gameConfig(G, CS, P, MU))).
 
 dialog(DialogGame, DialogParameters, DialogStrategyChromosome, DefaultStrategyChromosome) =
 	[
@@ -760,27 +734,27 @@ dialog_ultimatum = dialog(
 
                                                           % getters and setters for gameConfig/4
 
-:- func get_game(gameConfig(G, CS, P, A)) = G.
+:- func get_game(gameConfig(G, CS, P, T)) = G.
 
 get_game(Config) = Config^game.
 
-:- func set_game(gameConfig(G, CS, P, A), G) = setResult(gameConfig(G, CS, P, A)).
+:- func set_game(gameConfig(G, CS, P, T), G) = setResult(gameConfig(G, CS, P, T)).
 
 set_game(Config, Game) = ok('game :='(Config, Game)).
 
-:- func get_parameters(gameConfig(G, CS, P, A)) = P.
+:- func get_parameters(gameConfig(G, CS, P, T)) = P.
 
 get_parameters(Config) = Config^parameters.
 
-:- func set_parameters(gameConfig(G, CS, P, A), P) = setResult(gameConfig(G, CS, P, A)).
+:- func set_parameters(gameConfig(G, CS, P, T), P) = setResult(gameConfig(G, CS, P, T)).
 
 set_parameters(Config, Parameters) = ok('parameters :='(Config, Parameters)).
 
-:- func get_initialPopulation(gameConfig(G, CS, P, A)) = initialPopulation(CS, A).
+:- func get_initialPopulation(gameConfig(G, CS, P, T)) = ebea.population.configuration.configuration(CS, T).
 
 get_initialPopulation(Config) = Config^initialPopulation.
 
-:- func set_initialPopulation(gameConfig(G, CS, P, A), initialPopulation(CS, A)) = setResult(gameConfig(G, CS, P, A)).
+:- func set_initialPopulation(gameConfig(G, CS, P, T), ebea.population.configuration.configuration(CS, T)) = setResult(gameConfig(G, CS, P, T)).
 
 set_initialPopulation(Config, InitialPopulation) = ok('initialPopulation :='(Config, InitialPopulation)).
 

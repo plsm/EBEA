@@ -41,7 +41,21 @@
 	).
 
 %% ************************************************************************
-%% Represents site dynamics.
+%% Base type to represent site dynamics.
+%%
+%% @cons static Site state does not change during an evolutionary run.
+%%
+%% @cons dynamic(T) Site state changes is given by type {@code T}.
+%%
+%% @param T Represents how site state changes.
+%%
+:- type abstractDynamics(T) --->
+	static ;
+	dynamic(T)
+	.
+
+%% ************************************************************************
+%% Site dynamics used in an EBEA run.
 %%
 %% @cons static Site state does not change during an evolutionary run.
 %%
@@ -50,12 +64,13 @@
 %%
 %% @param AA The game actions accumulator.
 %%
-:- type dynamics(AA) --->
-	static ;
-	dynamic(func(AA, ebea.population.site.site) = ebea.population.site.state)
-	.
+:- type dynamics(AA) == abstractDynamics(updateState(AA)).
+
+:- type parseableDynamics(MU) == abstractDynamics(MU).
 
 :- type updateState(AA) == (func(AA, ebea.population.site.site) = ebea.population.site.state).
+
+:- inst updateState == ((func(in, in) = out) is det).
 
 /**
  * Initialise the players in some site given the initial site state parameters.
@@ -100,7 +115,8 @@
 	float                     :: in,
 	geometry                  :: in(lattice),
 	ebea.player.parameters(P) :: in,
-	int :: in, site :: out,
+	int                       :: in,
+	site :: out,
 	list(ebea.population.site.parameters.parameters(C)) :: in, list(ebea.population.site.parameters.parameters(C)) :: out,
 	ebea.population.players.key                         :: in, ebea.population.players.key                         :: out,
 	ebea.population.players.players(C, T)               :: in, ebea.population.players.players(C, T)               :: out,
@@ -203,12 +219,11 @@
 %% Parse site dynamics.
 %%
 :- pred parseDynamics(
-	pred(int, updateState(AA)),
-	dynamics(AA),
+	parseableDynamics(MU),
 	parseable.state, parseable.state
-).
-:- mode parseDynamics(in(pred(out, in)  is det),     in,  out, in)  is det.
-:- mode parseDynamics(in(pred(in,  out) is semidet), out, in,  out) is semidet.
+) <= parseable(MU).
+:- mode parseDynamics(in,  out, in)  is det.
+:- mode parseDynamics(out, in,  out) is semidet.
 
 :- func fold_player(population(C, T), site, func(player(C, T), A) = A, A) = A.
 
@@ -471,56 +486,15 @@ debug(!IO) :-
 		true
 	).
 
-parseDynamics(MapUpdateState, Dynamics) -->
+parseDynamics(Dynamics) -->
 	{Dynamics = static},
 	[0]
 	;
 	{Dynamics = dynamic(UF)},
-	[1, Code],
-	{MapUpdateState(Code, UF)}
+	[1],
+	parse(UF)
 	.
 
-/*
-:- pred parseDynamicsUpdateFunction(
-	list(updateState(AA)),
-	int,
-	updateState(AA),
-	parseable.state, parseable.state
-).
-:- mode parseDynamicsUpdateFunction(in, in, in, out, in) is det.
-:- mode parseDynamicsUpdateFunction(in, in, out, in, out) is semidet.
-
-parseDynamicsUpdateFunction(
-	ListUpdateState :: in,
-	Index           :: in,
-	Result          :: out,
-	!.State :: in,  !:State :: out
-) :-
-	!.State = [Code | !:State],
-	ListUpdateState = [AnUpdateState | RestUpdateState],
-	(if
-		Code = Index
-	then
-		AnUpdateState = Result
-	else
-		parseDynamicsUpdateFunction(RestUpdateState, Index + 1, Result, !State)
-	).
-
-parseDynamicsUpdateFunction(
-	ListUpdateState :: in,
-	Index           :: in,
-	Result          :: in,
-	!.State :: out,  !:State :: in
-) :-
-	ListUpdateState = [AnUpdateState | RestUpdateState],
-	(if
-		AnUpdateState = Result
-	then
-		!.State = [Index | !:State]
-	else
-		parseDynamicsUpdateFunction(RestUpdateState, Index + 1, Result, !State)
-	).
-*/
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of private predicates and functions

@@ -11,7 +11,7 @@
 :- type format --->
 	plain.
 
-:- pred print(io.output_stream, format, config, io.state, io.state).
+:- pred print(io.output_stream, format, data.config.config, io.state, io.state).
 :- mode print(in, in, in, di, uo) is det.
 
 :- implementation.
@@ -44,7 +44,8 @@ mutation probability:   ",
 		 i(Config^numberRuns),
 		 i(Config^numberIterations),
 		 s(string(Config^level)),
-		 s(string(Config^dynamic))],
+		 s(string(Config^data.config.dynamic))
+		],
 		!IO),
 	probability.print(Stream, Config^mutationProbability, !IO),
 	io.print(Stream, "\nmigration probability:  ", !IO),
