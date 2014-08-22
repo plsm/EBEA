@@ -40,6 +40,10 @@
 
 :- func mapUpdateSiteState(updateSiteState) = updateState(accumulator).
 
+:- func defaultSiteUpdateFunction = updateSiteState.
+
+:- func dialogSiteUpdateFunction = list(dialogItem(updateSiteState)).
+
 :- implementation.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -83,6 +87,11 @@ updateSiteState(Accumulator, Site) = Result :-
 
 mapUpdateSiteState(0, decayHighDefects, updateSiteState).
 mapUpdateSiteState(decayHighDefects) = updateSiteState.
+
+defaultSiteUpdateFunction = decayHighDefects.
+
+dialogSiteUpdateFunction =
+	[di(label("decay if defects are majority"), newValue(decayHighDefects))].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of private predicates and functions

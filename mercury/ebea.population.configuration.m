@@ -14,7 +14,7 @@
 
 :- import_module userInterface, parseable.
 :- import_module ebea.population.site.parameters.
-:- import_module list.
+:- import_module list, unit.
 
 %% ************************************************************************
 %% Represents the initial configuration of an EBEA population.  The user
@@ -59,7 +59,17 @@
  */
 :- func default(CS) = ebea.population.configuration.configuration(CS, MU).
 
-:- func dialog(CS, list(dialogItem(CS))) = list(dialogItem(ebea.population.configuration.configuration(CS, MU))).
+:- func dialog(CS, list(dialogItem(CS))) = list(dialogItem(ebea.population.configuration.configuration(CS, unit))).
+
+%% ************************************************************************
+%% Return a dialog to edit {@code configuration/2} type values.
+%%
+:- func dialog(
+	CS,
+	list(dialogItem(CS)),
+	MU,
+	list(dialogItem(MU))
+	) = list(dialogItem(ebea.population.configuration.configuration(CS, MU))).
 
 :- pred parse(ebea.population.configuration.configuration(CS, MU), list(int), list(int))
 	<= (
@@ -126,6 +136,35 @@ dialog(DefaultStrategyChromosome, DialogStrategyChromosome) =
 	di(label("default carrying capacity"),  updateFieldInt(      get_defaultCarryingCapacity,  checkInt(   "default carrying capacity",  unbound, unbound, set_defaultCarryingCapacity)))
 	].
 
+dialog(DefaultStrategyChromosome, DialogStrategyChromosome, DefaultSiteUpdateFunction, DialogSiteUpdateFunctions) =
+	[
+	di(label("geometry"),
+		'new selectOneOf'(
+			selectedGeometry,
+			selectGeometry,
+			set(set_geometry),
+			listGeometryChoices
+			)),
+	di(label("sites"),
+		'new editListFieldAny'(
+			get_sites,
+			set(set_sites),
+			ebea.population.site.parameters.default(DefaultStrategyChromosome),
+			ebea.population.site.parameters.dialog(yes, DefaultStrategyChromosome, DialogStrategyChromosome)
+			)),
+	di(label("default carrying capacity"),
+		updateFieldInt(
+			get_defaultCarryingCapacity,
+			checkInt(   "default carrying capacity",  unbound, unbound, set_defaultCarryingCapacity)
+			)),
+	di(label("site dynamics"),
+		'new editField'(
+			get_siteDynamics,
+			userInterface.set(set_siteDynamics),
+			ebea.population.site.dialog_parseableDynamics(DefaultSiteUpdateFunction, DialogSiteUpdateFunctions)
+			))
+	].
+
 parse(P) -->
 	parse_geometry(P^geometry),
 	parseable.parseList(normalType, P^sites),
@@ -170,7 +209,6 @@ parse_geometry(P) -->
 % geometries(lattice(_, _, _, _), 1, 0, wellmixed).
 % geometries(wellmixed,           0, 1, lattice(default_xSize, default_ySize, default_neighbourhood, default_boundary)).
 % geometries(lattice(X, Y, N, B), 1, 1, lattice(X, Y, N, B)).
-
 
 :- func selectedGeometry(ebea.population.configuration.configuration(CS, MU)) = maybe(currentChoice(geometry)).
 
@@ -560,6 +598,17 @@ get_defaultCarryingCapacity(P) = P^defaultCarryingCapacity.
 :- func set_defaultCarryingCapacity(ebea.population.configuration.configuration(CS, MU), int) = ebea.population.configuration.configuration(CS, MU).
 
 set_defaultCarryingCapacity(P, V) = 'defaultCarryingCapacity :='(P, V).
+
+
+
+:- func get_siteDynamics(ebea.population.configuration.configuration(CS, MU)) = ebea.population.site.parseableDynamics(MU).
+
+get_siteDynamics(P) = P^siteDynamics.
+
+
+:- func set_siteDynamics(ebea.population.configuration.configuration(CS, MU), ebea.population.site.parseableDynamics(MU)) = ebea.population.configuration.configuration(CS, MU).
+
+set_siteDynamics(P, V) = 'siteDynamics :='(P, V).
 
 
 

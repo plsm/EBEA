@@ -11,6 +11,7 @@
 
 :- include_module parameters.
 :- import_module ebea.population.site.parameters.
+:- import_module userInterface.
 
 %% ************************************************************************
 %% Represents a site in an EBEA population.  A site has a state, the list
@@ -51,7 +52,9 @@
 %%
 :- type abstractDynamics(T) --->
 	static ;
-	dynamic(T)
+	dynamic(
+		function :: T
+		)
 	.
 
 %% ************************************************************************
@@ -220,10 +223,14 @@
 %%
 :- pred parseDynamics(
 	parseableDynamics(MU),
-	parseable.state, parseable.state
+	parseable.state,  parseable.state
 ) <= parseable(MU).
 :- mode parseDynamics(in,  out, in)  is det.
 :- mode parseDynamics(out, in,  out) is semidet.
+
+
+:- func dialog_parseableDynamics(MU, list(dialogItem(MU))) = list(dialogItem(parseableDynamics(MU))).
+
 
 :- func fold_player(population(C, T), site, func(player(C, T), A) = A, A) = A.
 
@@ -495,6 +502,19 @@ parseDynamics(Dynamics) -->
 	parse(UF)
 	.
 
+dialog_parseableDynamics(DefaultSiteUpdateFunction, ListSiteUpdateFunctions) =
+	[di(label("site dynamics"), selectOneOf(
+		selectedSiteDynamics,
+		setSiteDynamics,
+		[
+			ci(label("static"),   []),
+			ci(label("dynamic"),
+				[di(label("function"),  'new editField'(
+					get_function(DefaultSiteUpdateFunction),
+					set(set_function),
+					ListSiteUpdateFunctions
+					))])
+		]))].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of private predicates and functions
@@ -662,7 +682,42 @@ neighbour(lattice(XL, YL, N, B),   X, Y,    (X + 1) mod XL + ((Y - 1) mod YL) * 
 	)
 	.
 
+:- func selectedSiteDynamics(parseableDynamics(MU)) = maybe(int).
 
+selectedSiteDynamics(static)     = yes(0).
+selectedSiteDynamics(dynamic(_)) = yes(1).
+
+:- func setSiteDynamics(parseableDynamics(MU), int) = setResult(parseableDynamics(MU)).
+
+setSiteDynamics(Result, Index) = ok(Result) :-
+	(if
+		Index \= 0,
+		Index \= 1
+	then
+		throw("ebea.population.site.setSiteDynamics/2: invalid index")
+	else
+		true
+	).
+
+:- func get_function(MU, parseableDynamics(MU)) = MU.
+
+get_function(DefaultSiteUpdateFunction, P) = R :-
+	P = static,
+	R = DefaultSiteUpdateFunction
+	;
+	P = dynamic(_),
+	R = P^function
+	.
+
+:- func set_function(parseableDynamics(MU), MU) = parseableDynamics(MU).
+
+set_function(P, V) = R :-
+	P = static,
+	R = dynamic(V)
+	;
+	P = dynamic(_),
+	R = 'function :='(P, V)
+	.
 
 :- end_module ebea.population.site.
 
