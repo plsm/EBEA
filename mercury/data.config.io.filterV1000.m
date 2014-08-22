@@ -153,7 +153,7 @@ map(configFile(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15,
 			gl.investment.parameter.default,
 			ebea.population.configuration.default(gl.investment.strategy.default)
 		),
-		data.config.io.filterV1000.mapGameConfigPGP(A5, A15),
+%		data.config.io.filterV1000.mapGameConfigPGP(A5, A15),
 		mapGameConfig(A5, A16),
 		mapGameConfig(A5, A17)
 	).

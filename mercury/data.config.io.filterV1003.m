@@ -48,9 +48,9 @@
 
 :- func map(configFileV1003) = config.
 
-:- func mapGameConfig(gameConfigV1003(G, CS, P)) = data.config.gameConfig(G, CS, P, AA).
+:- func mapGameConfig(gameConfigV1003(G, CS, P)) = data.config.gameConfig(G, CS, P, unit).
 
-:- func mapGameConfigPGP(gameConfigV1003_pgp) = data.config.config_pgp.
+%:- func mapGameConfigPGP(gameConfigV1003_pgp) = data.config.config_pgp.
 
 :- implementation.
 
@@ -176,7 +176,7 @@ map(configFile(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15,
 		mapGameConfig(A14),
 		mapGameConfig(A15),
 		mapGameConfig(A16),
-		data.config.io.filterV1003.mapGameConfigPGP(A17),
+%		data.config.io.filterV1003.mapGameConfigPGP(A17),
 		mapGameConfig(A18),
 		mapGameConfig(A19)
 	).
@@ -193,7 +193,7 @@ mapGameConfig(gameConfig(Game, Parameters, Configuration)) = Result :-
 			static
 		)
 	).
-
+/*
 mapGameConfigPGP(gameConfig(Game, Parameters, Configuration)) = Result :-
 	Parameters = parameters(StdDev),
 	Configuration = configuration(Geometry, Sites, DefaultCarryingCapacity),
@@ -207,7 +207,7 @@ mapGameConfigPGP(gameConfig(Game, Parameters, Configuration)) = Result :-
 			static
 		)
 	).
-
+*/
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of private predicates and functions
 

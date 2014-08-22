@@ -109,9 +109,9 @@ pool size parent-offspring transmission: %d%%\n",
 		Config^selectedGame = investment,
 		print_investment(Stream, plain, Config, Config^investment, !IO)
 		;
-		Config^selectedGame = pgp,
-		print_pgp(Stream, plain, Config, Config^pgp, !IO)
-		;
+%		Config^selectedGame = pgp,
+%		print_pgp(Stream, plain, Config, Config^pgp, !IO)
+%		;
 		Config^selectedGame = 'pgp+pa',
 		'print_pgp+pa'(Stream, plain, Config, Config^'pgp+pa', !IO)
 		;
@@ -209,7 +209,7 @@ print_givetake(Stream, plain, _AllConfig, GameConfig, !IO) :-
 :- mode print_investment(in, in, in, in, di, uo) is det.
 
 print_investment(_Stream, plain, _AllConfig, _GameConfig, !IO).
-
+/*
 :- pred print_pgp(io.output_stream, format, config, config_pgp, io.state, io.state).
 :- mode print_pgp(in, in, in, in, di, uo) is det.
 
@@ -219,7 +219,7 @@ print_pgp(Stream, plain, _AllConfig, GameConfig, !IO) :-
 	io.format(Stream, "provision cost:     %f\n", [f(GameConfig^game^provisionCost)], !IO),
 	io.format(Stream, "-- geometry --\n%s\n", [s(string(GameConfig^initialPopulation^geometry))], !IO),
 	list.foldl(printSite(Stream, plain), GameConfig^initialPopulation^sites, !IO).
-
+*/
 :- pred 'print_pgp+pa'(io.output_stream, format, config, 'config_pgp+pa', io.state, io.state).
 :- mode 'print_pgp+pa'(in, in, in, in, di, uo) is det.
 

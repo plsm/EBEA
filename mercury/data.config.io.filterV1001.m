@@ -121,7 +121,8 @@ parseGames(ultimatum)   --> [5].
 mapGames('2x2')       = '2x2'.
 mapGames(battlesexes) = battlesexes.
 mapGames(centipede)   = centipede.
-mapGames(pgp)         = pgp.
+mapGames(pgp)         = throw(pgp).
+%mapGames(pgp)         = pgp.
 mapGames('pgp+pa')    = 'pgp+pa'.
 mapGames(ultimatum)   = ultimatum.
 
@@ -135,7 +136,7 @@ map(configFile(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10_in, A11, A12, A13, A14, A
 		mapGameConfig(A14),
 		B1,
 		B2,
-		data.config.io.filterV1003.mapGameConfigPGP(A15),
+%		data.config.io.filterV1003.mapGameConfigPGP(A15),
 		mapGameConfig(A16),
 		mapGameConfig(A17))
 :-
