@@ -12,15 +12,6 @@
 
 :- type configFileV1000 == data.config.io.filterV1000.configFile.
 
-% :- type gameConfig(G, CS, P).
-
-% :- type gameConfig_2x2.
-% :- type gameConfig_battlesexes.
-% :- type gameConfig_centipede.
-% :- type gameConfig_pgp.
-% :- type 'gameConfig_pgp+pa'.
-% :- type gameConfig_ultimatum.
-
 :- pred parse(configFileV1000, list(int), list(int)).
 :- mode parse(in, out, in) is det.
 :- mode parse(out, in, out) is semidet.
@@ -153,7 +144,7 @@ map(configFile(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15,
 			gl.investment.parameter.default,
 			ebea.population.configuration.default(gl.investment.strategy.default)
 		),
-%		data.config.io.filterV1000.mapGameConfigPGP(A5, A15),
+		data.config.io.filterV1000.mapGameConfigPGP(A5, A15),
 		mapGameConfig(A5, A16),
 		mapGameConfig(A5, A17)
 	).

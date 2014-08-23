@@ -26,7 +26,7 @@
 		data.config.config_centipede,     % 14 centipede
 		data.config.config_givetake,      % 15 givetake
 		data.config.config_investment,    % 16 investment
-%		data.config.config_pgp,           % 17 pgp
+		data.config.config_pgp,           % 17 pgp
 		data.config.'config_pgp+pa',      % 18 pgp+pa
 		data.config.config_ultimatum      % 19 ultimatum
 	).
@@ -68,7 +68,7 @@ parse(C) -->
 		Centipede,
 		GiveTake,
 		Investment,
-%		PGP,
+		PGP,
 		PGP_PA,
 		Ultimatum)},
 	data.prng.parse(Random),
@@ -87,18 +87,15 @@ parse(C) -->
 	parse_GameConfig(Centipede),
 	parse_GameConfig(GiveTake),
 	parse_GameConfig(Investment),
-%	parse_GameConfig(PGP),
+	parse_GameConfig(PGP),
 	parse_GameConfig(PGP_PA),
 	parse_GameConfig(Ultimatum)
 	.
 
-%map(configFile(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19)) =
-%	config(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19).
+map(configFile(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19)) =
+	config(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19).
 
-map(configFile(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18)) =
-	config(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18).
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of private predicates and functions
 
 :- pred parse_GameConfig(gameConfig(G, CS, P, MU), list(int), list(int))

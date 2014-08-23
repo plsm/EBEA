@@ -43,7 +43,7 @@ gameConfig(Config) = Result :-
 	Config^selectedGame = centipede,   Result = 'new gcex'( Config^centipede  ^game,  Config^centipede  ^parameters,  Config^centipede  ^initialPopulation) ;
 	Config^selectedGame = givetake,    Result = 'new gcex'( Config^givetake   ^game,  Config^givetake   ^parameters,  Config^givetake   ^initialPopulation) ;
 	Config^selectedGame = investment,  Result = 'new gcex'( Config^investment ^game,  Config^investment ^parameters,  Config^investment ^initialPopulation) ;
-%	Config^selectedGame = pgp,         Result = 'new gcex'( Config^pgp        ^game,  Config^pgp        ^parameters,  Config^pgp        ^initialPopulation) ;
+	Config^selectedGame = pgp,         Result = 'new gcex'( Config^pgp        ^game,  Config^pgp        ^parameters,  Config^pgp        ^initialPopulation) ;
 	Config^selectedGame = 'pgp+pa',    Result = 'new gcex'( Config^'pgp+pa'   ^game,  Config^'pgp+pa'   ^parameters,  Config^'pgp+pa'   ^initialPopulation) ;
 	Config^selectedGame = ultimatum,   Result = 'new gcex'( Config^ultimatum  ^game,  Config^ultimatum  ^parameters,  Config^ultimatum  ^initialPopulation)
 	.

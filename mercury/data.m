@@ -17,7 +17,7 @@
 	centipede ;
 	givetake ;
 	investment ;
-%	pgp ;
+	pgp ;
 	'pgp+pa' ;
 	ultimatum.
 
@@ -46,7 +46,7 @@
 parseGames('2x2')       --> [0].
 parseGames(battlesexes) --> [1].
 parseGames(centipede)   --> [2].
-%parseGames(pgp)         --> [3].
+parseGames(pgp)         --> [3].
 parseGames('pgp+pa')    --> [4].
 parseGames(ultimatum)   --> [5].
 parseGames(givetake)    --> [6].

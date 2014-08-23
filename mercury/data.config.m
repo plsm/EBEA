@@ -56,7 +56,7 @@ ebea.player.age, ebea.player.energy, ebea.player.selection.
 		centipede            :: config_centipede,
 		givetake             :: config_givetake,
 		investment           :: config_investment,
-%		pgp                  :: config_pgp,
+		pgp                  :: config_pgp,
 		'pgp+pa'             :: 'config_pgp+pa',
 		ultimatum            :: config_ultimatum
 	).
@@ -88,11 +88,11 @@ ebea.player.age, ebea.player.energy, ebea.player.selection.
 		interactivePred( gl.investment.strategy.strategy,   unit) ,
 		processPred(     gl.investment.strategy.strategy,   unit)
 	) ;
-%	pgp(
-%		processPred(     gl.pgp.strategy.strategy,         unit) ,
-%		interactivePred( gl.pgp.strategy.strategy,         unit) ,
-%		processPred(     gl.pgp.strategy.strategy,         unit)
-%	) ;
+	pgp(
+		processPred(     gl.pgp.strategy.strategy,         unit) ,
+		interactivePred( gl.pgp.strategy.strategy,         unit) ,
+		processPred(     gl.pgp.strategy.strategy,         unit)
+	) ;
 	'pgp+pa'(
 		processPred(     gl.'pgp+pa'.strategy.strategy,    unit) ,
 		interactivePred( gl.'pgp+pa'.strategy.strategy,    unit) ,
@@ -113,7 +113,7 @@ ebea.player.age, ebea.player.energy, ebea.player.selection.
 		centipede(   processPred, interactivePred, processPred ) ;
 		givetake(    processPred, interactivePred, processPred ) ;
 		investment(  processPred, interactivePred, processPred ) ;
-%		pgp(         processPred, interactivePred, processPred ) ;
+		pgp(         processPred, interactivePred, processPred ) ;
 		'pgp+pa'(    processPred, interactivePred, processPred ) ;
 		ultimatum(   processPred, interactivePred, processPred )
 	).
@@ -130,7 +130,7 @@ ebea.player.age, ebea.player.energy, ebea.player.selection.
 :- type config_centipede    == gameConfig(gl.centipede.game.game,   gl.centipede.strategy.strategy,   gl.centipede.parameters.parameters,   unit).
 :- type config_givetake     == gameConfig(gl.givetake.game.game,    gl.givetake.strategy.strategy,    gl.givetake.parameters.parameters,    unit).
 :- type config_investment   == gameConfig(gl.investment.game.game,  gl.investment.strategy.strategy,  gl.investment.parameter.parameter,    unit).
-%:- type config_pgp          == gameConfig(gl.pgp.game.game,         gl.pgp.strategy.strategy,         gl.pgp.parameters.parameters,         gl.pgp.action.updateSiteState).
+:- type config_pgp          == gameConfig(gl.pgp.game.game,         gl.pgp.strategy.strategy,         gl.pgp.parameters.parameters,         gl.pgp.action.updateSiteState).
 :- type 'config_pgp+pa'     == gameConfig(gl.'pgp+pa'.game.game,    gl.'pgp+pa'.strategy.strategy,    gl.'pgp+pa'.parameters.parameters,    unit).
 :- type config_ultimatum    == gameConfig(gl.ultimatum.game.game,   gl.ultimatum.strategy.strategy,   gl.ultimatum.parameters.parameters,   unit).
 
@@ -203,12 +203,12 @@ default = config(
 		gl.investment.game.default,
 		gl.investment.parameter.default,
 		ebea.population.configuration.default(gl.investment.strategy.default)
-		),/*
+		),
 	gameConfig(
 		gl.pgp.game.default,
 		gl.pgp.parameters.default,
 		ebea.population.configuration.default(gl.pgp.strategy.default)
-		),*/
+		),
 	gameConfig(
 		gl.'pgp+pa'.game.default,
 		gl.'pgp+pa'.parameters.default,
@@ -244,18 +244,19 @@ dialog =
 		di(label("energy parameters"),     'new editField'(  get_energyParameters,     set(set_energyParameters),    ebea.player.energy.dialogParameters)),
 		di(label("selection parameters"),  'new editField'(  get_selectionParameters,  set(set_selectionParameters), ebea.player.selection.dialogParameters))
 		])),
-	di(label("game"),    'new selectOneOf'(
-		getCurrentChoice,
+	di(label("game"),    selectOneOf(
+		get_selectedGame,
+		set_selectedGame,
+/*		getCurrentChoice,
 		setChoice,
-		setData,
+		setData,*/
 		[
 		 ci(label("2 player 2 action"),  [di(label("next"), 'new editField'( get_cfg_2x2,      set(set_cfg_2x2),     dialog_2x2))]),
 		 ci(label("battle of sexes"),    [di(label("next"), 'new editField'( get_battlesexes,  set(set_battlesexes), dialog_battlesexes))]),
 		 ci(label("centipede"),          [di(label("next"), 'new editField'( get_centipede,    set(set_centipede),   dialog_centipede))]),
 		 ci(label("givetake"),           [di(label("next"), 'new editField'( get_givetake,     set(set_givetake),    dialog_givetake))]),
 		 ci(label("investment"),         [di(label("next"), 'new editField'( get_investment,   set(set_investment),  dialog_investment))]),
-%		 ci(label("pgp"),                [di(label("next"), 'new editField'( get_pgp,          set(set_pgp),         dialog_pgp))]),
-		 ci(label("pgp"),                []),
+		 ci(label("pgp"),                [di(label("next"), 'new editField'( get_pgp,          set(set_pgp),         dialog_pgp))]),
 		 ci(label("pgp+pa"),             [di(label("next"), 'new editField'( 'get_pgp+pa',     set('set_pgp+pa'),    'dialog_pgp+pa'))]),
 		 ci(label("ultimatum"),          [di(label("next"), 'new editField'( get_ultimatum,    set(set_ultimatum),   dialog_ultimatum))])
 		]))
@@ -308,9 +309,9 @@ runEBEA(RunMode, Config, !IO) :-
 		RunMode = investment(_, _, _),
 		Config^selectedGame \= investment
 	;
-%		RunMode = pgp(_, _, _),
-%		Config^selectedGame \= pgp
-%	;
+		RunMode = pgp(_, _, _),
+		Config^selectedGame \= pgp
+	;
 		RunMode = 'pgp+pa'(_, _, _),
 		Config^selectedGame \= 'pgp+pa'
 	;
@@ -347,7 +348,7 @@ selectedGameIndex(battlesexes, 1).
 selectedGameIndex(centipede,   2).
 selectedGameIndex(givetake,    3).
 selectedGameIndex(investment,  4).
-%selectedGameIndex(pgp,         5).
+selectedGameIndex(pgp,         5).
 selectedGameIndex('pgp+pa',    6).
 selectedGameIndex(ultimatum,   7).
 
@@ -455,9 +456,9 @@ runVS3(RunMode, Config, Streams, !Random, !IO) :-
 	;
 		Config^selectedGame = investment,
 		runVS4Game2(background, Config, Config^investment, Streams, !Random, !IO)
-%	;
-%		Config^selectedGame = pgp,
-%		runVS4Game3(background, Config, Config^pgp, Streams, gl.pgp.action.mapUpdateSiteState, !Random, !IO)
+	;
+		Config^selectedGame = pgp,
+		runVS4Game3(background, Config, Config^pgp, Streams, gl.pgp.action.mapUpdateSiteState, !Random, !IO)
 	;
 		Config^selectedGame = 'pgp+pa',
 		runVS4Game2(background, Config, Config^'pgp+pa', Streams, !Random, !IO)
@@ -480,9 +481,9 @@ runVS3(RunMode, Config, Streams, !Random, !IO) :-
 	;
 	RunMode = investment(FirstPred, IteraPred, FinalPred),
 	runVS4Game2(interactively(FirstPred, IteraPred, FinalPred), Config, Config^investment, Streams, !Random, !IO)
-%	;
-%	RunMode = pgp(FirstPred, IteraPred, FinalPred),
-%	runVS4Game3(interactively(FirstPred, IteraPred, FinalPred), Config, Config^pgp, Streams, gl.pgp.action.mapUpdateSiteState, !Random, !IO)
+	;
+	RunMode = pgp(FirstPred, IteraPred, FinalPred),
+	runVS4Game3(interactively(FirstPred, IteraPred, FinalPred), Config, Config^pgp, Streams, gl.pgp.action.mapUpdateSiteState, !Random, !IO)
 	;
 	RunMode = 'pgp+pa'(FirstPred, IteraPred, FinalPred),
 	runVS4Game2(interactively(FirstPred, IteraPred, FinalPred), Config, Config^'pgp+pa', Streams, !Random, !IO)
@@ -650,7 +651,12 @@ runVS4Game3(RunMode, AllConfig, GameConfig, Streams, MapUpdateState, !Random, !I
 % 	).
 
 
-:- func dialog(list(dialogItem(G)), list(dialogItem(P)), list(dialogItem(CS)), CS) = list(dialogItem(gameConfig(G, CS, P, unit))).
+:- func dialog(
+	list(dialogItem(G)),
+	list(dialogItem(P)),
+	list(dialogItem(CS)),
+	CS
+	) = list(dialogItem(gameConfig(G, CS, P, unit))).
 
 dialog(DialogGame, DialogParameters, DialogStrategyChromosome, DefaultStrategyChromosome) =
 	[
@@ -733,15 +739,15 @@ dialog_investment = dialog(
 	gl.investment.strategy.dialog,
 	gl.investment.strategy.default).
 
-% :- func dialog_pgp = list(dialogItem(config_pgp)).
+:- func dialog_pgp = list(dialogItem(config_pgp)).
 
-% dialog_pgp = dialog(
-% 	gl.pgp.game.dialog,
-% 	gl.pgp.parameters.dialog,
-% 	gl.pgp.strategy.dialog,
-% 	gl.pgp.strategy.default,
-% 	gl.pgp.action.dialogSiteUpdateFunction,
-% 	gl.pgp.action.defaultSiteUpdateFunction).
+dialog_pgp = dialog(
+	gl.pgp.game.dialog,
+	gl.pgp.parameters.dialog,
+	gl.pgp.strategy.dialog,
+	gl.pgp.strategy.default,
+	gl.pgp.action.dialogSiteUpdateFunction,
+	gl.pgp.action.defaultSiteUpdateFunction).
 
 :- func 'dialog_pgp+pa' = list(dialogItem('config_pgp+pa')).
 
@@ -903,6 +909,27 @@ set_selectionParameters(P, V) = 'selectionParameters :='(P, V).
 
 
 
+:- func get_selectedGame(config) = maybe(int).
+
+get_selectedGame(P) = Result :-
+	selectedGameIndex(P^selectedGame, Index),
+	Result = yes(Index)
+	.
+
+
+:- func set_selectedGame(config, int) = setResult(config).
+
+set_selectedGame(P, Index) = Result :-
+	(if
+		selectedGameIndex(SelectedGame, Index)
+	then
+		Result = ok('selectedGame :='(P, SelectedGame))
+	else
+		Result = throw("data.config.set_selectedGame/2: invalid index")
+	).
+
+
+
 :- func get_cfg_2x2(config) = config_2x2.
 
 get_cfg_2x2(P) = P^cfg_2x2.
@@ -958,7 +985,6 @@ set_investment(P, V) = 'investment :='('selectedGame :='(P, investment), V).
 
 
 
-/*
 :- func get_pgp(config) = config_pgp.
 
 get_pgp(P) = P^pgp.
@@ -967,7 +993,6 @@ get_pgp(P) = P^pgp.
 :- func set_pgp(config, config_pgp) = config.
 
 set_pgp(P, V) = 'pgp :='('selectedGame :='(P, pgp), V).
-*/
 
 
 :- func 'get_pgp+pa'(config) = 'config_pgp+pa'.
