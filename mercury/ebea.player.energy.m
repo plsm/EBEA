@@ -224,6 +224,7 @@
 
 :- import_module array.
 :- import_module parseable.
+:- import_module userInterface.util.
 :- import_module util.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -279,12 +280,15 @@ defaultParameters = Result :-
 
 dialogParameters =
 	[
-	di(label("energy scaling"),    'new editField'(  get_energyScaling,    set(set_energyScaling),
-		[
-		di(label("unscaled"),       newValue(unscaled)),
-		di(label("scaled"),         newValue(scaled)),
-		di(label("scaledPositive"), newValue(scaledPositive))
-		])),
+	di(
+		label("energy scaling"),
+		userInterface.util.makeSelectOneOf(
+			get_energyScaling,
+			set(set_energyScaling),
+			[label("unscaled"), label("scaled"), label("scaled positive")],
+			[unscaled, scaled, scaledPositive]
+		)
+	),
 	di(label("energy reproduce"),  updateFieldFloat( get_energyReproduce,  checkFloat( "energyReproduce",  bounded(0.0, no), unbound, set_energyReproduce))),
 	di(label("energy newborn (as % of energy reproduce)"),    updateFieldFloat( get_energyNewborn,    set_energyNewborn)),
 	di(label("energy lost birth (as % of energy reproduce)"), updateFieldFloat( get_energyLostBirth,  set_energyLostBirth)),

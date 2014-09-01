@@ -141,7 +141,7 @@ processRun_s1(Config, Parameters, Directory, RunIndex, !FeedbackAsList, !IO) :-
 	ebea.streams.openInputStreams(Directory, detailedBin, yes(string.format("_R%d", [i(RunIndex)])), IMStreams, !IO),
 	(if
 		IMStreams = ok(Streams),
-		Streams = detailedBin(_, _, _, _)
+		Streams = detailedBin(_, _, _, _, _)
 	then
 		io.format("Run %d\n", [i(RunIndex)], !IO),
 		ebea.streams.birth.read(Streams, IRAllBirths, !IO),

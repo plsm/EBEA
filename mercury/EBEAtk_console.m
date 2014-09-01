@@ -262,6 +262,7 @@ set_config(D, C) = ok('config :='(D, C)).
 
 loadConfiguration(!Data, !IO) :-
 	io.print("File name? ", !IO),
+	io.flush_output(io.stdout_stream, !IO),
 	io.read_line_as_string(ILine, !IO),
 	(if
 		ILine = ok(Line)
@@ -306,6 +307,7 @@ saveConfiguration(!Data, !IO) :-
 
 saveAsConfiguration(!Data, !IO) :-
 	io.print("File name? ", !IO),
+	io.flush_output(io.stdout_stream, !IO),
 	io.read_line_as_string(ILine, !IO),
 	(if
 		ILine = ok(Line)

@@ -222,7 +222,7 @@ createPlayerProfilesNetworkForRun(Data, Level, Parameters, Directory, RunIndex, 
 			ebea.streams.closeInputStreams(Streams, !IO),
 			io.print("\r                      \n", !IO)
 		;
-			Streams = detailedBin(_, _, _, _),
+			Streams = detailedBin(_, _, _, _, _),
 			io.format("Run %d\n", [i(RunIndex)], !IO),
 			ebea.streams.birth.read(Streams^bisBirth, -1, RIIterationBirthRecords, no, BirthAdvancedResult, parseable.iou.cacheInit, BirthCache, !IO),
 			(	%

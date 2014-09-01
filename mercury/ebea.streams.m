@@ -9,7 +9,7 @@
 
 :- interface.
 
-:- include_module birth, death, phenotype, playerProfile.
+:- include_module birth, death, phenotype, playerProfile, siteState.
 :- import_module userInterface, parseable.
 :- import_module io, list, maybe.
 
@@ -37,6 +37,7 @@
 		tosPlayerProfile :: io.output_stream
 	) ;
 	detailedBin(
+		bosSiteState     :: io.binary_output_stream,
 		bosBirth         :: io.binary_output_stream,
 		bosDeath         :: io.binary_output_stream,
 		bosPhenotype     :: io.binary_output_stream,
@@ -57,6 +58,7 @@
 		tisPlayerProfile :: io.input_stream
 	) ;
 	detailedBin(
+		bisSiteState     :: io.binary_input_stream,
 		bisBirth         :: io.binary_input_stream,
 		bisDeath         :: io.binary_input_stream,
 		bisPhenotype     :: io.binary_input_stream,
@@ -71,10 +73,10 @@
 
 :- inst detailedTxt == bound(detailedTxt(ground, ground, ground, ground)).
 
-:- inst detailedBin == bound(detailedBin(ground, ground, ground, ground)).
+:- inst detailedBin == bound(detailedBin(ground, ground, ground, ground, ground)).
 
 :- inst detailed == bound(
-	detailedBin(ground, ground, ground, ground) ;
+	detailedBin(ground, ground, ground, ground, ground) ;
 	detailedTxt(ground, ground, ground, ground)
 	).
 
@@ -252,16 +254,28 @@ openInputStreams(Directory, Level, MSuffix, IMStreams, !IO) :-
 				RStreamPhenotype = ok(SPhenotype),
 				FileNamePlayerProfile = filename(Directory, "player-profile", MSuffix, bin),
 				io.open_binary_input(FileNamePlayerProfile, RStreamPlayerProfile, !IO),
-				(
-					RStreamPlayerProfile = ok(StreamPlayerProfile),
-					Streams = detailedBin(SBirth, SDeath, SPhenotype, StreamPlayerProfile),
-					IMStreams = ok(Streams)
-					;
+				(	%
 					RStreamPlayerProfile = error(Error4),
 					IMStreams = error(string.format("IO error opening `%s` file: %s", [s(FileNamePlayerProfile), s(io.error_message(Error4))])),
 					io.close_binary_input(SPhenotype, !IO),
 					io.close_binary_input(SDeath, !IO),
 					io.close_binary_input(SBirth, !IO)
+				;
+					RStreamPlayerProfile = ok(StreamPlayerProfile),
+					FileNameSiteState = filename(Directory, "site-state", MSuffix, bin),
+					io.open_binary_input(FileNameSiteState, RStreamSiteState, !IO),
+					(	%
+						RStreamSiteState = error(Error5),
+						IMStreams = error(string.format("IO error opening `%s` file: %s", [s(FileNameSiteState), s(io.error_message(Error5))])),
+						io.close_binary_input(SPhenotype, !IO),
+						io.close_binary_input(SDeath, !IO),
+						io.close_binary_input(SBirth, !IO),
+						io.close_binary_input(StreamPlayerProfile, !IO)
+					;
+						RStreamSiteState = ok(SSiteState),
+						Streams = detailedBin(SSiteState, SBirth, SDeath, SPhenotype, StreamPlayerProfile),
+						IMStreams = ok(Streams)
+					)
 				)
 			)
 		)
@@ -327,7 +341,8 @@ closeInputStreams(Streams, !IO) :-
 	io.close_input(Streams^tisPhenotype, !IO),
 	io.close_input(Streams^tisPlayerProfile, !IO)
 	;
-	Streams = detailedBin(_, _, _, _),
+	Streams = detailedBin(_, _, _, _, _),
+	io.close_binary_input(Streams^bisSiteState, !IO),
 	io.close_binary_input(Streams^bisBirth, !IO),
 	io.close_binary_input(Streams^bisDeath, !IO),
 	io.close_binary_input(Streams^bisPhenotype, !IO),
@@ -346,7 +361,8 @@ closeOutputStreams(Streams, !IO) :-
 	io.close_output(Streams^tosPhenotype, !IO),
 	io.close_output(Streams^tosPlayerProfile, !IO)
 	;
-	Streams = detailedBin(_, _, _, _),
+	Streams = detailedBin(_, _, _, _, _),
+	io.close_binary_output(Streams^bosSiteState, !IO),
 	io.close_binary_output(Streams^bosBirth, !IO),
 	io.close_binary_output(Streams^bosDeath, !IO),
 	io.close_binary_output(Streams^bosPhenotype, !IO),
@@ -429,14 +445,27 @@ openOutputStreams(Level, MSuffix, IMStreams, !IO) :-
 				RStreamPhenotype = ok(SPhenotype),
 				FileNamePlayerProfile = filename("player-profile", MSuffix, bin),
 				io.open_binary_output(FileNamePlayerProfile, RStreamPlayerProfile, !IO),
-				(
+				(	%
 					RStreamPlayerProfile = ok(SPlayerProfile),
-					Streams^bosBirth = SBirth,
-					Streams^bosDeath = SDeath,
-					Streams^bosPhenotype = SPhenotype,
-					Streams^bosPlayerProfile = SPlayerProfile,
-					IMStreams = ok(Streams)
+					FileNameSiteState = filename("site-state", MSuffix, bin),
+					io.open_binary_output(FileNameSiteState, RStreamSiteState, !IO),
+					(	%
+						RStreamSiteState = ok(SStreamSiteState),
+						Streams^bosSiteState = SStreamSiteState,
+						Streams^bosBirth = SBirth,
+						Streams^bosDeath = SDeath,
+						Streams^bosPhenotype = SPhenotype,
+						Streams^bosPlayerProfile = SPlayerProfile,
+						IMStreams = ok(Streams)
 					;
+						RStreamSiteState = error(Error4),
+						IMStreams = error(string.format("IO error opening `%s` file: %s", [s(FileNameSiteState), s(io.error_message(Error4))])),
+						io.close_binary_output(SPlayerProfile, !IO),
+						io.close_binary_output(SPhenotype, !IO),
+						io.close_binary_output(SDeath, !IO),
+						io.close_binary_output(SBirth, !IO)
+					)
+				;
 					RStreamPlayerProfile = error(Error0),
 					IMStreams = error(string.format("IO error opening `%s` file: %s", [s(FileNamePlayerProfile), s(io.error_message(Error0))])),
 					io.close_binary_output(SPhenotype, !IO),

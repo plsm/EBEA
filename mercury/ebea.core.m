@@ -258,6 +258,7 @@
 :- import_module ebea.player, ebea.player.chromosome, ebea.player.age,
 ebea.player.selection, ebea.population.players, ebea.population.site,
 ebea.streams.birth, ebea.streams.death, ebea.streams.phenotype,
+ebea.streams.siteState,
 ebea.streams.playerProfile.
 
 :- import_module util.
@@ -561,7 +562,8 @@ printInitialDataToStreams(Streams, Population, !IO) :-
 	ebea.population.fold_players(printBirth(Streams^tosBirth, -1), Population, !IO)
 %	list.foldl(printBirth(Streams^tosBirth, -1), ebea.population.players(Population), !IO)
 	;
-	Streams = detailedBin(_, _, _, _),
+	Streams = detailedBin(_, _, _, _, _),
+	ebea.streams.siteState.write(Streams^bosSiteState, -1, Population, !IO),
 	ebea.population.fold_players(ebea.streams.birth.foldInit, Population, []) = Births,
 	ebea.streams.birth.writeInit(Streams^bosBirth, Births, !IO)
 %	ebea.streams.birth.write(Streams^bosBirth, -1, ebea.population.players(Population), !IO)
@@ -616,7 +618,8 @@ printIterationDataToStreams(Streams, Game, Iteration, Population, PlayerProfiles
 	list.foldl(printDeathDataToStream(Streams^tosDeath, Iteration, starvation), CemeteryStarvation, !IO),
 	ebea.population.fold_players(printPhenotypeDataToStream(Streams^tosPhenotype, Iteration), Population, !IO)
 	;
-	Streams = detailedBin(_, _, _, _),
+	Streams = detailedBin(_, _, _, _, _),
+	ebea.streams.siteState.write(Streams^bosSiteState, Iteration, Population, !IO),
 	ebea.streams.birth.write(Streams^bosBirth, Iteration, Births, !IO),
 	ebea.streams.death.write(Streams^bosDeath, Iteration, CemeteryCarryingCapacity, CemeteryOldAge, CemeteryStarvation, !IO),
 	ebea.streams.phenotype.write(Streams^bosPhenotype, Iteration, Population, !IO),
@@ -658,7 +661,7 @@ printLastIterationDataToStreams(Stats, Streams, Iteration, Population, !IO)
 :-
 	Streams = detailedTxt(_, _, _, _)
 	;
-	Streams = detailedBin(_, _, _, _)
+	Streams = detailedBin(_, _, _, _, _)
 	;
 	Streams = dynamics(_)
 	;
@@ -716,7 +719,8 @@ printDataToStreams(Game, Last, Streams, Iteration, Population, PlayerProfiles, B
 	list.foldl(printDeathDataToStream(Streams^tosDeath, Iteration, starvation), CemeteryStarvation, !IO),
 	ebea.population.fold_players(printPhenotypeDataToStream(Streams^tosPhenotype, Iteration), Population, !IO)
 	;
-	Streams = detailedBin(_, _, _, _),
+	Streams = detailedBin(_, _, _, _, _),
+	ebea.streams.siteState.write(Streams^bosSiteState, Iteration, Population, !IO),
 	ebea.streams.birth.write(Streams^bosBirth, Iteration, Births, !IO),
 	ebea.streams.death.write(Streams^bosDeath, Iteration, CemeteryCarryingCapacity, CemeteryOldAge, CemeteryStarvation, !IO),
 	ebea.streams.phenotype.write(Streams^bosPhenotype, Iteration, Population, !IO),
