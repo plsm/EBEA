@@ -24,6 +24,8 @@
 
 :- instance foldable(action, accumulator).
 
+:- instance parseable(updateSiteState).
+
 %% ************************************************************************
 %% updateSiteState(Accumulator, Site) = Result
 %%
@@ -34,7 +36,13 @@
 
 :- pred mapUpdateSiteState(int, updateSiteState, updateState(accumulator)).
 :- mode mapUpdateSiteState(in,  out, out) is semidet.
-:- mode mapUpdateSiteState(out, in,  out)  is semidet.
+:- mode mapUpdateSiteState(out, in,  out) is det.
+
+:- func mapUpdateSiteState(updateSiteState) = updateState(accumulator).
+
+:- func defaultSiteUpdateFunction = updateSiteState.
+
+:- func dialogSiteUpdateFunction = list(dialogItem(updateSiteState)).
 
 :- implementation.
 
@@ -51,6 +59,11 @@
 [
 	func(fold/2)   is gl.pgp.action.fold,
 	func(initAC/0) is gl.pgp.action.init
+].
+
+:- instance parseable(updateSiteState) where
+[
+	pred(parse/3) is gl.pgp.action.parse
 ].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -73,6 +86,12 @@ updateSiteState(Accumulator, Site) = Result :-
 	.
 
 mapUpdateSiteState(0, decayHighDefects, updateSiteState).
+mapUpdateSiteState(decayHighDefects) = updateSiteState.
+
+defaultSiteUpdateFunction = decayHighDefects.
+
+dialogSiteUpdateFunction =
+	[di(label("decay if defects are majority"), newValue(decayHighDefects))].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of private predicates and functions
@@ -84,6 +103,13 @@ init = ac(0, 0).
 
 fold(cooperate, AC) = 'numberCooperates :='(AC, AC^numberCooperates + 1).
 fold(defect, AC)    = 'numberDefects :='(   AC, AC^numberDefects    + 1).
+
+:- pred parse(updateSiteState, parseable.state, parseable.state).
+:- mode parse(in, out, in) is det.
+:- mode parse(out, in, out) is semidet.
+
+parse(decayHighDefects) -->
+	[0].
 
 :- end_module gl.pgp.action.
 

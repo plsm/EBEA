@@ -154,7 +154,7 @@ create_populationDynamics_forRun_s1(
 	(
 		IMStreams = ok(S),
 		(if
-			S = detailedBin(_, _, _, _)
+			S = detailedBin(_, _, _, _, _)
 		then
 			Streams = S
 		else

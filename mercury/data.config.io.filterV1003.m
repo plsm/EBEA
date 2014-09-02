@@ -48,7 +48,7 @@
 
 :- func map(configFileV1003) = config.
 
-:- func mapGameConfig(gameConfigV1003(G, CS, P)) = data.config.gameConfig(G, CS, P, AA).
+:- func mapGameConfig(gameConfigV1003(G, CS, P)) = data.config.gameConfig(G, CS, P, unit).
 
 :- func mapGameConfigPGP(gameConfigV1003_pgp) = data.config.config_pgp.
 

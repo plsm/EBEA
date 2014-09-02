@@ -11,6 +11,7 @@
 
 :- include_module parameters.
 :- import_module ebea.population.site.parameters.
+:- import_module userInterface.
 
 %% ************************************************************************
 %% Represents a site in an EBEA population.  A site has a state, the list
@@ -41,7 +42,23 @@
 	).
 
 %% ************************************************************************
-%% Represents site dynamics.
+%% Base type to represent site dynamics.
+%%
+%% @cons static Site state does not change during an evolutionary run.
+%%
+%% @cons dynamic(T) Site state changes is given by type {@code T}.
+%%
+%% @param T Represents how site state changes.
+%%
+:- type abstractDynamics(T) --->
+	static ;
+	dynamic(
+		function :: T
+		)
+	.
+
+%% ************************************************************************
+%% Site dynamics used in an EBEA run.
 %%
 %% @cons static Site state does not change during an evolutionary run.
 %%
@@ -50,12 +67,13 @@
 %%
 %% @param AA The game actions accumulator.
 %%
-:- type dynamics(AA) --->
-	static ;
-	dynamic(func(AA, ebea.population.site.site) = ebea.population.site.state)
-	.
+:- type dynamics(AA) == abstractDynamics(updateState(AA)).
+
+:- type parseableDynamics(MU) == abstractDynamics(MU).
 
 :- type updateState(AA) == (func(AA, ebea.population.site.site) = ebea.population.site.state).
+
+:- inst updateState == ((func(in, in) = out) is det).
 
 /**
  * Initialise the players in some site given the initial site state parameters.
@@ -100,7 +118,8 @@
 	float                     :: in,
 	geometry                  :: in(lattice),
 	ebea.player.parameters(P) :: in,
-	int :: in, site :: out,
+	int                       :: in,
+	site :: out,
 	list(ebea.population.site.parameters.parameters(C)) :: in, list(ebea.population.site.parameters.parameters(C)) :: out,
 	ebea.population.players.key                         :: in, ebea.population.players.key                         :: out,
 	ebea.population.players.players(C, T)               :: in, ebea.population.players.players(C, T)               :: out,
@@ -203,12 +222,15 @@
 %% Parse site dynamics.
 %%
 :- pred parseDynamics(
-	pred(int, updateState(AA)),
-	dynamics(AA),
-	parseable.state, parseable.state
-).
-:- mode parseDynamics(in(pred(out, in)  is det),     in,  out, in)  is det.
-:- mode parseDynamics(in(pred(in,  out) is semidet), out, in,  out) is semidet.
+	parseableDynamics(MU),
+	parseable.state,  parseable.state
+) <= parseable(MU).
+:- mode parseDynamics(in,  out, in)  is det.
+:- mode parseDynamics(out, in,  out) is semidet.
+
+
+:- func dialog_parseableDynamics(MU, list(dialogItem(MU))) = list(dialogItem(parseableDynamics(MU))).
+
 
 :- func fold_player(population(C, T), site, func(player(C, T), A) = A, A) = A.
 
@@ -471,56 +493,28 @@ debug(!IO) :-
 		true
 	).
 
-parseDynamics(MapUpdateState, Dynamics) -->
+parseDynamics(Dynamics) -->
 	{Dynamics = static},
 	[0]
 	;
 	{Dynamics = dynamic(UF)},
-	[1, Code],
-	{MapUpdateState(Code, UF)}
+	[1],
+	parse(UF)
 	.
 
-/*
-:- pred parseDynamicsUpdateFunction(
-	list(updateState(AA)),
-	int,
-	updateState(AA),
-	parseable.state, parseable.state
-).
-:- mode parseDynamicsUpdateFunction(in, in, in, out, in) is det.
-:- mode parseDynamicsUpdateFunction(in, in, out, in, out) is semidet.
-
-parseDynamicsUpdateFunction(
-	ListUpdateState :: in,
-	Index           :: in,
-	Result          :: out,
-	!.State :: in,  !:State :: out
-) :-
-	!.State = [Code | !:State],
-	ListUpdateState = [AnUpdateState | RestUpdateState],
-	(if
-		Code = Index
-	then
-		AnUpdateState = Result
-	else
-		parseDynamicsUpdateFunction(RestUpdateState, Index + 1, Result, !State)
-	).
-
-parseDynamicsUpdateFunction(
-	ListUpdateState :: in,
-	Index           :: in,
-	Result          :: in,
-	!.State :: out,  !:State :: in
-) :-
-	ListUpdateState = [AnUpdateState | RestUpdateState],
-	(if
-		AnUpdateState = Result
-	then
-		!.State = [Index | !:State]
-	else
-		parseDynamicsUpdateFunction(RestUpdateState, Index + 1, Result, !State)
-	).
-*/
+dialog_parseableDynamics(DefaultSiteUpdateFunction, ListSiteUpdateFunctions) =
+	[di(label("site dynamics"), selectOneOf(
+		selectedSiteDynamics,
+		setSiteDynamics,
+		[
+			ci(label("static"),   []),
+			ci(label("dynamic"),
+				[di(label("function"),  'new editField'(
+					get_function(DefaultSiteUpdateFunction),
+					set(set_function),
+					ListSiteUpdateFunctions
+					))])
+		]))].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of private predicates and functions
@@ -688,7 +682,42 @@ neighbour(lattice(XL, YL, N, B),   X, Y,    (X + 1) mod XL + ((Y - 1) mod YL) * 
 	)
 	.
 
+:- func selectedSiteDynamics(parseableDynamics(MU)) = maybe(int).
 
+selectedSiteDynamics(static)     = yes(0).
+selectedSiteDynamics(dynamic(_)) = yes(1).
+
+:- func setSiteDynamics(parseableDynamics(MU), int) = setResult(parseableDynamics(MU)).
+
+setSiteDynamics(Result, Index) = ok(Result) :-
+	(if
+		Index \= 0,
+		Index \= 1
+	then
+		throw("ebea.population.site.setSiteDynamics/2: invalid index")
+	else
+		true
+	).
+
+:- func get_function(MU, parseableDynamics(MU)) = MU.
+
+get_function(DefaultSiteUpdateFunction, P) = R :-
+	P = static,
+	R = DefaultSiteUpdateFunction
+	;
+	P = dynamic(_),
+	R = P^function
+	.
+
+:- func set_function(parseableDynamics(MU), MU) = parseableDynamics(MU).
+
+set_function(P, V) = R :-
+	P = static,
+	R = dynamic(V)
+	;
+	P = dynamic(_),
+	R = 'function :='(P, V)
+	.
 
 :- end_module ebea.population.site.
 

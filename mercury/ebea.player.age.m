@@ -161,10 +161,14 @@ defaultParameters = deathByOldAge(150, 1.0).
 
 dialogParameters =
 	[
-	di(label("no death"),          newValue(noDeath)),
-	di(label("death by old age"),  subdialog( [
-		di(label("old age"),          updateFieldInt(   get_oldAge,          checkInt(   "old age",          bounded(0, no),   unbound, set_oldAge))),
-		di(label("death suaveness"),  updateFieldFloat( get_deathSuaveness,  checkFloat( "death suaveness",  bounded(0.0, no), unbound, set_deathSuaveness)))
+	di(label("age parameters"),  selectOneOf( selectedParameters, setParameters,
+		[
+		ci(label("no death"),    []),
+		ci(label("death by old age"),
+			[
+			di(label("old age"),          updateFieldInt(   get_oldAge,          checkInt(   "old age",          bounded(0, no),   unbound, set_oldAge))),
+			di(label("death suaveness"),  updateFieldFloat( get_deathSuaveness,  checkFloat( "death suaveness",  bounded(0.0, no), unbound, set_deathSuaveness)))
+			])
 		]))
 	].
 
@@ -293,9 +297,26 @@ printTrait(Stream, Trait, !IO) :-
 printAc(_Stream, noac, !IO).
 
 
+:- func selectedParameters(ebea.player.age.parameters) = maybe(int).
 
+selectedParameters(noDeath)             = yes(0).
+selectedParameters(deathByOldAge(_, _)) = yes(1).
 
+:- func setParameters(ebea.player.age.parameters, int) = userInterface.setResult(ebea.player.age.parameters).
 
+setParameters(OldValue, Index) = ok(NewValue) :-
+	OldValue = noDeath,
+	(if     Index = 0 then NewValue = OldValue
+	else if Index = 1 then NewValue = deathByOldAge(default_oldAge, default_deathSuaveness)
+	else throw("ebea.player.age.setParameters/2: invalid index")
+	)
+	;
+	OldValue = deathByOldAge(_, _),
+	(if     Index = 0 then NewValue = noDeath
+	else if Index = 1 then NewValue = OldValue
+	else throw("ebea.player.age.setParameters/2: invalid index")
+	)
+	.
 
 :- func get_oldAge(ebea.player.age.parameters) = int.
 

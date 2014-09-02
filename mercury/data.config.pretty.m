@@ -11,7 +11,7 @@
 :- type format --->
 	plain.
 
-:- pred print(io.output_stream, format, config, io.state, io.state).
+:- pred print(io.output_stream, format, data.config.config, io.state, io.state).
 :- mode print(in, in, in, di, uo) is det.
 
 :- implementation.
@@ -44,7 +44,8 @@ mutation probability:   ",
 		 i(Config^numberRuns),
 		 i(Config^numberIterations),
 		 s(string(Config^level)),
-		 s(string(Config^dynamic))],
+		 s(string(Config^data.config.dynamic))
+		],
 		!IO),
 	probability.print(Stream, Config^mutationProbability, !IO),
 	io.print(Stream, "\nmigration probability:  ", !IO),
@@ -216,8 +217,11 @@ print_pgp(Stream, plain, _AllConfig, GameConfig, !IO) :-
 	io.format(Stream, "number of players:  %d\n", [i(GameConfig^game^players)], !IO),
 	io.format(Stream, "good values:        %f\n", [f(GameConfig^game^good)], !IO),
 	io.format(Stream, "provision cost:     %f\n", [f(GameConfig^game^provisionCost)], !IO),
-	io.format(Stream, "-- geometry --\n%s\n", [s(string(GameConfig^initialPopulation^geometry))], !IO),
-	list.foldl(printSite(Stream, plain), GameConfig^initialPopulation^sites, !IO).
+	io.format(Stream, "standard deviation used in mutation:     %f\n", [f(GameConfig^parameters^stdev)], !IO),
+	printConfiguration(Stream, plain, GameConfig^initialPopulation, !IO)
+	.
+%	io.format(Stream, "-- geometry --\n%s\n", [s(string(GameConfig^initialPopulation^geometry))], !IO),
+%	list.foldl(printSite(Stream, plain), GameConfig^initialPopulation^sites, !IO).
 
 :- pred 'print_pgp+pa'(io.output_stream, format, config, 'config_pgp+pa', io.state, io.state).
 :- mode 'print_pgp+pa'(in, in, in, in, di, uo) is det.
@@ -235,6 +239,25 @@ print_ultimatum(Stream, plain, _AllConfig, GameConfig, !IO) :-
 	io.format(Stream, "Cake size:  %d\n", [i(GameConfig^game^cakeSize)], !IO),
 	io.format(Stream, "-- geometry --\n%s\n", [s(string(GameConfig^initialPopulation^geometry))], !IO),
 	list.foldl(printSite(Stream, plain), GameConfig^initialPopulation^sites, !IO).
+
+
+
+:- pred printConfiguration(
+	io.output_stream                                    :: in,
+	data.config.pretty.format                           :: in,
+	ebea.population.configuration.configuration(CS, MU) :: in,
+	io.state :: di,  io.state :: uo
+	) is det.
+
+printConfiguration(Stream, Format, Configuration, !IO) :-
+	(	%
+		Format = plain,
+		io.print(Stream, "-- initial population --\n", !IO),
+		io.format(Stream, "  geometry:    %s\n", [s(string(Configuration^geometry))], !IO),
+		io.format(Stream, "  default carrying capacity:  %i\n", [i(Configuration^defaultCarryingCapacity)], !IO),
+		io.format(Stream, "  site dynamics:  %s\n", [s(string(Configuration^siteDynamics))], !IO)
+	),
+	list.foldl(printSite(Stream, Format), Configuration^sites, !IO).
 
 
 :- pred printSite(io.output_stream, format, ebea.population.site.parameters.parameters(CS), io.state, io.state).

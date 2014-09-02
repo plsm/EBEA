@@ -69,12 +69,12 @@ ebea.population.players, ebea.population.site.
 %%
 %% @param P Parameters the govern the game played by players
 %%
-%% @param A The action accumulator.
+%% @param MU The action accumulator.
 %%
-:- type parameters(P, A) --->
+:- type parameters(P, MU) --->
 	p(
 		base         :: ebea.population.parameters(P),
-		siteDynamics :: ebea.population.site.dynamics(A)
+		siteDynamics :: ebea.population.site.dynamics(MU)
 	).
 
 
@@ -108,9 +108,16 @@ ebea.population.players, ebea.population.site.
 :- inst playerDeath == bound(oldAge ; starvation).
 
 
-:- pred createInitialPopulation(ebea.player.parameters(P), ebea.population.configuration.configuration(C, A), population(C, T), R, R)
-	<= (chromosome(C, T, P), ePRNG(R)).
-:- mode createInitialPopulation(in, in, out, in, out) is det.
+:- pred createInitialPopulation(
+	ebea.player.parameters(P)                         :: in,
+	ebea.population.configuration.configuration(C, _) :: in,
+	population(C, T) :: out,
+	R :: in,  R :: out
+) is det
+	<= (
+	chromosome(C, T, P),
+	ePRNG(R)
+).
 
 
 /**
@@ -347,15 +354,15 @@ ebea.population.players, ebea.population.site.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of exported predicates and functions
 
-createInitialPopulation(PlayerParameters, Parameters, Population, !Random) :-
-	Parameters^geometry = Geometry,
+createInitialPopulation(PlayerParameters, Configuration, Population, !Random) :-
+	Configuration^geometry = Geometry,
 	(
 	Geometry = wellmixed,
 	(
-		Parameters^sites = [],
+		Configuration^sites = [],
 		throw("ebea.population.createInitialPopulation/5: no sites")
 		;
-		Parameters^sites = [Site | _],
+		Configuration^sites = [Site | _],
 		ebea.population.players.init(EmptyPlayers, InitialKey),
 		list.foldl4(
 			ebea.population.site.initialisePlayers(PlayerParameters, 0),
@@ -374,11 +381,11 @@ createInitialPopulation(PlayerParameters, Parameters, Population, !Random) :-
 	ebea.population.players.init(EmptyPlayers, InitialKey),
 	list.map_foldl4(
 		ebea.population.site.createLatticeInitialSite(
-			float(Parameters^defaultCarryingCapacity),
+			float(Configuration^defaultCarryingCapacity),
 			Geometry,
 			PlayerParameters),
 		SiteIndexes,      InitialSites,
-		Parameters^sites, _,
+		Configuration^sites, _,
 		InitialKey,       NextKey,
 		EmptyPlayers,     PopulationPlayers,
 		!Random),

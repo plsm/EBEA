@@ -12,15 +12,6 @@
 
 :- type configFileV1000 == data.config.io.filterV1000.configFile.
 
-% :- type gameConfig(G, CS, P).
-
-% :- type gameConfig_2x2.
-% :- type gameConfig_battlesexes.
-% :- type gameConfig_centipede.
-% :- type gameConfig_pgp.
-% :- type 'gameConfig_pgp+pa'.
-% :- type gameConfig_ultimatum.
-
 :- pred parse(configFileV1000, list(int), list(int)).
 :- mode parse(in, out, in) is det.
 :- mode parse(out, in, out) is semidet.
@@ -208,7 +199,7 @@ mapGameConfig(CarryingCapacity, gameConfig(A1, A2, A3)) = Result :-
 	)
 	.
 
-:- func mapGameConfigPGP(float, gameConfig_pgp) = gameConfig(gl.pgp.game.game, gl.pgp.strategy.strategy, gl.pgp.parameters.parameters, gl.pgp.action.accumulator).
+:- func mapGameConfigPGP(float, gameConfig_pgp) = gameConfig(gl.pgp.game.game, gl.pgp.strategy.strategy, gl.pgp.parameters.parameters, gl.pgp.action.updateSiteState).
 
 mapGameConfigPGP(CarryingCapacity, gameConfig(A1, Parameters, A3)) = Result :-
 	Parameters = parameters(StdDev),

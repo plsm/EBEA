@@ -20,6 +20,27 @@
 :- pred read(format, string, maybe_error(config), io.state, io.state).
 :- mode read(in, in, out, di, uo) is det.
 
+
+%% ************************************************************************
+%% write(Format, Filename, Config, MErrors, !IO)
+%%
+%% Write the EBEA configuration to a file.  The format depends on parameter
+%% {@code Format}.  IO errors are returned in parameter {@code MErrors} as
+%% {@code yes(Message)}.  If writing is sucessfull parameter {@code
+%% MErrors} is unified with {@code no}.
+%%
+%% @warn Format {@code mercury} does not work in the java grade.
+%%
+%% @param Format the format to write the EBEA configuration
+%%
+%% @param Filename The file-name.
+%%
+%% @param Config The EBEA configuration
+%%
+%% @param MErrors IO errors are returned in this parameter
+%%
+%% @param !IO IO state
+%%
 :- pred write(format, string, config, maybe(string), io.state, io.state).
 :- mode write(in, in, in, out, di, uo) is det.
 
@@ -48,69 +69,6 @@ data.config.io.filterV1004.
 	configFileV1003(data.config.io.filterV1003.configFile) ;
 	configFileV1004(data.config.io.filterV1004.configFile)
 	.
-
-/*						
-	config_v1001(
-		data.prng.supplyParameter,         %  1 random
-		int,                               %  2 numberRuns
-		int,                               %  3 numberIterations
-		ebea.streams.level,                %  4 level
-		ebea.population.dynamic,           %  5 dynamic
-		probability,                       %  6 mutationProbability
-		probability,                       %  7 migrationProbability
-		ebea.player.age.parameters,        %  8 ageParameters
-		ebea.player.energy.parameters,     %  9 energyParameters
-		ebea_player_selection_parameters_v1002,  % 10 selectionParameters
-		games_old_v1001,                         % 11 selectedGame
-		gameConfig_old_v1003_2x2,                    % 12 cfg_2x2
-		gameConfig_old_v1003_battlesexes,            % 13 battlesexes
-		gameConfig_old_v1003_centipede,              % 14 centipede
-		gameConfig_old_v1003_pgp,                    % 15 pgp
-		'gameConfig_old_v1003_pgp+pa',               % 16 'pgp+pa'
-		gameConfig_old_v1003_ultimatum               % 17 ultimatum
-	) ;
-	config_v1000(
-		data.prng.supplyParameter,			 %  1 random
-		int,										 %  2 numberRuns
-		int,										 %  3 numberIterations
-		ebea.streams.level,					 %  4 level
-		float,									 %  5 carryingCapacity
-		ebea.population.dynamic,			 %  6 dynamic
-		float,									 %  7 mutationProbability
-		ebea.player.age.parameters,		 %  8 ageParameters
-		ebea.player.energy.parameters,	 %  9 energyParameters
-		ebea_player_selection_parameters_v1002, % 10 selectionParameters
-		games_old_v1001,							 % 11 selectedGame
-		config_old_v1000_2x2,				 % 12 cfg_2x2
-		config_old_v1000_battlesexes,	 % 13 battlesexes
-		config_old_v1000_centipede,		 % 14 centipede
-		config_old_v1000_pgp,				 % 15 pgp
-		'config_old_v1000_pgp+pa',		 % 16 pgp+pa
-		config_old_v1000_ultimatum		 % 19 ultimatum
-	 ).
-*/
-
-
-
-
-:- type chromosome --->
-	random ;
-	partnerSelection(
-		poolSize                :: int ,
-		bitsPerProbability      :: int ,
-		probabilityUpdateFactor :: float ,
-		payoffThreshold_PS      :: float
-	) ;
-	opinion(
-		payoffThreshold_O :: float
-	)
-	.
-
-
-
-
-
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of exported predicates and functions
@@ -221,54 +179,6 @@ parse(configFileV1002(C)) -->	[2],	data.config.io.filterV1002.parse(C).
 parse(configFileV1003(C)) -->	[3],	data.config.io.filterV1003.parse(C).
 parse(configFileV1004(C)) -->	[4],	data.config.io.filterV1004.parse(C).
 
-
-/*
-parse(C) -->
-	{C = config_v1001(
-		Random,
-		NumberRuns,
-		NumberIterations,
-		Level,
-		Dynamic,
-		MutationProbability,
-		MigrationProbability,
-		AgeParameters,
-		EnergyParameters,
-		SelectionParameters,
-		SelectedGame,
-		Cfg_2x2,
-		BattleSexes,
-		Centipede,
-		PGP,
-		PGP_PA,
-		Ultimatum)},
-	[1],
-	data.prng.parse(Random),
-	parseable.int32(NumberRuns),
-	parseable.int32(NumberIterations),
-	ebea.streams.parse(Level),
-	ebea.population.parseDynamic(Dynamic),
-	probability.parse(MutationProbability),
-	probability.parse(MigrationProbability),
-	ebea.player.age.parseParameters(AgeParameters),
-	ebea.player.energy.parseParameters(EnergyParameters),
-	ebea_player_selection_parseParameters_v1002(SelectionParameters),
-	parseGames_v1001(SelectedGame),
-	parse_GameConfig_old_v1003(Cfg_2x2),
-	parse_GameConfig_old_v1003(BattleSexes),
-	parse_GameConfig_old_v1003(Centipede),
-	parse_GameConfig_old_v1003(PGP),
-	parse_GameConfig_old_v1003(PGP_PA),
-	parse_GameConfig_old_v1003(Ultimatum)
-	.
-*/
-
-
-
-
-
-
-
 /**
  * Convert the configuration parameters as stored in a text stream to the
  * internal representation.
@@ -282,24 +192,6 @@ map(configFileV1002(C)) = data.config.io.filterV1002.map(C).
 map(configFileV1003(C)) = data.config.io.filterV1003.map(C).
 map(configFileV1004(C)) = data.config.io.filterV1004.map(C).
 
-/*
-map(config_v1001(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10_in, A11, A12, A13, A14, A15, A16, A17)) =
-	config(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10_out, mapGames_v1001(A11), A12, A13, A14, B1, B2, A15, A16, A17) :-
-	B1 = gameConfig(
-		gl.givetake.game.default,
-		gl.givetake.parameters.default,
-		ebea.population.configuration.default(gl.givetake.strategy.default)
-	),
-	B2 = gameConfig(
-		gl.investment.game.default,
-		gl.investment.parameter.default,
-		ebea.population.configuration.default(gl.investment.strategy.default)
-	),
-	A10_out = map_ebea_player_selection_parseParameters_v1002(A10_in)
-	.
-
-
-
 /**
  * Convert the config parameters from the internal representation to the
  * text stream representation.  This is the inverse function of {@code
@@ -310,10 +202,6 @@ map(config_v1001(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10_in, A11, A12, A13, A14,
 
 pam(config(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19)) =
 	configFileV1004(configFile(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19)).
-
-
-
-
 
 :- end_module data.config.io.
 

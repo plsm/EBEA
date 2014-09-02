@@ -98,8 +98,8 @@ map(configFile(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15,
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of private predicates and functions
 
-:- pred parse_GameConfig(gameConfig(G, CS, P, A), list(int), list(int))
-	<= (parseable(G), parseable(CS), parseable(P)).
+:- pred parse_GameConfig(gameConfig(G, CS, P, MU), list(int), list(int))
+	<= (parseable(G), parseable(CS), parseable(P), parseable(MU)).
 :- mode parse_GameConfig(in,  out, in)  is det.
 :- mode parse_GameConfig(out, in,  out) is semidet.
 
