@@ -483,7 +483,15 @@ runVS3(RunMode, Config, Streams, !Random, !IO) :-
 	runVS4Game2(interactively(FirstPred, IteraPred, FinalPred), Config, Config^investment, Streams, !Random, !IO)
 	;
 	RunMode = pgp(FirstPred, IteraPred, FinalPred),
-	runVS4Game3(interactively(FirstPred, IteraPred, FinalPred), Config, Config^pgp, Streams, gl.pgp.action.mapUpdateSiteState, !Random, !IO)
+	runVS4Game3(
+		interactively(FirstPred, IteraPred, FinalPred),
+		Config,
+		Config^pgp,
+		Streams,
+		gl.pgp.action.mapUpdateSiteState,
+		!Random,
+		!IO
+	)
 	;
 	RunMode = 'pgp+pa'(FirstPred, IteraPred, FinalPred),
 	runVS4Game2(interactively(FirstPred, IteraPred, FinalPred), Config, Config^'pgp+pa', Streams, !Random, !IO)

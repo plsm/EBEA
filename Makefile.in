@@ -5,9 +5,7 @@ MFLAGS_COMMON = \
 --make                                                               \
 --output-compile-error-lines  500                                    \
 --max-error-line-width        120                                    \
---search-directory            @lib_mc4ap@/lib/mercury/ints/          \
 --mercury-library-directory   @lib_mc4ap@/lib/mercury/               \
---search-directory            @lib_mercury_utils@/lib/mercury/ints/  \
 --mercury-library-directory   @lib_mercury_utils@/lib/mercury/       \
 --mercury-library             mercury_utils
 

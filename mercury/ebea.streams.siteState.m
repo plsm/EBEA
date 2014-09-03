@@ -8,7 +8,20 @@
 
 :- interface.
 
-:- import_module ebea.population.
+:- import_module ebea.population, ebea.population.site.
+
+:- type iterationSitesStateRecord --->
+	issr(
+		iteration  :: int,
+		sitesState :: list(siteStateRecord)
+	).
+
+:- type siteStateRecord --->
+	ssr(
+		state :: ebea.population.site.state
+	).
+
+:- instance parseable(iterationSitesStateRecord).
 
 :- pred write(
 	io.binary_output_stream :: in,
@@ -17,21 +30,61 @@
 	io.state :: di,  io.state :: uo
 	) is det.
 
+:- pred parse(iterationSitesStateRecord, list(int), list(int)).
+:- mode parse(in, out, in) is det.
+:- mode parse(out, in, out) is semidet.
+
 :- implementation.
+
+:- import_module parseable.iou.
+:- import_module array.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Definition of exported types
 
+:- instance parseable(iterationSitesStateRecord) where
+[
+	pred(parse/3) is ebea.streams.siteState.parse
+].
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Definition of private types
+
+:- instance parseable(siteStateRecord) where
+[
+	pred(parse/3) is ebea.streams.siteState.parse_siteStateRecord
+].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of exported predicates and functions
 
-write(Stream, Iteration, Population, !IO).
+write(Stream, Iteration, Population, !IO) :-
+	IterationSitesStateRecord = issr(
+		Iteration,
+		array.foldr(extractSiteState, Population^sites, [])
+	),
+	parseable.iou.write(Stream, IterationSitesStateRecord, !IO)
+	.
+
+parse(issr(Iteration, SitesState)) -->
+	parseable.int32(Iteration),
+	parseable.parseList(withLength, SitesState).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of private predicates and functions
+
+:- func extractSiteState(site, list(siteStateRecord)) = list(siteStateRecord).
+
+extractSiteState(Site, AC) = [ssr(Site^state) | AC].
+
+
+:- pred parse_siteStateRecord(siteStateRecord, list(int), list(int)).
+:- mode parse_siteStateRecord(in, out, in) is det.
+:- mode parse_siteStateRecord(out, in, out) is semidet.
+
+parse_siteStateRecord(ssr(state(CarryingCapacity))) -->
+	parseable.float32(CarryingCapacity)
+	.
 
 :- end_module ebea.streams.siteState.
 

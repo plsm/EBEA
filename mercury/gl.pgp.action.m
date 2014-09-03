@@ -20,7 +20,9 @@
 :- type accumulator.
 
 :- type updateSiteState --->
-	decayHighDefects.
+	decayHighDefects(
+		decreaseFactor :: float
+	).
 
 :- instance foldable(action, accumulator).
 
@@ -32,11 +34,11 @@
 %% Updates the site's state given the actions done by players in the given
 %% site.
 %%
-:- func updateSiteState(accumulator, ebea.population.site.site) = ebea.population.site.state.
+:- func updateSiteState(updateSiteState, accumulator, ebea.population.site.site) = ebea.population.site.state.
 
-:- pred mapUpdateSiteState(int, updateSiteState, updateState(accumulator)).
-:- mode mapUpdateSiteState(in,  out, out) is semidet.
-:- mode mapUpdateSiteState(out, in,  out) is det.
+%:- pred mapUpdateSiteState(int, updateSiteState, updateState(accumulator)).
+%:- mode mapUpdateSiteState(in,  out, out) is semidet.
+%:- mode mapUpdateSiteState(out, in,  out) is det.
 
 :- func mapUpdateSiteState(updateSiteState) = updateState(accumulator).
 
@@ -72,26 +74,29 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of exported predicates and functions
 
-updateSiteState(Accumulator, Site) = Result :-
+updateSiteState(decayHighDefects(DecreaseFactor), Accumulator, Site) = Result :-
 	(if
 		Accumulator^numberCooperates > Accumulator^numberDefects
 	then
 		Result = 'carryingCapacity :='(
 			Site^state,
-			Site^state^carryingCapacity * 0.9
+			Site^state^carryingCapacity * DecreaseFactor
 		)
 	else
 		Result = Site^state
 	)
 	.
 
-mapUpdateSiteState(0, decayHighDefects, updateSiteState).
-mapUpdateSiteState(decayHighDefects) = updateSiteState.
+%mapUpdateSiteState(0, UpdateSiteState, updateSiteState(UpdateSiteState)).
+mapUpdateSiteState(UpdateSiteState) = updateSiteState(UpdateSiteState).
 
-defaultSiteUpdateFunction = decayHighDefects.
+defaultSiteUpdateFunction = decayHighDefects(0.9).
 
 dialogSiteUpdateFunction =
-	[di(label("decay if defects are majority"), newValue(decayHighDefects))].
+	[di(
+		label("decay if defects are majority"),
+		updateFieldFloat( getDecreaseFactor, userInterface.checkFloat("decrease factor", bounded(0.0, no), bounded(1.0, no), setDecreaseFactor)))
+	].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of private predicates and functions
@@ -108,8 +113,18 @@ fold(defect, AC)    = 'numberDefects :='(   AC, AC^numberDefects    + 1).
 :- mode parse(in, out, in) is det.
 :- mode parse(out, in, out) is semidet.
 
-parse(decayHighDefects) -->
-	[0].
+parse(decayHighDefects(DecreaseFactor)) -->
+	[0],
+	parseable.float32(DecreaseFactor).
+
+
+:- func getDecreaseFactor(updateSiteState) = float.
+
+getDecreaseFactor(decayHighDefects(DecreaseFactor)) = DecreaseFactor.
+
+:- func setDecreaseFactor(updateSiteState, float) = updateSiteState.
+
+setDecreaseFactor(UpdateSiteState, Value) = 'decreaseFactor :='(UpdateSiteState, Value).
 
 :- end_module gl.pgp.action.
 
