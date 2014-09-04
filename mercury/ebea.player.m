@@ -277,7 +277,7 @@ numberGenes(Chromosome) = Result :-
 	Result =
 		  chromosome.numberGenes(Chromosome^ageGenes)
 		+ chromosome.numberGenes(Chromosome^energyGenes)
-		+ chromosome.numberGenes(Chromosome^selectionGenes)
+		+ ebea.player.selection.chromosome.numberGenes(Chromosome^selectionGenes)
 		+ chromosome.numberGenes(Chromosome^strategyGenes).
 
 :- pred mutateGene(ebea.player.parameters(P), int, distribution, distribution, R, R, ebea.player.chromosome.chromosome(CS), ebea.player.chromosome.chromosome(CS))
@@ -302,24 +302,24 @@ mutateGene(Parameters, Index, !Distribution, !Random, Chromosome, Result) :-
 		Index <
 			  chromosome.numberGenes(Chromosome^ageGenes)
 			+ chromosome.numberGenes(Chromosome^energyGenes)
-			+ chromosome.numberGenes(Chromosome^selectionGenes)
+			+ ebea.player.selection.chromosome.numberGenes(Chromosome^selectionGenes)
 	then
 		ThisIndex = Index
 			- chromosome.numberGenes(Chromosome^ageGenes)
 			- chromosome.numberGenes(Chromosome^energyGenes),
-		chromosome.mutateGene(Parameters^selectionPar, ThisIndex, !Distribution, !Random, Chromosome^selectionGenes, ResultSelection),
+		ebea.player.selection.chromosome.mutateGene(Parameters^selectionPar, ThisIndex, !Distribution, !Random, Chromosome^selectionGenes, ResultSelection),
 		Result = 'selectionGenes :='(Chromosome, ResultSelection)
 	else if
 		Index <
 			  chromosome.numberGenes(Chromosome^ageGenes)
 			+ chromosome.numberGenes(Chromosome^energyGenes)
-			+ chromosome.numberGenes(Chromosome^selectionGenes)
+			+ ebea.player.selection.chromosome.numberGenes(Chromosome^selectionGenes)
 			+ chromosome.numberGenes(Chromosome^strategyGenes)
 	then
 		ThisIndex = Index
 			- chromosome.numberGenes(Chromosome^ageGenes)
 			- chromosome.numberGenes(Chromosome^energyGenes)
-			- chromosome.numberGenes(Chromosome^selectionGenes),
+			- ebea.player.selection.chromosome.numberGenes(Chromosome^selectionGenes),
 		chromosome.mutateGene(Parameters^gamePar, ThisIndex, !Distribution, !Random, Chromosome^strategyGenes, ResultStrategy),
 		Result = 'strategyGenes :='(Chromosome, ResultStrategy)
 	else

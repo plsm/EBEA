@@ -254,7 +254,8 @@
 
 :- type ac --->
 	ac(
-		qty_PS                     :: int,
+		qty_NPS                    :: int,
+		qty_WPS                    :: int,
 		sumPoolSize                :: int,
 		sumBitsPerProbability      :: int,
 		sumProbabilityUpdateFactor :: float,
@@ -266,9 +267,9 @@
 :- instance chromosome(ebea.player.selection.chromosome.chromosome, ebea.player.selection.traits, ebea.player.selection.parameters)
 	where
 [
-	func(numberGenes/1) is ebea.player.selection.numberGenes,
-	pred(mutateGene/8)  is ebea.player.selection.mutateGene,
-	func(born/2)        is ebea.player.selection.born
+	func(numberGenes/1) is ebea.player.selection.chromosome.numberGenes,
+	pred(mutateGene/8)  is ebea.player.selection.chromosome.mutateGene,
+	func(born/2)        is ebea.player.selection.chromosome.born
 ].
 
 :- instance foldable(ebea.player.selection.chromosome.chromosome, ebea.player.selection.ac)
@@ -277,7 +278,6 @@
 	func(fold/2)    is ebea.player.selection.fold,
 	func(initAC/0)  is ebea.player.selection.fold
 ].
-
 
 :- instance printable(ebea.player.selection.traits)
 	where
@@ -363,19 +363,22 @@ born(Chromosome, Result, !Random) :-
 	Chromosome = random,
 	Result = random
 	;
-	Chromosome = partnerSelection(_, _, _, _),
+	Chromosome = normalPartnerSelection(PS),
 	(if
-		Chromosome^poolSize = 0
+		PS^poolSize = 0
 	then
 		PCV = array.make_empty_array
 	else
-		Quotient = (1 << Chromosome^bitsPerProbability) / Chromosome^poolSize,
-		Remainder = (1 << Chromosome^bitsPerProbability) rem Chromosome^poolSize,
+		Quotient = (1 << PS^bitsPerProbability) / PS^poolSize,
+		Remainder = (1 << PS^bitsPerProbability) rem PS^poolSize,
 		PCV = array.generate(
-			Chromosome^poolSize,
+			PS^poolSize,
 			ebea.player.selection.pcv.initProbabilityVector(Quotient, Remainder))
 	),
 	Result = partnerSelection(PCV)
+	;
+	Chromosome = weightedPartnerSelection(PS),
+	throw("born/4: not implemented")
 	;
 	Chromosome = opinion_old(_, _),
 	rng.nextFloat(OV, !Random),
@@ -423,7 +426,7 @@ stepSelectPartnersPlayGame(
 			throw("ebea.player.selection.stepSelectPartnersPlayGame/10: Invalid combination of chromosome and phenotipic trait")
 		)
 		;
-		Chromosome = partnerSelection(_, _, _, _),
+		Chromosome = normalPartnerSelection(PS),
 		(if
 			Traits = partnerSelection(_)
 		then
@@ -442,7 +445,7 @@ stepSelectPartnersPlayGame(
 			),
 			ebea.player.selection.pcv.updateProbCombVectors(
 				Game, PlayerParameters^energyPar^energyScaling,
-				NumberPartners, Chromosome, PartnersIDs, Neighbours, SelectedSlot, PlayerPayoff,
+				NumberPartners, PS, PartnersIDs, Neighbours, SelectedSlot, PlayerPayoff,
 				!Random,
 				Traits^pcv, NextProbCombVector
 			),
@@ -454,6 +457,9 @@ stepSelectPartnersPlayGame(
 		else
 			throw("ebea.player.selection.stepSelectPartnersPlayGame/10: Invalid combination of chromosome and phenotipic trait")
 		)
+		;
+		Chromosome = weightedPartnerSelection(_),
+		throw("ebea.player.selection.stepSelectPartnersPlayGame/10: Not implemented")
 		;
 		(
 			Chromosome = opinion_old(_, _) ;
@@ -534,7 +540,7 @@ stepSelectPartnersPlayGame3(
 			throw("ebea.player.selection.stepSelectPartnersPlayGame/10: Invalid combination of chromosome and phenotipic trait")
 		)
 		;
-		Chromosome = partnerSelection(_, _, _, _),
+		Chromosome = normalPartnerSelection(PS),
 		(if
 			Traits = partnerSelection(_)
 		then
@@ -553,7 +559,7 @@ stepSelectPartnersPlayGame3(
 			),
 			ebea.player.selection.pcv.updateProbCombVectors(
 				Game, PlayerParameters^energyPar^energyScaling,
-				NumberPartners, Chromosome, PartnersIDs, Neighbours, SelectedSlot, PlayerPayoff,
+				NumberPartners, PS, PartnersIDs, Neighbours, SelectedSlot, PlayerPayoff,
 				!Random,
 				Traits^pcv, NextProbCombVector
 			),
@@ -565,6 +571,9 @@ stepSelectPartnersPlayGame3(
 		else
 			throw("ebea.player.selection.stepSelectPartnersPlayGame/10: Invalid combination of chromosome and phenotipic trait")
 		)
+		;
+		Chromosome = weightedPartnerSelection(PS),
+		throw("ebea.player.selection.stepSelectPartnersPlayGame/10: Not implemented")
 		;
 		(
 			Chromosome = opinion_old(_, _) ;
@@ -726,134 +735,9 @@ parseTraits(T) -->
 % Implementation of private predicates and functions
 
 
-
-
-
-/**
- * Return the number of genes in the given selection chromosome.
- */
-:- func numberGenes(ebea.player.selection.chromosome.chromosome) = int.
-
-numberGenes(Chromosome) = Result :-
-	Chromosome = random,
-	Result = 0
-	;
-	Chromosome = partnerSelection(_, _, _, _),
-	Result = 4
-	;
-	Chromosome = opinion_old(_, _),
-	Result = 1
-	;
-	Chromosome = opinion_old(_, _, _, _),
-	Result = 0
-	.
-
-/**
- * mutateGene(Parameters, Index, !Distribution, !Random, Chromosome, Result)
-
- * Mutate the {@code Index}th gene of {@code Chromosome} and the return the
- * result in {@code Result}.  Accumulator parameters {@code Distribution}
- * and {@code Random} are used to calculate the new gene value.
- */
-
-:- pred mutateGene(ebea.player.selection.parameters, int, distribution, distribution, R, R, ebea.player.selection.chromosome.chromosome, ebea.player.selection.chromosome.chromosome)
-	<= ePRNG(R).
-:- mode mutateGene(in, in, in, out, in, out, in, out) is det.
-
-mutateGene(Parameters, Index, !Distribution, !Random, Chromosome, Result) :-
-	Chromosome = random,
-	throw("ebea.player.selection.mutateGene/8: No genes to mutate in chromosome random")
-	;
-	Chromosome = partnerSelection(_, _, _, _),
-	(if
-		Index = 0
-	then
-		rng.distribution.unitGaussian(Perturb0, !Distribution, !Random),
-		Perturb = Perturb0 * Parameters^poolSizeStdDev,
-		NextPoolSize = int.max(0, Chromosome^poolSize + float.round_to_int(Perturb)),
-		Result = 'poolSize :='(Chromosome, NextPoolSize)
-	else if
-		Index = 1
-	then
-		rng.distribution.unitGaussian(Perturb0, !Distribution, !Random),
-		Perturb = Perturb0 * Parameters^bitsPerProbabilityStdDev,
-		NextBitsPerProbability = int.max(0, Chromosome^bitsPerProbability + float.round_to_int(Perturb)),
-		Result = 'bitsPerProbability :='(Chromosome, NextBitsPerProbability)
-	else if
-		Index = 2
-	then
-		rng.distribution.unitGaussian(Perturb0, !Distribution, !Random),
-		Perturb = Perturb0 * Parameters^probabilityUpdateFactorStdDev,
-		NextProbabilityUpdateFactor = float.max(0.0, float.min(Chromosome^probabilityUpdateFactor + Perturb, 1.0)),
-		Result = 'probabilityUpdateFactor :='(Chromosome, NextProbabilityUpdateFactor)
-	else if
-		Index = 3
-	then
-		rng.distribution.unitGaussian(Perturb0, !Distribution, !Random),
-		Perturb = Perturb0 * Parameters^payoffThresholdStdDev,
-		NextPayoffThreshold = float.max(0.0, float.min(Chromosome^payoffThreshold_PS + Perturb, 1.0)),
-		Result = 'payoffThreshold_PS :='(Chromosome, NextPayoffThreshold)
-	else
-		throw("ebea.player.selection.mutateGene/8: invalid gene index for partnerSelection chromosome")
-	)
-	;
-	Chromosome = opinion_old(_, _),
-	(if
-		Index = 0
-	% then
-	% 	rng.distribution.unitGaussian(Perturb0, !Distribution, !Random),
-	% 	Perturb = Perturb0 * Parameters^payoffThresholdStdDev,
-	% 	NextPayoffThreshold = float.max(0.0, float.min(Chromosome^payoffThreshold_O + Perturb, 1.0)),
-	% 	Result = 'payoffThreshold_O :='(Chromosome, NextPayoffThreshold)
-	% else if
-	% 	Index = 1
-	then
-		rng.distribution.unitGaussian(Perturb, !Distribution, !Random),
-		Next = float.max(0.0, float.min(Chromosome^initialUncertainty + Perturb * 0.5, 2.0)),
-		Result = 'initialUncertainty :='(Chromosome, Next)
-	else
-		throw("ebea.player.selection.mutateGene/8: invalid gene index for opinion chromosome")
-	)
-	;
-	Chromosome = opinion_old(_, _, _, _),
-	throw("ebea.player.selection.mutateGene/8: No genes to mutate in chromosome opinion/4")
-	.
-
-/**
- * Given the selection part of an EBEA chromosome return the individual
- * that can develop from this chromosome.
- */
-:- func born(ebea.player.selection.parameters, ebea.player.selection.chromosome.chromosome) = ebea.player.selection.traits.
-:- mode born(in, in) = out is erroneous.
-
-born(_, _) = throw("Not used").
-
-% born(_, Chromosome) = Result :-
-% 	Chromosome = random,
-% 	Result = random
-% 	;
-% 	Chromosome = partnerSelection(_, _, _, _),
-% 	(if
-% 		Chromosome^poolSize = 0
-% 	then
-% 		PCV = array.make_empty_array
-% 	else
-% 		Quotient = (1 << Chromosome^bitsPerProbability) / Chromosome^poolSize,
-% 		Remainder = (1 << Chromosome^bitsPerProbability) rem Chromosome^poolSize,
-% 		PCV = array.generate(
-% 			Chromosome^poolSize,
-% 			ebea.player.selection.pcv.initProbabilityVector(Quotient, Remainder))
-% 	),
-% 	Result = partnerSelection(PCV)
-% 	;
-% 	Chromosome = opinion(_, _),
-% 	Result^opinionValue = 0.0,
-% 	Result^uncertainty = Chromosome^initialUncertainty
-% 	.
-
 :- func fold = ebea.player.selection.ac.
 
-fold = ac(0, 0, 0, 0.0, 0.0, 0, 0.0).
+fold = ac(0, 0, 0, 0, 0.0, 0.0, 0, 0.0).
 
 
 :- func fold(ebea.player.selection.chromosome.chromosome, ebea.player.selection.ac) = ebea.player.selection.ac.
@@ -862,12 +746,23 @@ fold(Chromosome, AC) = Result :-
 	Chromosome = random,
 	Result = AC
 	;
-	Chromosome = partnerSelection(_, _, _, _),
-	Result^qty_PS = AC^qty_PS + 1,
-	Result^sumPoolSize = AC^sumPoolSize + Chromosome^poolSize,
-	Result^sumBitsPerProbability = AC^sumBitsPerProbability + Chromosome^bitsPerProbability,
-	Result^sumProbabilityUpdateFactor = AC^sumProbabilityUpdateFactor + Chromosome^probabilityUpdateFactor,
-	Result^sumPayoffThreshold_PS = AC^sumPayoffThreshold_PS + Chromosome^payoffThreshold_PS,
+	Chromosome = normalPartnerSelection(PS),
+	Result^qty_NPS = AC^qty_NPS + 1,
+	Result^qty_WPS = AC^qty_WPS,
+	Result^sumPoolSize = AC^sumPoolSize + PS^poolSize,
+	Result^sumBitsPerProbability = AC^sumBitsPerProbability + PS^bitsPerProbability,
+	Result^sumProbabilityUpdateFactor = AC^sumProbabilityUpdateFactor + PS^probabilityUpdateFactor,
+	Result^sumPayoffThreshold_PS = AC^sumPayoffThreshold_PS + PS^payoffThreshold,
+	Result^qty_O = AC^qty_O,
+	Result^sumPayoffThreshold_O = AC^sumPayoffThreshold_O
+	;
+	Chromosome = weightedPartnerSelection(PS),
+	Result^qty_NPS = AC^qty_NPS,
+	Result^qty_WPS = AC^qty_WPS + 1,
+	Result^sumPoolSize = AC^sumPoolSize + PS^poolSize,
+	Result^sumBitsPerProbability = AC^sumBitsPerProbability + PS^bitsPerProbability,
+	Result^sumProbabilityUpdateFactor = AC^sumProbabilityUpdateFactor + PS^probabilityUpdateFactor,
+	Result^sumPayoffThreshold_PS = AC^sumPayoffThreshold_PS + PS^payoffThreshold,
 	Result^qty_O = AC^qty_O,
 	Result^sumPayoffThreshold_O = AC^sumPayoffThreshold_O
 	;
@@ -927,16 +822,19 @@ printTraits(Stream, Traits, !IO) :-
 
 printAccumulator(Stream, AC, !IO) :-
 	(if
-		AC^qty_PS = 0
+		AC^qty_NPS + AC^qty_WPS = 0
 	then
 		io.print(Stream, "1/0 1/0 1/0 1/0", !IO)
 	else
-		FQty_PS = float(AC^qty_PS),
-		io.format(Stream, "%f %f %f %f",
+		FQty_PS = float(AC^qty_NPS+ AC^qty_WPS),
+		io.format(Stream, "%f %f %f %f %d %d",
 			[f(float(AC^sumPoolSize) / FQty_PS),
 			 f(float(AC^sumBitsPerProbability) / FQty_PS),
 			 f(AC^sumProbabilityUpdateFactor / FQty_PS),
-			 f(AC^sumPayoffThreshold_PS / FQty_PS)], !IO)
+			 f(AC^sumPayoffThreshold_PS / FQty_PS),
+			 i(AC^qty_NPS),
+			 i(AC^qty_WPS)
+			 ], !IO)
 	),
 	io.print(Stream, '\t', !IO),
 	(if

@@ -9,6 +9,19 @@
 
 :- interface.
 
+%% ************************************************************************
+%% Chromosome genes responsible for the selection based on the probability
+%% and combination vectors.
+
+:- type chromosome --->
+	partnerSelection(
+		poolSize                :: int ,
+		bitsPerProbability      :: int ,
+		probabilityUpdateFactor :: float ,
+		payoffThreshold         :: float
+	).
+
+
 /**
  * The probability and combination vectors used by this partner selection
  * model.  Both vectors are stored in an array where each array element
@@ -97,13 +110,13 @@
  */
 :- pred updateProbCombVectors(
 	G, energyScaling,
-	int, ebea.player.selection.chromosome.chromosome, list(key), ebea.population.neighbours.neighbours,
+	int, ebea.player.selection.pcv.chromosome, list(key), ebea.population.neighbours.neighbours,
 	int, float,
 	R, R,
 	probabilityCombinationVector, probabilityCombinationVector
 	)
 	<= (abstractGame(G), ePRNG(R)).
-:- mode updateProbCombVectors(in, in, in, in(bound(partnerSelection(ground,ground,ground,ground))), in, in, in, in, in, out, in, out) is det.
+:- mode updateProbCombVectors(in, in, in, in, in, in, in, in, in, out, in, out) is det.
 %:- mode updateProbCombVectors(in, in, in, in(bound(partnerSelection(ground,ground,ground,ground))), in, in, in, in, in, out, di, uo) is det.
 %:- mode update(in, in(pred(di, uo, out) is det), in, in, di, uo, di, uo) is det.
 
@@ -234,7 +247,7 @@ select(NumberPartners, Neighbours, ProbCombVectors, !Random, SelectedSlot, Combi
 updateProbCombVectors(Game, EnergyScaling, CombinationSize, Chromosome, SelectedCombinationIDs, Partners, SelectedSlot, Payoff, !Random, !ProbCombVectors) :-
 	VectorSize = array.size(!.ProbCombVectors),
 	(if
-		scaledPayoffToThreshold(Game, EnergyScaling, Payoff) >= Chromosome^payoffThreshold_PS
+		scaledPayoffToThreshold(Game, EnergyScaling, Payoff) >= Chromosome^payoffThreshold
 	then
 		(if
 			array.size(!.ProbCombVectors) > 0,
