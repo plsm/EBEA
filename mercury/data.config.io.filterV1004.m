@@ -47,6 +47,26 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Definition of private types
 
+:- type player_selection_chromosome --->
+	random ;
+	partnerSelection(
+		poolSize                :: int ,
+		bitsPerProbability      :: int ,
+		probabilityUpdateFactor :: float ,
+		payoffThreshold         :: float
+	) ;
+	opinion_old(
+		payoffThreshold_O  :: float ,
+		initialUncertainty :: float
+	) ;
+	opinion_old(
+		initialAverageOpinion     :: float ,
+		initialStdDevOpinion      :: float ,
+		initialAverageUncertainty :: float ,
+		initialStdDevUncertainty  :: float
+	) .
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of exported predicates and functions
 
@@ -108,6 +128,47 @@ parse_GameConfig(Config) -->
 	parseable.parse(Config^parameters),
 	ebea.population.configuration.parse(Config^initialPopulation)
 	.
+
+
+
+:- pred parse_player_selection_chromosome(player_selection_chromosome, list(int), list(int)).
+:- mode parse_player_selection_chromosome(in, out, in) is det.
+:- mode parse_player_selection_chromosome(out, in, out) is semidet.
+
+
+
+parse_player_selection_chromosome(P) -->
+	{P = random},
+	[0]
+	.
+
+parse_player_selection_chromosome(P) -->
+	{P = partnerSelection(_, _, _, _)},
+	[1],
+	parseable.int32(P^poolSize),
+	parseable.int32(P^bitsPerProbability),
+	parseable.float32(P^probabilityUpdateFactor),
+	parseable.float32(P^payoffThreshold)
+	.
+
+parse_player_selection_chromosome(P) -->
+	{P = opinion_old(_, _)},
+	[2],
+	parseable.float32(P^payoffThreshold_O),
+	parseable.float32(P^initialUncertainty)
+	.
+
+parse_player_selection_chromosome(P) -->
+	{P = opinion_old(_, _, _, _)},
+	[3],
+	parseable.float32(P^initialAverageOpinion),
+	parseable.float32(P^initialStdDevOpinion),
+	parseable.float32(P^initialAverageUncertainty),
+	parseable.float32(P^initialStdDevUncertainty)
+	.
+
+
+
 
 :- end_module data.config.io.filterV1004.
 

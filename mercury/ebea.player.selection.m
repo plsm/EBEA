@@ -14,9 +14,11 @@
 :- include_module opinion.
 :- include_module pcv.
 :- include_module chromosome.
+:- include_module wv.
 
 :- import_module ebea.player.selection.chromosome.
 :- import_module ebea.player.selection.pcv.
+:- import_module ebea.player.selection.wv.
 :- import_module ebea.population, ebea.population.neighbours.
 :- import_module game.
 :- import_module userInterface.
@@ -89,7 +91,8 @@
 	random
 	;
 	partnerSelection(
-		pcv :: probabilityCombinationVector
+		pcv :: probabilityCombinationVector,
+		mwv :: maybe(weightVector)
 	)
 	;
 	opinion(
@@ -375,7 +378,7 @@ born(Chromosome, Result, !Random) :-
 			PS^poolSize,
 			ebea.player.selection.pcv.initProbabilityVector(Quotient, Remainder))
 	),
-	Result = partnerSelection(PCV)
+	Result = partnerSelection(PCV, no)
 	;
 	Chromosome = weightedPartnerSelection(PS),
 	throw("born/4: not implemented")
@@ -428,7 +431,7 @@ stepSelectPartnersPlayGame(
 		;
 		Chromosome = normalPartnerSelection(PS),
 		(if
-			Traits = partnerSelection(_)
+			Traits = partnerSelection(_, _)
 		then
 			/* create the strategy profile */
 			ebea.player.selection.pcv.select(NumberPartners, Neighbours, Traits^pcv, !Random, SelectedSlot, PartnersIDs),
@@ -542,7 +545,7 @@ stepSelectPartnersPlayGame3(
 		;
 		Chromosome = normalPartnerSelection(PS),
 		(if
-			Traits = partnerSelection(_)
+			Traits = partnerSelection(_, _)
 		then
 			/* create the strategy profile */
 			ebea.player.selection.pcv.select(NumberPartners, Neighbours, Traits^pcv, !Random, SelectedSlot, PartnersIDs),
@@ -620,12 +623,20 @@ roundCheckForDeadPlayers(Game, DeadPlayerIDs, Player, Neighbours, NextPlayer, !R
 		Traits = random,
 		NextPlayer = Player
 		;
-		Traits = partnerSelection(PCV),
+		Traits = partnerSelection(PCV, MWV),
 		array.map_foldl(
 			ebea.player.selection.pcv.checkForDeadPlayers(NumberPartners, Neighbours, DeadPlayerIDs),
 			PCV, NextPCV,
 			!Random),
-		NextTraits = 'pcv :='(Traits, NextPCV),
+		(	%
+			MWV = no,
+			TmpTraits = Traits
+		;
+			MWV = yes(OldWeightVector),
+			ebea.player.selection.wv.removeElements(DeadPlayerIDs, OldWeightVector, NewWeightVector),
+			TmpTraits = 'mwv :='(Traits, yes(NewWeightVector))
+		),
+		NextTraits = 'pcv :='(TmpTraits, NextPCV),
 		NextPlayerTraits = 'selectionTrait :='(Player^traits, NextTraits),
 		NextPlayer = 'traits :='(Player, NextPlayerTraits)
 		;
@@ -638,9 +649,9 @@ teachKnowHow(Parameters, Parent, !Offspring, !Random) :-
 	(
 		ParentTrait = random
 		;
-		ParentTrait = partnerSelection(_ParentPCV),
+		ParentTrait = partnerSelection(_ParentPCV, _ParentMWV),
 		(if
-			!.Offspring^traits^selectionTrait = partnerSelection(_OldPCV)
+			!.Offspring^traits^selectionTrait = partnerSelection(_OldPCV, _OldMWV)
 		then
 			copyPercentageCombinations(Parameters, Parent, !Offspring, !Random)
 			% copyPercentageCombinations(
@@ -721,9 +732,14 @@ parseTraits(T) -->
 	{T = random},
 	[0]
 	;
-	{T = partnerSelection(PCV)},
+	{T = partnerSelection(PCV, no)},
 	[1],
 	ebea.player.selection.pcv.parse(PCV)
+	;
+	{T = partnerSelection(PCV, yes(WV))},
+	[3],
+	ebea.player.selection.pcv.parse(PCV),
+	ebea.player.selection.wv.parse(WV)
 	;
 	{T = opinion(_, _)},
 	[2],
@@ -807,7 +823,7 @@ fold(Chromosome, AC) = Result :-
 printTraits(Stream, Traits, !IO) :-
 	Traits = random
 	;
-	Traits = partnerSelection(PCV),
+	Traits = partnerSelection(PCV, _),
 	array.foldl2(printSlot(Stream), PCV, yes, _, !IO)
 %	io.print(Stream, PCV, !IO)
 	;

@@ -205,13 +205,6 @@
 % Implementation of exported predicates and functions
 
 initProbabilityVector(Quotient, Remainder, Index) = Slot :-
-	% (if
-	% 	Index = 0
-	% then
-	%	Slot^probability = (Index + 1) * Quotient + Remainder
-	% else
-	% 	Slot^probability = (Index + 1) * Quotient
-	% ),
 	Slot^probability = (Index + 1) * Quotient + Remainder,
 	Slot^combination = [].
 
@@ -308,7 +301,7 @@ updateProbCombVectors(Game, EnergyScaling, CombinationSize, Chromosome, Selected
 
 updatePlayerProbCombVectors(PCV, Player) = Result :-
 	Player^traits^selectionTrait = SelectionPhe,
-	SelectionPhe = partnerSelection(_),
+	SelectionPhe = partnerSelection(_, _),
 	Traits = 'pcv :='(SelectionPhe, PCV),
 	PlayerTraits = 'selectionTrait :='(Player^traits, Traits),
 	Result = 'traits :='(Player, PlayerTraits)
@@ -339,8 +332,8 @@ checkForDeadPlayers(NumberPartners, Neighbours, DeadPlayerIDs, !Slot, !Random) :
 
 copyPercentageCombinations(Parameters, Parent, !Offspring, !Random) :-
 	(if
-		Parent^traits^selectionTrait = partnerSelection(ParentPCV),
-		!.Offspring^traits^selectionTrait = partnerSelection(OldPCV)
+		Parent^traits^selectionTrait = partnerSelection(ParentPCV, _),
+		!.Offspring^traits^selectionTrait = partnerSelection(OldPCV, MWV)
 	then
 		Remaining = int.min(
 			float.round_to_int(float(Parameters^poolSizePercentageTransmission * array.size(ParentPCV)) / 100.0),
@@ -356,7 +349,7 @@ copyPercentageCombinations(Parameters, Parent, !Offspring, !Random) :-
 					OffspringTrait
 				)
 			),
-			OffspringTrait = partnerSelection(NewPCV)
+			OffspringTrait = partnerSelection(NewPCV, MWV)
 		else
 			true
 		)

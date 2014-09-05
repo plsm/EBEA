@@ -531,7 +531,7 @@ createProbabilityCombinationVectorsNetworkForRunIterationPlayer(
 ) :-
 	(if
 		ebea.streams.phenotype.search(PlayerID, ListPlayerPhenotypicRecord, ThePlayerPhenotypicRecord),
-		ThePlayerPhenotypicRecord^selection = partnerSelection(PCV)
+		ThePlayerPhenotypicRecord^selection = partnerSelection(PCV, _)
 	then
 		FileName = string.format("%s_R%d_P%d_T%d.dot",
 			[s(Parameters^fileNamePrefix),

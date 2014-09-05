@@ -236,7 +236,7 @@ weight(TraitPlayer, TraitPartner) = Result :-
 	TraitPartner = random,
 	Result = 0
 	;
-	TraitPartner = partnerSelection(_),
+	TraitPartner = partnerSelection(_, _),
 	Result = 0
 	;
 	TraitPartner = opinion(_, _),
