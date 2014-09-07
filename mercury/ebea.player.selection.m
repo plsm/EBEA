@@ -178,29 +178,35 @@
 	foldable(A, AA)
 ).
 
-/**
- * roundCheckForDeadPlayers(Game, DeadPlayerIDs, Player, Neighbours, NextPlayer, !Random)
-
- * <p> Check if player {@code Player} has any reference to dead players,
- * and replace them by players from {@code Neighbours}.  This predicate is
- * called after a round of game playing and death and birth process.
-
- * <p> This predicate assumes that there are enough players in {@code Neighbours}.
-
- * TODO: decrease uncertainty
-  
- */
-:- pred roundCheckForDeadPlayers(
-	G,
-	list(ebea.population.players.key),
-	player(C, T),
-	ebea.population.neighbours.neighbours,
-	player(C, T),
-	R, R
-)
-	<= (abstractGame(G), ePRNG(R)).
-:- mode roundCheckForDeadPlayers(in, in, in, in, out, in, out) is det.
-
+%% ****************************************************************************
+%% stepProcessBornPlayersCheckForDeadPlayers(Game, DeadPlayerIDs, NewBornIDs, Neighbours, !Player, !Random)
+%%
+%% Updates the selection traits given the id of dead and new born players.
+%%
+%% <p> In random partner selection nothing needs to be done.
+%%
+%% <p> In partner selection based in probability and combination vectors,
+%% combinations with dead players are removed and replaced by a new
+%% combination if there are sufficient neighbours.  If this selection mode
+%% has a weight vector, weights of dead players are removed and newborns
+%% are assigned a weight equal to the game Pareto payoff.
+%%
+%% <p> In opinion based selection nothing needs to be done.
+%%
+%% TODO: decrease uncertainty
+%%
+:- pred stepProcessBornPlayersCheckForDeadPlayers(
+	G                                     :: in,
+	list(ebea.population.players.key)     :: in,
+	list(ebea.population.players.key)     :: in,
+	ebea.population.neighbours.neighbours :: in,
+	player(C, T) :: in,  player(C, T) :: out,
+	R            :: in,  R            :: out
+) is det
+	<= (
+	abstractGame(G),
+	ePRNG(R)
+).
 
 /**
  * teachKnowHow(Parameters, Parent, !Offspring)
@@ -248,7 +254,7 @@
 
 :- import_module ebea.player.selection.opinion, ebea.player.selection.pcv.
 :- import_module parseable.
-:- import_module array.
+:- import_module array, solutions.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Definition of exported types
@@ -615,14 +621,12 @@ stepSelectPartnersPlayGame3(
 		)
 	).
 
-
-roundCheckForDeadPlayers(Game, DeadPlayerIDs, Player, Neighbours, NextPlayer, !Random) :-
+stepProcessBornPlayersCheckForDeadPlayers(Game, DeadPlayerIDs, NewBornIDs, Neighbours, !Player, !Random) :-
 	NumberPartners = game.numberPlayers(Game) - 1,
-	Traits = Player^traits^selectionTrait,
+	Traits = !.Player^traits^selectionTrait,
 	(
-		Traits = random,
-		NextPlayer = Player
-		;
+		Traits = random
+	;
 		Traits = partnerSelection(PCV, MWV),
 		array.map_foldl(
 			ebea.player.selection.pcv.checkForDeadPlayers(NumberPartners, Neighbours, DeadPlayerIDs),
@@ -633,15 +637,25 @@ roundCheckForDeadPlayers(Game, DeadPlayerIDs, Player, Neighbours, NextPlayer, !R
 			TmpTraits = Traits
 		;
 			MWV = yes(OldWeightVector),
-			ebea.player.selection.wv.removeElements(DeadPlayerIDs, OldWeightVector, NewWeightVector),
+			NewElements = solutions.solutions(
+				(pred(E::out) is nondet :-
+					list.member(E, NewBornIDs),
+					ebea.population.neighbours.member(E, Neighbours)
+				)
+			),
+			ebea.player.selection.wv.addElements(
+				NewElements,
+				game.paretoPayoff(Game),
+				OldWeightVector, TmpWeightVector
+			),
+			ebea.player.selection.wv.removeElements(DeadPlayerIDs, TmpWeightVector, NewWeightVector),
 			TmpTraits = 'mwv :='(Traits, yes(NewWeightVector))
 		),
 		NextTraits = 'pcv :='(TmpTraits, NextPCV),
-		NextPlayerTraits = 'selectionTrait :='(Player^traits, NextTraits),
-		NextPlayer = 'traits :='(Player, NextPlayerTraits)
-		;
-		Traits = opinion(_, _),
-		NextPlayer = Player
+		NextPlayerTraits = 'selectionTrait :='(!.Player^traits, NextTraits),
+		!:Player = 'traits :='(!.Player, NextPlayerTraits)
+	;
+		Traits = opinion(_, _)
 	).
 
 teachKnowHow(Parameters, Parent, !Offspring, !Random) :-
@@ -653,21 +667,7 @@ teachKnowHow(Parameters, Parent, !Offspring, !Random) :-
 		(if
 			!.Offspring^traits^selectionTrait = partnerSelection(_OldPCV, _OldMWV)
 		then
-			copyPercentageCombinations(Parameters, Parent, !Offspring, !Random)
-			% copyPercentageCombinations(
-			% 	Parameters^poolSizePercentageTransmission,
-			% 	array.copy(ParentPCV),
-			% 	OldPCV, NewPCV,
-			% 	!Random
-			% ),
-			% !:Offspring = 'traits :='(
-			% 	!.Offspring,
-			% 	'selectionTrait :='(
-			% 		!.Offspring^traits,
-			% 		OffspringTrait
-			% 	)
-			% ),
-			% OffspringTrait = partnerSelection(NewPCV)
+			ebea.player.selection.pcv.copyPercentageCombinations(Parameters, Parent, !Offspring, !Random)
 		else
 			throw("teachKnowHow/6: Never reached")
 		)
@@ -702,21 +702,6 @@ scaledPayoffToThreshold(Game, unscaled, Payoff) = Result :-
 scaledPayoffToThreshold(_Game, scaled, Payoff) = (Payoff + 1.0) / 2.0.
 
 scaledPayoffToThreshold(_Game, scaledPositive, Payoff) = Payoff.
-
-% parseChromosome(C) -->
-% 	{C = random},
-% 	[0]
-% 	;
-% 	{C = partnerSelection(_, _, _, _)},
-% 	[1, C^poolSize, C^bitsPerProbability],
-% 	parseable.float32(C^probabilityUpdateFactor),
-% 	parseable.float32(C^payoffThreshold_PS)
-% 	;
-% 	{C = opinion(_, _)},
-% 	[2],
-% 	parseable.float32(C^payoffThreshold_O),
-% 	parseable.float32(C^initialUncertainty)
-% 	.
 
 parseParameters(P) -->
 	parseable.float32(P^poolSizeStdDev),

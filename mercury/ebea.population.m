@@ -284,6 +284,9 @@ ebea.population.players, ebea.population.site.
 :- pred mapfold_PlayerNeighbour(pred(player(C, T), ebea.population.neighbours.neighbours, player(C, T), A, A), population(C, T), population(C, T), A, A).
 :- mode mapfold_PlayerNeighbour(in(pred(in, in, out, in, out) is det), in, out, in, out) is det.
 
+:- pred mapfold_PlayerNeighbour_sv(pred(ebea.population.neighbours.neighbours, player(C, T), player(C, T), A, A), population(C, T), population(C, T), A, A).
+:- mode mapfold_PlayerNeighbour_sv(in(pred(in, in, out, in, out) is det), in, out, in, out) is det.
+
 /**
  * Convert a population dynamic value to a string a vice-versa.  The string
  * is one that must be present in a text stream.
@@ -533,6 +536,10 @@ fold4_PlayerNeighbour(Pred, Population, !Accumulator1, !Accumulator2, !Accumulat
 
 mapfold_PlayerNeighbour(Pred, PopulationIn, PopulationOut, !Accumulator) :-
 	ebea.population.players.mapFold(mapfold_real_PlayerNeighbour(Pred, PopulationIn), PopulationIn^players, MappedPlayers, !Accumulator),
+	PopulationOut = 'players :='(PopulationIn, MappedPlayers).
+
+mapfold_PlayerNeighbour_sv(Pred, PopulationIn, PopulationOut, !Accumulator) :-
+	ebea.population.players.mapFold(mapfold_real_PlayerNeighbour_sv(Pred, PopulationIn), PopulationIn^players, MappedPlayers, !Accumulator),
 	PopulationOut = 'players :='(PopulationIn, MappedPlayers).
 
 stringDynamic("birth+death", birthPlusDeath).
@@ -789,6 +796,25 @@ mapfold_real_PlayerNeighbour(Pred, Population, Player, MappedPlayer, !Accumulato
 %	ebea.population.site.neighbours(Population^sites, Population^players, Player) = Neighbours,
 	ebea.population.neighbours.init(Population^sites, Player) = Neighbours,
 	Pred(Player, Neighbours, MappedPlayer, !Accumulator).
+	
+/**
+ * mapfold_real_PlayerNeighbour_sv(Pred, Population, !Player, !Accumulator1)
+  
+ * Use {@code Pred} to map a player in the population using its neighbours
+ * and the accumulator.
+  
+ */
+:- pred mapfold_real_PlayerNeighbour_sv(
+	pred(ebea.population.neighbours.neighbours, player(C, T), player(C, T), A, A)
+		:: in(pred(in, in, out, in, out) is det),
+	population(C, T) :: in,
+	player(C, T) :: in,  player(C, T) :: out,
+	A            :: in,  A            :: out
+) is det.
+
+mapfold_real_PlayerNeighbour_sv(Pred, Population, !Player, !Accumulator) :-
+	ebea.population.neighbours.init(Population^sites, !.Player) = Neighbours,
+	Pred(Neighbours, !Player, !Accumulator).
 	
 
 

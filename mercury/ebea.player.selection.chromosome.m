@@ -1,5 +1,7 @@
 /**
- * 
+ * Provides the definition of the genes responsible for partner selection.
+ * This module also contains predicates to define an user interface to edit
+ * these genes.
 
  * @author Pedro Mariano
  * @version 1.0 2014/03/05
@@ -10,7 +12,6 @@
 
 :- import_module userInterface.
 :- import_module parseable.
-
 
 /**
  * The chromosome part that is responsible for partner selection.
@@ -274,13 +275,11 @@ print(Stream, Chromosome, !IO) :-
 :- pred mutateGenePartnerSelection(
 	ebea.player.selection.parameters :: in,
 	int                              :: in,
-	distribution :: in,  distribution :: out,
-	R            :: in,  R            :: out,
-	ebea.player.selection.pcv.chromosome :: in,
-		ebea.player.selection.pcv.chromosome :: out
+	distribution                         :: in,  distribution                         :: out,
+	R                                    :: in,  R                                    :: out,
+	ebea.player.selection.pcv.chromosome :: in,  ebea.player.selection.pcv.chromosome :: out
 ) is det
 <= ePRNG(R).
-
 
 mutateGenePartnerSelection(Parameters, Index, !Distribution, !Random, !Chromosome) :-
 	(if

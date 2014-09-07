@@ -262,7 +262,7 @@ ebea.streams.siteState,
 ebea.streams.playerProfile.
 
 :- import_module util.
-:- import_module benchmarking, char, int, list, maybe, solutions, string.
+:- import_module array, benchmarking, char, int, list, maybe, solutions, string.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Definition of exported types
@@ -365,8 +365,11 @@ iterationData2(Data, IterationNumber, !Population, ThisStats, NextStats, !Distri
 		Births,
 		CemeteryCarryingCapacity, CemeteryOldAge, CemeteryStarvation),
 	%io.print('\r', !IO), io.print(IterationNumber, !IO), io.print(' ', !IO), io.print('d', !IO), io.flush_output(io.stdout_stream, !IO),
-	ebea.population.mapfold_PlayerNeighbour(
-		ebea.player.selection.roundCheckForDeadPlayers(Data^game, list.append(CemeteryCarryingCapacity, list.append(CemeteryOldAge, CemeteryStarvation))),
+	ebea.population.mapfold_PlayerNeighbour_sv(
+		ebea.player.selection.stepProcessBornPlayersCheckForDeadPlayers(
+			Data^game,
+			list.append(CemeteryCarryingCapacity, list.append(CemeteryOldAge, CemeteryStarvation)),
+			list.map(ebea.player.'ID', Births)),
 		!Population,
 		!Random),
 	%io.print('\r', !IO), io.print(IterationNumber, !IO), io.print(' ', !IO), io.print('e', !IO), io.flush_output(io.stdout_stream, !IO),
@@ -406,7 +409,7 @@ iterationData3(Data, IterationNumber, !Population, !Stats, !Distribution, !Rando
 			!Population,
 			[], PlayerProfiles,
 			!Random,
-			util.arrayInitUnique(0, foldable.initAC), SiteActionAccumulator
+			util.arrayInitUnique(array.size(!.Population^sites), foldable.initAC), SiteActionAccumulator
 		),
 		ebea.population.map_players(ebea.player.age.stepClockTick, !Population),
 		ebea.population.stepBirthDeath(
@@ -416,16 +419,14 @@ iterationData3(Data, IterationNumber, !Population, !Stats, !Distribution, !Rando
 			!Population,
 			Births,
 			CemeteryCarryingCapacity, CemeteryOldAge, CemeteryStarvation),
-		ebea.population.mapfold_PlayerNeighbour(
-			ebea.player.selection.roundCheckForDeadPlayers(
+		ebea.population.mapfold_PlayerNeighbour_sv(
+			ebea.player.selection.stepProcessBornPlayersCheckForDeadPlayers(
 				Data^game3,
-				list.append(
-					CemeteryCarryingCapacity,
-					list.append(
-						CemeteryOldAge, CemeteryStarvation))),
+				list.append(CemeteryCarryingCapacity, list.append(CemeteryOldAge, CemeteryStarvation)),
+				list.map(ebea.player.'ID', Births)),
 			!Population,
 			!Random),
-		ebea.population.stepUpdateSitesState(Data^parameters3^siteDynamics, SiteActionAccumulator, !Population),
+		ebea.population.stepUpdateSitesState(SiteDynamics, SiteActionAccumulator, !Population),
 		!:Stats = stats(
 			ebea.population.fold_players(
 				ebea.player.foldChromosome,

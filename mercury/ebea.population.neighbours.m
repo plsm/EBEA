@@ -50,6 +50,11 @@
  */
 :- func size(neighbours) = int.
 
+:- pred member(ebea.population.players.key, neighbours).
+:- mode member(in, in) is semidet.
+:- mode member(out, in) is nondet.
+
+
 /**
  * randomElements(HowMany, Neighbours, Result, !Random)
 
@@ -131,6 +136,10 @@ init(ArraySites, APlayer) = Neighbours :-
 
 size([]) = 0.
 size([H | T]) = list.length(H) + size(T).
+
+member(Element, AllNeighbours) :-
+	list.member(SomeNeighbours, AllNeighbours),
+	list.member(Element, SomeNeighbours).
 
 randomElements(HowMany, Neighbours, Result, !Random) :-
 	(if
