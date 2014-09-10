@@ -156,6 +156,7 @@ ebea.player.age, ebea.player.energy, ebea.player.selection.
 :- import_module data.seed.
 :- import_module ebea.population.site.parameters.
 :- import_module rng, rng.distribution.
+:- import_module userInterface.util.
 :- import_module bool, exception, int, maybe, string.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -229,12 +230,21 @@ dialog =
 	di(label("data to store"),                   'new editField'(  get_level,                set(set_level), ebea.streams.dialog)),
 	di(label("population parameters"),           subdialog(
 		[
-		di(label("birth death sequence"),   'new editField'( get_dynamic, set(set_dynamic),
-			[
-			di(label("birth then death"),             newValue(birthThenDeath)),
- 			di(label("death then birth"),             newValue(deathThenBirth)),
-			di(label("birth and death for parents"),  newValue(birthPlusDeath))
-			])),
+		di(
+			label("birth death sequence"),
+			userInterface.util.makeSelectOneOf(
+				get_dynamic,
+				set(set_dynamic),
+				[
+					label("birth then death"),
+					label("death then birth"),
+					label("birth and death for parents")
+				],
+				[
+					birthThenDeath,
+					deathThenBirth,
+					birthPlusDeath
+				])),
 		di(label("mutation probability"),   dialogAction( get_mutationProbability,  set_mutationProbability)),
 		di(label("migration probability"),  dialogAction( get_migrationProbability, set_migrationProbability))
 		])),

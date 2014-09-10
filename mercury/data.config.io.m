@@ -44,6 +44,14 @@
 :- pred write(format, string, config, maybe(string), io.state, io.state).
 :- mode write(in, in, in, out, di, uo) is det.
 
+%% ************************************************************************
+%% standardFileNameExtension(Filename) = Result
+%%
+%% Given a filename for an EBEA data configuration see if it has the correct
+%% extension.
+%%
+:- func standardFileNameExtension(string) = string.
+
 :- implementation.
 
 :- include_module filterV1000, filterV1001, filterV1002, filterV1003, filterV1004.
@@ -166,6 +174,15 @@ write(binary, Filename, Config, MErrors, !IO) :-
 		MErrors = yes(string.format("IO error opening `%s` file: %s", [s(Filename), s(io.error_message(Error))]))
 	).
 
+standardFileNameExtension(Filename) = Result :-
+	 (if
+		string.to_upper(string.right(Filename, 5)) = ".EBEA"
+	 then
+		Result = Filename
+	 else
+		Result = Filename ++ ".ebea"
+	 ).
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of private predicates and functions
 
@@ -177,7 +194,7 @@ parse(configFileV1000(C)) -->	[0],	data.config.io.filterV1000.parse(C).
 parse(configFileV1001(C)) -->	[1],	data.config.io.filterV1001.parse(C).
 parse(configFileV1002(C)) -->	[2],	data.config.io.filterV1002.parse(C).
 parse(configFileV1003(C)) -->	[3],	data.config.io.filterV1003.parse(C).
-parse(configFileV1004(C)) -->	[4],	data.config.io.filterV1004.parse(C).
+parse(configFileV1004(C)) -->	[0xEB, 0xEA,  4],	data.config.io.filterV1004.parse(C).
 
 /**
  * Convert the configuration parameters as stored in a text stream to the

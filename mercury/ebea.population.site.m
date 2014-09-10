@@ -14,18 +14,20 @@
 :- import_module userInterface.
 
 %% ************************************************************************
-%% Represents a site in an EBEA population.  A site has a state, the list
-%% with current players, and an array with adjacent sites.  A site state
-%% may change during an evolutionary run depending on the dynamics.  The
-%% list of players contains players' keys.  This list changes from
-%% iteration to iteration as players reproduce and die.  The array with
-%% adjacent sites contains site indexes.  These refer to the site array in
-%% type {@code population}.  This array does not change during an
+%% Represents a site in an EBEA population.  A site has a current and a normal
+%% state, the list with current players, and an array with adjacent sites.  A
+%% site state may change during an evolutionary run depending on the dynamics.
+%% A site's state will tend to its normal condition but this game results may
+%% counteract this trend.  The list of players contains players' keys.  This
+%% list changes from iteration to iteration as players reproduce and die.  The
+%% array with adjacent sites contains site indexes.  These refer to the site
+%% array in type {@code population}.  This array does not change during an
 %% evolutionary run.
 %%
 :- type site --->
 	site(
-		state             :: ebea.population.site.state,
+		currentState      :: ebea.population.site.state,
+		normalState       :: ebea.population.site.state,
 		playerIDs         :: list(ebea.population.players.key),
 		neighbourSiteIdxs :: array(int)
 	).
@@ -505,7 +507,7 @@ parseDynamics(Dynamics) -->
 dialog_parseableDynamics(DefaultSiteUpdateFunction, ListSiteUpdateFunctions) =
 	[di(label("site dynamics"), selectOneOf(
 		selectedSiteDynamics,
-		setSiteDynamics,
+		setSiteDynamics(DefaultSiteUpdateFunction),
 		[
 			ci(label("static"),   []),
 			ci(label("dynamic"),

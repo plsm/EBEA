@@ -375,7 +375,7 @@ createInitialPopulation(PlayerParameters, Configuration, Population, !Random) :-
 			EmptyPlayers, PopulationPlayers,
 			!Random),
 		SiteState^carryingCapacity = float(Site^carryingCapacity),
-		SingleSite = site(SiteState, SitePlayerKeys, array.init(0, -1)),
+		SingleSite = site(SiteState, SiteState, SitePlayerKeys, array.init(0, -1)),
 		Population = pop(array.init(1, SingleSite), PopulationPlayers, NextKey)
 	)
 	;
@@ -484,7 +484,7 @@ stepUpdateSitesState(SiteDynamics, SiteActionAccumulator, !Population) :-
 	(pred(OldSite::in, NewSite::out, Index::in, NextIndex::out) is det :-
 		NextIndex = Index + 1,
 		array.lookup(SiteActionAccumulator, Index) = AA,
-		NewSite = 'state :='(OldSite, UpdateFunc(AA, OldSite))
+		NewSite = 'currentState :='(OldSite, UpdateFunc(AA, OldSite))
 	),
 	array.map_foldl(UpdateSite, !.Population^sites, NewSites, 0, _),
 	!:Population = 'sites :='(!.Population, NewSites)

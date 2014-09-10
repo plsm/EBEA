@@ -312,7 +312,7 @@ saveAsConfiguration(!Data, !IO) :-
 	(if
 		ILine = ok(Line)
 	then
-		Filename = string.strip(Line),
+		Filename = data.config.io.standardFileNameExtension(string.strip(Line)),
 		data.config.io.write(binary, Filename, !.Data^config, MErrors, !IO),
 		(
 			MErrors = no

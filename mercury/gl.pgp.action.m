@@ -21,7 +21,8 @@
 
 :- type updateSiteState --->
 	decayHighDefects(
-		decreaseFactor :: float
+		decreaseFactor :: float,
+		recoveryFactor :: float
 	).
 
 :- instance foldable(action, accumulator).
@@ -74,16 +75,19 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of exported predicates and functions
 
-updateSiteState(decayHighDefects(DecreaseFactor), Accumulator, Site) = Result :-
+updateSiteState(decayHighDefects(DecreaseFactor, RecoveryFactor), Accumulator, Site) = Result :-
 	(if
 		Accumulator^numberCooperates > Accumulator^numberDefects
 	then
 		Result = 'carryingCapacity :='(
-			Site^state,
-			Site^state^carryingCapacity * DecreaseFactor
+			Site^currentState,
+			Site^currentState^carryingCapacity * DecreaseFactor
 		)
 	else
-		Result = Site^state
+		Result = 'carryingCapacity :='(
+			Site^currentState,
+			Site^currentState^carryingCapacity
+			+ (Site^normalState^carryingCapacity - Site^currentState^carryingCapacity= * RecoveryFactor
 	)
 	.
 
@@ -93,9 +97,13 @@ mapUpdateSiteState(UpdateSiteState) = updateSiteState(UpdateSiteState).
 defaultSiteUpdateFunction = decayHighDefects(0.9).
 
 dialogSiteUpdateFunction =
-	[di(
+	[
+	di(
 		label("decay if defects are majority"),
-		updateFieldFloat( getDecreaseFactor, userInterface.checkFloat("decrease factor", bounded(0.0, no), bounded(1.0, no), setDecreaseFactor)))
+		updateFieldFloat( getDecreaseFactor, userInterface.checkFloat("decrease factor", bounded(0.0, no), bounded(1.0, no), setDecreaseFactor))),
+	di(
+		label("recovery factor"),
+		updateFieldFloat( getRecoveryFactor, userInterface.checkFloat("recovery factor", bounded(0.0, no), bounded(1.0, no), setRecoveryFactor)))
 	].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -125,6 +133,16 @@ getDecreaseFactor(decayHighDefects(DecreaseFactor)) = DecreaseFactor.
 :- func setDecreaseFactor(updateSiteState, float) = updateSiteState.
 
 setDecreaseFactor(UpdateSiteState, Value) = 'decreaseFactor :='(UpdateSiteState, Value).
+
+
+
+:- func getRecoveryFactor(updateSiteState) = float.
+
+getRecoveryFactor(decayHighDefects(RecoveryFactor)) = RecoveryFactor.
+
+:- func setRecoveryFactor(updateSiteState, float) = updateSiteState.
+
+setRecoveryFactor(UpdateSiteState, Value) = 'recoveryFactor :='(UpdateSiteState, Value).
 
 :- end_module gl.pgp.action.
 
