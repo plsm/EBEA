@@ -75,7 +75,7 @@ parse(issr(Iteration, SitesState)) -->
 
 :- func extractSiteState(site, list(siteStateRecord)) = list(siteStateRecord).
 
-extractSiteState(Site, AC) = [ssr(Site^state) | AC].
+extractSiteState(Site, AC) = [ssr(Site^currentState) | AC].
 
 
 :- pred parse_siteStateRecord(siteStateRecord, list(int), list(int)).

@@ -87,14 +87,15 @@ updateSiteState(decayHighDefects(DecreaseFactor, RecoveryFactor), Accumulator, S
 		Result = 'carryingCapacity :='(
 			Site^currentState,
 			Site^currentState^carryingCapacity
-			+ (Site^normalState^carryingCapacity - Site^currentState^carryingCapacity= * RecoveryFactor
+			+ (Site^normalState^carryingCapacity - Site^currentState^carryingCapacity) * RecoveryFactor
+		)
 	)
 	.
 
 %mapUpdateSiteState(0, UpdateSiteState, updateSiteState(UpdateSiteState)).
 mapUpdateSiteState(UpdateSiteState) = updateSiteState(UpdateSiteState).
 
-defaultSiteUpdateFunction = decayHighDefects(0.9).
+defaultSiteUpdateFunction = decayHighDefects(0.98, 0.97).
 
 dialogSiteUpdateFunction =
 	[
@@ -121,14 +122,15 @@ fold(defect, AC)    = 'numberDefects :='(   AC, AC^numberDefects    + 1).
 :- mode parse(in, out, in) is det.
 :- mode parse(out, in, out) is semidet.
 
-parse(decayHighDefects(DecreaseFactor)) -->
+parse(decayHighDefects(DecreaseFactor, RecoveryFactor)) -->
 	[0],
-	parseable.float32(DecreaseFactor).
+	parseable.float32(DecreaseFactor),
+	parseable.float32(RecoveryFactor).
 
 
 :- func getDecreaseFactor(updateSiteState) = float.
 
-getDecreaseFactor(decayHighDefects(DecreaseFactor)) = DecreaseFactor.
+getDecreaseFactor(decayHighDefects(DecreaseFactor, _)) = DecreaseFactor.
 
 :- func setDecreaseFactor(updateSiteState, float) = updateSiteState.
 
@@ -138,7 +140,7 @@ setDecreaseFactor(UpdateSiteState, Value) = 'decreaseFactor :='(UpdateSiteState,
 
 :- func getRecoveryFactor(updateSiteState) = float.
 
-getRecoveryFactor(decayHighDefects(RecoveryFactor)) = RecoveryFactor.
+getRecoveryFactor(decayHighDefects(_, RecoveryFactor)) = RecoveryFactor.
 
 :- func setRecoveryFactor(updateSiteState, float) = updateSiteState.
 

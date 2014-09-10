@@ -291,7 +291,8 @@ createInitialSite(PlayerParameters, SiteParameters, MSiteIndex, MSiteNeighbourho
 		MSiteNeighbourhood = yes(SiteNeighbourhood)
 	),
 	SiteState^carryingCapacity = float(SiteParameters^carryingCapacity),
-	InitialSite^state = SiteState,
+	InitialSite^currentState = SiteState,
+	InitialSite^normalState = SiteState,
 	InitialSite^playerIDs = SitePlayerKeys,
 	InitialSite^neighbourSiteIdxs = array.from_list(SiteNeighbourhood)
 	.
@@ -317,7 +318,8 @@ createLatticeInitialSite(
 			!Random)
 	else
 		SiteState^carryingCapacity = DefaultCarryingCapacity,
-		InitialSite^state = SiteState,
+		InitialSite^normalState = SiteState,
+		InitialSite^currentState = SiteState,
 		InitialSite^playerIDs = [],
 		InitialSite^neighbourSiteIdxs = array.from_list(makeConnections(Geometry, SiteIndex))
 	).
@@ -368,7 +370,7 @@ stepDeath(Parameters, Population, Player, Filter, !Random,
 	!CemeteryCarryingCapacity, !CemeteryOldAge, !CemeteryStarvation)
 :-
 	Site = playerSite(Population, Player),
-	deathProbability(Site^state^carryingCapacity, numberPlayers(Site)) = Value,
+	deathProbability(Site^currentState^carryingCapacity, numberPlayers(Site)) = Value,
 	rng.flipCoin(Value, DiesCC, !Random),
 	(if
 		DiesCC = yes
@@ -689,16 +691,23 @@ neighbour(lattice(XL, YL, N, B),   X, Y,    (X + 1) mod XL + ((Y - 1) mod YL) * 
 selectedSiteDynamics(static)     = yes(0).
 selectedSiteDynamics(dynamic(_)) = yes(1).
 
-:- func setSiteDynamics(parseableDynamics(MU), int) = setResult(parseableDynamics(MU)).
+:- func setSiteDynamics(MU, parseableDynamics(MU), int) = setResult(parseableDynamics(MU)).
 
-setSiteDynamics(Result, Index) = ok(Result) :-
+setSiteDynamics(DefaultFunction, Previous, Index) = ok(Result) :-
 	(if
-		Index \= 0,
-		Index \= 1
+		Index = 0
 	then
-		throw("ebea.population.site.setSiteDynamics/2: invalid index")
+		Previous = static,     Result = Previous
+	;
+		Previous = dynamic(_), Result = static
+	else if
+		Index = 1
+	then
+		Previous = static,     Result = dynamic(DefaultFunction)
+	;
+		Previous = dynamic(_), Result = Previous
 	else
-		true
+		throw("ebea.population.site.setSiteDynamics/2: invalid index")
 	).
 
 :- func get_function(MU, parseableDynamics(MU)) = MU.
