@@ -21,6 +21,13 @@
 :- type weight == float.
 
 %% ************************************************************************
+%% init = WeightVector
+%%
+%% Initialise an empty weight vector.
+%%
+:- func init = weightVector(T).
+
+%% ************************************************************************
 %% init(ElementGenerator, InitialWeight) = WeightVector
 %%
 %% Initialise a weight vector with the elements provided by the predicate.
@@ -108,6 +115,8 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of exported predicates and functions
+
+init = wv(map.init, 0.0, 0).
 
 init(ElementGenerator, InitialWeight) = WeightVector :-
 	promise_equivalent_solutions [Elements, Size]

@@ -43,9 +43,9 @@
 
 :- type combination == list(ebea.population.players.key).
 
-:- inst pcv == bound(parterSelection(ground)).
+%:- inst pcv == bound(parterSelection(ground)).
 
-:- inst playerPCV == bound(player(ground, ground, ground, bound(traits(ground, ground, pcv)))).
+%:- inst playerPCV == bound(player(ground, ground, ground, bound(traits(ground, ground, pcv)))).
 
 /**
  * initProbabilityCombinationVector(Quotient, Remainder, Index) = Result

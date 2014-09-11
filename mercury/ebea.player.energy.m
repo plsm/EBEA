@@ -123,7 +123,7 @@
 
 
 /**
- * stepPlayGame(EnergyParameters, Player, Partners, Payoffs, !NextRoundPopulation, !PlayerProfile, !Random)
+ * stepPlayGame2(EnergyParameters, Player, Partners, Payoffs, !NextRoundPopulation, !PlayerProfile, !Random)
 
  * Plays a game between {@code Player} and {@code Partners} and updates
  * their energy in {@code NextRoundPopulation}.  Parameters {@code Player}
@@ -131,7 +131,7 @@
  * the game is symmetric.
 
  */
-:- pred stepPlayGame(
+:- pred stepPlayGame2(
 	ebea.player.energy.parameters, G,
 	player(C, T), list(player(C, T)),
 	maybe(array(float)),
@@ -139,7 +139,7 @@
 	list(list(key)), list(list(key)),
 	R, R)
 	<= (asymmetricGame(G, C), ePRNG(R)).
-:- mode stepPlayGame(in, in, in, in, out, in, out, in, out, in, out) is det.
+:- mode stepPlayGame2(in, in, in, in, out, in, out, in, out, in, out) is det.
 
 %% ************************************************************************
 %% stepPlayGame3(EnergyParameters, Player, Partners, Payoffs, !NextRoundPopulation, !PlayerProfile, !SiteActionAccumulator, !Random)
@@ -170,6 +170,25 @@
 	ePRNG(R),
 	foldable(A, AA)
 ).
+
+
+:- pred stepPlayGame3High(
+	ebea.player.energy.parameters :: in,
+	G                             :: in,
+	population(CS, T)                       :: in,  population(CS, T)                       :: out,
+	list(list(ebea.population.players.key)) :: in,  list(list(ebea.population.players.key)) :: out,
+	array(AA) :: di,  array(AA) :: uo,
+	R                                       :: in,  R                                       :: out,
+	player(CS, T)                 :: in,
+	list(player(CS, T))           :: in,
+	maybe(array(float)) :: out
+) is det
+	<= (
+	asymmetricGame(G, CS, A),
+	ePRNG(R),
+	foldable(A, AA)
+).
+
 
 /**
  * stepSurvive(Parameters, Player, !Random, Dies)
@@ -305,7 +324,7 @@ canReproduce(Player, Parameters, NextTraits) :-
 	NextTraits = NextEnergy
 	.
 
-stepPlayGame(
+stepPlayGame2(
 	EnergyParameters, Game, ForPlayer, Partners, MPayoffs,
 	!NextRoundPopulation,
 	!PlayerProfiles,
@@ -347,7 +366,29 @@ stepPlayGame(
 		MPayoffs = no
 	).
 
-stepPlayGame3(	
+stepPlayGame3High(
+	EnergyParameters,
+	Game,
+	!NextRoundPopulation,
+	!PlayerProfiles,
+	!SiteActionAccumulator,
+	ForPlayer,
+	Partners,
+	MPayoffs
+) :-
+	stepPlayGame3(
+	EnergyParameters,
+	Game,
+	ForPlayer,
+	Partners,
+	MPayoffs,
+	!NextRoundPopulation,
+	!PlayerProfiles,
+	!Random,
+	!SiteActionAccumulator
+		     ).
+
+stepPlayGame3(
 	EnergyParameters,
 	Game,
 	ForPlayer,

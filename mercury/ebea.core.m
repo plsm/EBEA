@@ -349,7 +349,7 @@ runGame3(Mode, Game, Parameters, Streams, NumberIterations, Population, !Distrib
 iterationData2(Data, IterationNumber, !Population, ThisStats, NextStats, !Distribution, !Random, !IO) :-
 	%io.print('\r', !IO), io.print(IterationNumber, !IO), io.print(' ', !IO), io.print('a', !IO), io.flush_output(io.stdout_stream, !IO),
 	ebea.population.fold3_PlayerNeighbour(
-		ebea.player.selection.stepSelectPartnersPlayGame(Data^gp^playerParameters, Data^game),
+		ebea.player.selection.stepSelectPartnersPlayGame2(Data^gp^playerParameters, Data^game),
 		!.Population,
 		!Population,
 		[], PlayerProfiles,
