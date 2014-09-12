@@ -175,13 +175,13 @@
 :- pred stepPlayGame3High(
 	ebea.player.energy.parameters :: in,
 	G                             :: in,
-	population(CS, T)                       :: in,  population(CS, T)                       :: out,
 	list(list(ebea.population.players.key)) :: in,  list(list(ebea.population.players.key)) :: out,
-	array(AA) :: di,  array(AA) :: uo,
-	R                                       :: in,  R                                       :: out,
+	array(AA)                               :: di,  array(AA)                               :: uo,
 	player(CS, T)                 :: in,
 	list(player(CS, T))           :: in,
-	maybe(array(float)) :: out
+	maybe(array(float)) :: out,
+	population(CS, T) :: in,  population(CS, T) :: out,
+	R                 :: in,  R                 :: out
 ) is det
 	<= (
 	asymmetricGame(G, CS, A),
@@ -369,12 +369,13 @@ stepPlayGame2(
 stepPlayGame3High(
 	EnergyParameters,
 	Game,
-	!NextRoundPopulation,
 	!PlayerProfiles,
 	!SiteActionAccumulator,
 	ForPlayer,
 	Partners,
-	MPayoffs
+	MPayoffs,
+	!NextRoundPopulation,
+	!Random
 ) :-
 	stepPlayGame3(
 	EnergyParameters,

@@ -249,8 +249,14 @@
 
 
 :- pred stepSelectPartnersPlayGame(
-	pred(player(CS, T), list(player(CS, T)), maybe(array(float))) ::
-		in(pred(in, in, out) is det),
+	pred(
+		player(CS, T),
+		list(player(CS, T)),
+		maybe(array(float)),
+		population(CS, T),  population(CS, T),
+		R,  R
+		) ::
+		in(pred(in, in, out, in, out, in, out) is det),
 	ebea.player.parameters(P)             :: in,
 	G                                     :: in,
 	player(CS, T)                         :: in,
@@ -740,7 +746,7 @@ stepSelectPartnersPlayGame(
 			ebea.population.neighbours.randomElements(NumberPartners, Neighbours, PartnersID, !Random),
 			list.map(ebea.population.players.player(!.NextRoundPopulation^players), PartnersID) = RestProfile,
 			/* play the game */
-			PredPlayGame(Player, RestProfile, _MPayoffs),
+			PredPlayGame(Player, RestProfile, _MPayoffs, !NextRoundPopulation, !Random),
 			/* no selection traits to update */
 			true
 		else
@@ -755,7 +761,7 @@ stepSelectPartnersPlayGame(
 			ebea.player.selection.pcv.select(NumberPartners, Neighbours, Traits^pcv, !Random, SelectedSlot, PartnersIDs),
 			list.map(ebea.population.players.player(!.NextRoundPopulation^players), PartnersIDs) = RestProfile,
 			/* play the game */
-			PredPlayGame(Player, RestProfile, MPayoffs),
+			PredPlayGame(Player, RestProfile, MPayoffs, !NextRoundPopulation, !Random),
 			/* update the selection traits */
 			(
 				MPayoffs = yes(Payoffs),
@@ -805,7 +811,7 @@ stepSelectPartnersPlayGame(
 					!Random)
 			then
 				/* play the game */
-				PredPlayGame(Player, RestProfile, MPayoffs),
+				PredPlayGame(Player, RestProfile, MPayoffs, !NextRoundPopulation, !Random),
 				/* update the selection traits */
 				(
 					MPayoffs = yes(Payoffs),
@@ -949,16 +955,30 @@ stepSelectPartnersPlayGame2(
 stepSelectPartnersPlayGame3(
 	PlayerParameters, Game, Player, Neighbours,
 	!NextRoundPopulation,
-	!PlayerProfile,
+	PlayerProfile1, PlayerProfile2,
 	!Random,
-	!SiteActionAccumulator
+	SiteActionAccumulator1, SiteActionAccumulator2
 ) :-
-	stepSelectPartnersPlayGame(
-		stepPlayGame3High(
+	PredPlayGame =
+	(pred(
+			LPlayer   :: in,
+			LPartners :: in,
+			LMPayoffs :: out,
+			!.LNextRoundPopulation :: in,  !:LNextRoundPopulation :: out,
+			!.LRandom              :: in,  !:LRandom              :: out) is det :-
+		ebea.player.energy.stepPlayGame3High(
 			PlayerParameters^energyPar,
 			Game,
-			!PlayerProfile,
-			!SiteActionAccumulator),
+			PlayerProfile1, PlayerProfile2,
+			SiteActionAccumulator1, SiteActionAccumulator2,
+			LPlayer,
+			LPartners,
+			LMPayoffs,
+			!LNextRoundPopulation,
+			!LRandom)
+	),
+	stepSelectPartnersPlayGame(
+		PredPlayGame,
 		PlayerParameters,
 		Game,
 		Player,
