@@ -65,6 +65,17 @@
  */
 :- type ac.
 
+%% ************************************************************************
+%% initTraits(Game, Player, Neighbours) = Result
+%%
+%% Initialise the selection traits of players.  This is used in the initial
+%% population.  Partner selection based on weight vector requires the
+%% neighbours that are not available when initialising a value of {@code
+%% ebea.population.players/2} type.
+%%
+:- func initTraits(G, player(C, T), ebea.population.neighbours.neighbours) = player(C, T)
+	<= abstractGame(G).
+
 /**
  * Given the selection part of an EBEA chromosome return the individual
  * that can develop from this chromosome.
@@ -288,6 +299,30 @@ dialogParameters =
 	di(label("mu"),                                      updateFieldFloat( get_mu,                             checkFloat( "mu",                                bounded(0.0, no),  unbound, set_mu))),
 	di(label("% combination slots passed to offspring"), updateFieldInt(   get_poolSizePercentageTransmission,  checkInt( "percentage",                          bounded(0, yes),  bounded(100, yes), set_poolSizePercentageTransmission)))
 	].
+
+initTraits(Game, Player, Neighbours) = Result :-
+	Traits = Player^traits^selectionTrait,
+	(	%
+		Traits = random,
+		Result = Player
+	;
+		Traits = partnerSelection(_, no),
+		Result = Player
+	;
+		Traits = partnerSelection(PCV, yes(_)),
+		PredElementGenerator =
+		(pred(E::out) is nondet :-
+			ebea.population.neighbours.member(E, Neighbours)
+		),
+		InitialWeight = game.paretoPayoff(Game) - game.lowestPayoff(Game),
+		WeightVector = ebea.player.selection.wv.init(PredElementGenerator, InitialWeight),
+		NewTraits = partnerSelection(PCV, yes(WeightVector)),
+		PlayerTraits = 'selectionTrait :='(Player^traits, NewTraits),
+		Result = 'traits :='(Player, PlayerTraits)
+	;
+		Traits = opinion(_, _),
+		Result = Player
+	).
 
 born(Chromosome, Result, !Random) :-
 	Chromosome = random,

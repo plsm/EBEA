@@ -550,7 +550,7 @@ runVS4Game2(RunMode, AllConfig, GameConfig, Streams, !Random, !IO) :-
 	Parameters^dynamic = AllConfig^dynamic,
 	Parameters^playerParameters = PlayerParameters,
 	
-	ebea.population.createInitialPopulation(PlayerParameters, GameConfig^initialPopulation, Population, !Random),
+	ebea.population.createInitialPopulation(PlayerParameters, GameConfig^game, GameConfig^initialPopulation, Population, !Random),
 	ebea.core.runGame2(RunMode, GameConfig^game, Parameters, Streams, AllConfig^numberIterations, Population, rng.distribution.init, _, !Random, !IO),
 	ebea.streams.closeOutputStreams(Streams, !IO)
 	.
@@ -605,6 +605,7 @@ runVS4Game3(RunMode, AllConfig, GameConfig, Streams, MapUpdateState, !Random, !I
 
 	ebea.population.createInitialPopulation(
 		PlayerParameters,
+		GameConfig^game,
 		GameConfig^initialPopulation,
 		Population,
 		!Random
