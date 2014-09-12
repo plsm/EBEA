@@ -25,44 +25,6 @@
 :- import_module array.
 
 /**
- * The chromosome part that is responsible for partner selection.
- * Selection can be random, based on the partner selection algorithm
- * presented in Mariano 2009, or based on generic opinion.
-
- * TODO: opinion chromosome has average and deviation of initial uncertainty.
-
- * TODO2 : remove payoff threshold from opinion. Increases search space
- * unnecessarily.
-  
-  
- */
-% :- type chromosome --->
-% 	random ;
-% 	partnerSelection(
-% 		poolSize                :: int ,
-% 		bitsPerProbability      :: int ,
-% 		probabilityUpdateFactor :: float ,
-% 		payoffThreshold_PS      :: float
-% 	) ;
-% 	opinion(
-% 		payoffThreshold_O  :: float,
-% 		initialUncertainty :: float
-% 	) ;
-% 	opinion(
-% 		initialAverageOpinion
-% 	.
-
-% /**
-%  * Return a default selection chromosome that can be used con construct a
-%  * player chromosome.
-  
-%  */
-% :- func defaultChromosome = ebea.player.selection.chromosome.
-
-% %:- func dialogChromosome = userInterface.dialogAction(ebea.player.selection.chromosome).
-% :- func dialogChromosome = list(userInterface.dialogItem(ebea.player.selection.chromosome)).
-
-/**
  * The parameters that control the dynamics of the partner selection module
  * of Energy Based Evolutionary Algorithm.
  */
@@ -82,8 +44,6 @@
 
 :- func dialogParameters = list(dialogItem(ebea.player.selection.parameters)).
 
-
-
 /**
  * The traits part that is responsible for partner selection.
  */
@@ -99,10 +59,6 @@
 		opinionValue :: float,
 		uncertainty  :: float
 	).
-%:- type traits.
-
-
-
 
 /**
  * The accumulator used by type class functions {@code fold/0} and {@code fold/2}.
@@ -177,98 +133,6 @@
 	ePRNG(R),
 	foldable(A, AA)
 ).
-
-%% ************************************************************************
-%%
-%% stepSelectPartnersPrePlayGame(Game, Player, Neighbours, Population, PlayerProfile, !Random)
-%%
-%% Select partners for player {@code Player} from collection {@code Neighbours}.
-%% May fail if there are not enough neighbours or the selection process does not
-%% find fit neighbours.
-%%
-%% <p> This predicate performs the core of the selection process of an
-%% Energy Based Evolutionary Algorithm.
-%%
-%% @param G The game player by players
-%%
-%% @param CS The game strategy and strategy genes.
-%%
-%% @param T  The player phenotype that results from the strategy genes.
-%%
-%% @param R The pseudo-random number generator.
-%%
-% :- pred stepSelectPartnersPrePlayGame(
-% 	G                                     :: in,
-% 	player(CS, T)                         :: in,
-% 	ebea.population.neighbours.neighbours :: in,
-% 	population(CS, T)                     :: in,
-% 	maybe(list(player(CS, T))) :: out,
-% 	R :: in,  R :: out
-% ) is det
-% 	<= (
-% 	abstractGame(G),
-% 	ePRNG(R)
-% ).
-
-%% ************************************************************************
-%%
-%% stepSelectPartnersPostPlayGame(PlayerParameters, Game, Player, Neighbours, !NextRoundPopulation, !PlayerProfiles, !SiteActionAccumulator, !Random)
-%%
-%% Update the selection traits of {@code Player} given the payoff vector.
-%%
-%% <p> This predicate performs the core of the selection process of an
-%% Energy Based Evolutionary Algorithm.
-%%
-%% @param P player parameters which contains game and energy parameters.
-%%
-%% @param G The game player by players
-%%
-%% @param CS The game strategy and strategy genes.
-%%
-%% @param T  The player phenotype that results from the strategy genes.
-%%
-%% @param R The pseudo-random number generator.
-%%
-%% @param A The game actions.
-%%
-% :- pred stepSelectPartnersPostPlayGame(
-% 	ebea.player.parameters(P)             :: in,
-% 	G                                     :: in,
-% 	player(CS, T)                         :: in,
-% 	ebea.population.neighbours.neighbours :: in,
-% 	maybe(list(player(CS, T))) :: in,
-% 	maybe(array(float)) :: in,
-% 	population(CS, T)                       :: in,  population(CS, T)                       :: out,
-% 	list(list(ebea.population.players.key)) :: in,  list(list(ebea.population.players.key)) :: out,
-% 	R                                       :: in,  R                                       :: out
-% ) is det
-% 	<= (
-% 	abstractGame(G),
-% 	ePRNG(R)
-% ).
-
-
-:- pred stepSelectPartnersPlayGame(
-	pred(
-		player(CS, T),
-		list(player(CS, T)),
-		maybe(array(float)),
-		population(CS, T),  population(CS, T),
-		R,  R
-		) ::
-		in(pred(in, in, out, in, out, in, out) is det),
-	ebea.player.parameters(P)             :: in,
-	G                                     :: in,
-	player(CS, T)                         :: in,
-	ebea.population.neighbours.neighbours :: in,
-	population(CS, T)                       :: in,  population(CS, T)                       :: out,
-	R                                       :: in,  R                                       :: out
-) is det
-	<= (
-	abstractGame(G),
-	ePRNG(R)
-).
-
 
 %% ****************************************************************************
 %% stepProcessBornPlayersCheckForDeadPlayers(Game, DeadPlayerIDs, NewBornIDs, Neighbours, !Player, !Random)
@@ -405,41 +269,6 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of exported predicates and functions
 
-%defaultChromosome = random.
-
-% dialogChromosome =
-% 	[di(label("selection genes"), selectOneOf(
-% 		getCurrentChoice,
-% 		setChoice,
-% 		[
-% 		 ci(label("random"),             []),
-% 		 ci(label("partner selection"),
-% 			[
-% 			 di(label("pool size"),                  updateFieldInt(   get_poolSize,                 checkInt(   "pool size",                  bounded(0, yes), unbound,             set_poolSize))),
-% 			 di(label("bits per probability"),       updateFieldInt(   get_bitsPerProbability,       checkInt(   "bits per probability",       bounded(1, yes), unbound,             set_bitsPerProbability))),
-% 			 di(label("probability update factor"),  updateFieldFloat( get_probabilityUpdateFactor,  checkFloat( "probability update factor",  bounded(0.0, yes), bounded(1.0, yes), set_probabilityUpdateFactor))),
-% 			 di(label("payoff threshold"),           updateFieldFloat( get_payoffThreshold_PS,       checkFloat( "payoff threshold",           bounded(-1.0, yes), bounded(1.0, yes), set_payoffThreshold_PS)))
-% 			]),
-% 		 ci(label("opinion"),
-% 			[
-% 			 di(label("payoff threshold (as fraction of game payoff)"),  updateFieldFloat( get_payoffThreshold_O,       checkFloat( "payoff threshold",     bounded(0.0, yes),  bounded(1.0, yes), set_payoffThreshold_O))),
-% 			 di(label("initial uncertainty"),                            updateFieldFloat( get_initialUncertainty,      checkFloat( "initial uncertainty",  bounded(-1.0, yes), bounded(1.0, yes), set_initialUncertainty)))
-% 			])
-% 		]))].
-% dialogChromosome =
-% 	[
-% 	di(label("random"),            newValue(random)),
-% 	di(label("partner selection"),  subdialog( [
-% 		di(label("pool size"),                  updateFieldInt(   get_poolSize,                 checkInt(   "pool size",                  bounded(0, yes), unbound,             set_poolSize))),
-% 		di(label("bits per probability"),       updateFieldInt(   get_bitsPerProbability,       checkInt(   "bits per probability",       bounded(1, yes), unbound,             set_bitsPerProbability))),
-% 		di(label("probability update factor"),  updateFieldFloat( get_probabilityUpdateFactor,  checkFloat( "probability update factor",  bounded(0.0, yes), bounded(1.0, yes), set_probabilityUpdateFactor))),
-% 		di(label("payoff threshold"),           updateFieldFloat( get_payoffThreshold_PS,       checkFloat( "payoff threshold",           bounded(-1.0, yes), bounded(1.0, yes), set_payoffThreshold_PS)))
-% 		])),
-% 	di(label("opinion"),           subdialog( [
-% 		di(label("payoff threshold (as fraction of game payoff)"),  updateFieldFloat( get_payoffThreshold_O,       checkFloat( "payoff threshold",           bounded(-1.0, yes), bounded(1.0, yes), set_payoffThreshold_O)))
-% 		]))
-% 	].
-
 defaultParameters = Result :-
 	Result^poolSizeStdDev = default_poolSizeStdDev,
 	Result^bitsPerProbabilityStdDev = default_bitsPerProbabilityStdDev,
@@ -487,9 +316,6 @@ born(Chromosome, Result, !Random) :-
 		Chromosome = weightedPartnerSelection(_),
 		Result = partnerSelection(PCV, yes(ebea.player.selection.wv.init))
 	 )
-	% ;
-	% Chromosome = weightedPartnerSelection(PS),
-	% throw("ebea.player.selection.born/4: not implemented")
 	;
 	Chromosome = opinion_old(_, _),
 	rng.nextFloat(OV, !Random),
@@ -506,329 +332,6 @@ born(Chromosome, Result, !Random) :-
 	Result^uncertainty = float.max(0.0, float.min(InitialUncertainty1, 2.0))
 	.
 
-% stepSelectPartnersPrePlayGame(
-% 	Game,
-% 	Player,
-% 	Neighbours,
-% 	Population,
-% 	MPlayerProfile,
-% 	!Random
-% ) :-
-% 	NumberPartners = game.numberPlayers(Game) - 1,
-% 	Chromosome = Player^chromosome^selectionGenes,
-% 	Traits = Player^traits^selectionTrait,
-% 	(if
-% 		NumberPartners > ebea.population.neighbours.size(Neighbours)
-% 	then
-% 		MPlayerProfile = no
-% 	else
-% 		Chromosome = random,
-% 		(if
-% 			Traits = random
-% 		then
-% 			ebea.population.neighbours.randomElements(
-% 				NumberPartners,
-% 				Neighbours,
-% 				PartnersID,
-% 				!Random),
-% 			RestProfile = list.map(
-% 				ebea.population.players.player(Population^players),
-% 				PartnersID),
-% 			PlayerProfile = [Player | RestProfile],
-% 			MPlayerProfile = yes(PlayerProfile)
-% 		else
-% 			throw("ebea.player.selection.stepSelectPartnersPrePlayGame/7: Invalid combination of chromosome and phenotipic trait")
-% 		)
-% 		;
-% 		Chromosome = normalPartnerSelection(PS),
-% 		(if
-% 			Traits = partnerSelection(_, no)
-% 		then
-% 			ebea.player.selection.pcv.select(
-% 				NumberPartners,
-% 				Neighbours,
-% 				Traits^pcv,
-% 				!Random,
-% 				SelectedSlot,
-% 				PartnersID),
-% 			RestProfile = list.map(
-% 				ebea.population.players.player(Population^players),
-% 				PartnersID),
-% 			PlayerProfile = [Player | RestProfile],
-% 			MPlayerProfile = yes(PlayerProfile)
-% 		else
-% 			throw("ebea.player.selection.stepSelectPartnersPrePlayGame/7: Invalid combination of chromosome and phenotipic trait")
-% 		)
-% 		;
-% 		Chromosome = weightedPartnerSelection(_),
-% 		(if
-% 			Traits = partnerSelection(_, yes(WV))
-% 		then
-% 			ebea.player.selection.wv.drawAsList(
-% 				WV,
-% 				NumberPartners,
-% 				PartnersID,
-% 				!Random),
-% 			RestProfile = list.map(
-% 				ebea.population.players.player(Population^players),
-% 				PartnersID),
-% 			PlayerProfile = [Player | RestProfile],
-% 			MPlayerProfile = yes(PlayerProfile)
-% 		else
-% 			throw("ebea.player.selection.stepSelectPartnersPrePlayGame/7: Invalid combination of chromosome and phenotipic trait")
-% 		)
-% 		;
-% 		(
-% 			Chromosome = opinion_old(_, _) ;
-% 			Chromosome = opinion_old(_, _, _, _)
-% 		),
-% 		(if
-% 			Traits = opinion(_, _)
-% 		then
-% 			(if
-% 				ebea.player.selection.opinion.selectPartners(
-% 					Traits,
-% 					NumberPartners,
-% 					Population^players,
-% 					Neighbours,
-% 					RestProfile,
-% 					!Random)
-% 			then
-% 				PlayerProfile = [Player | RestProfile],
-% 				MPlayerProfile = yes(PlayerProfile)
-% 			else
-% 				MPlayerProfile = no
-% 			)
-% 		else
-% 			throw("ebea.player.selection.stepSelectPartnersPrePlayGame/7: Invalid combination of chromosome and traits")
-% 		)
-% 	)
-% 	.
-
-
-% stepSelectPartnersPostPlayGame
-% 	PlayerParameters,
-% 	Game,
-% 	Player,
-% 	Neighbours,
-% 	MPlayerProfile,
-% 	MPayoffs,
-% 	!NextRoundPopulation,
-% 	!Random
-% ) :-
-% 	NumberPartners = game.numberPlayers(Game) - 1,
-% 	Chromosome = Player^chromosome^selectionGenes,
-% 	Traits = Player^traits^selectionTrait,
-% 	(if
-% 		NumberPartners > ebea.population.neighbours.size(Neighbours)
-% 	then
-% 		true
-% 	else
-% 		Chromosome = random,
-% 		(if
-% 			Traits = random
-% 		then
-% 			/* no selection traits to update */
-% 			true
-% 		else
-% 			throw("ebea.player.selection.stepSelectPartnersPlayGame2/10: Invalid combination of chromosome and phenotipic trait")
-% 		)
-% 		;
-% 		Chromosome = normalPartnerSelection(PS),
-% 		(if
-% 			Traits = partnerSelection(_, no)
-% 		then
-% 			/* update the selection traits */
-% 			(
-% 				MPayoffs = yes(Payoffs),
-% 				PlayerPayoff = array.lookup(Payoffs, 0)
-% 				;
-% 				MPayoffs = no,
-% 				PlayerPayoff = game.lowestPayoff(Game)
-% 			),
-% 			ebea.player.selection.pcv.updateProbCombVectors(
-% 				Game, PlayerParameters^energyPar^energyScaling,
-% 				NumberPartners, PS, PartnersIDs, Neighbours, SelectedSlot, PlayerPayoff,
-% 				!Random,
-% 				Traits^pcv, NextProbCombVector
-% 			),
-% 			ebea.population.update(
-% 				Player^id,
-% 				ebea.player.selection.pcv.updatePlayerProbCombVectors(NextProbCombVector),
-% 				!NextRoundPopulation
-% 			)
-% 		else
-% 			throw("ebea.player.selection.stepSelectPartnersPlayGame2/10: Invalid combination of chromosome and phenotipic trait")
-% 		)
-% 		;
-% 		Chromosome = weightedPartnerSelection(_),
-% 		(if
-% 			Traits = partnerSelection(_, yes(WV))
-% 		then
-% 			true
-% 		else
-% 			throw("ebea.player.selection.stepSelectPartnersPlayGame/10: Invalid combination of chromosome and phenotipic trait")
-% 		)
-% 		;
-% 		(
-% 			Chromosome = opinion_old(_, _) ;
-% 			Chromosome = opinion_old(_, _, _, _)
-% 		),
-% 		(if
-% 			Traits = opinion(_, _)
-% 		then
-% 			% /* create the strategy profile */
-% 			% ebea.player.selection.opinion.selectPartners(Traits, NumberPartners, Neighbours, RestProfile, !Random),
-% 			% /* play the game */
-% 			% ebea.player.energy.stepPlayGame(PlayerParameters^energyPar, Game, Player, RestProfile, Payoffs, !NextRoundPopulation, !PlayerProfile, !Random),
-% 			% /* update the selection traits */
-% 			% ebea.player.selection.opinion.updateOpinions(Game, PlayerParameters, [Player | RestProfile], Payoffs, !NextRoundPopulation)
-
-% 			/* create the strategy profile */
-% %			ebea.player.selection.opinion.selectPartners_v1(Traits, NumberPartners, Neighbours, RestProfile, !Random),
-% 			%rng.randomElementsList(NumberPartners, Neighbours, RestProfile, !Random),
-% 			(if
-% 				ebea.player.selection.opinion.selectPartners(
-% 					Traits,
-% 					NumberPartners,
-% 					!.NextRoundPopulation^players,
-% 					Neighbours,
-% 					RestProfile,
-% 					!Random)
-% %				ebea.player.selection.opinion.selectPartners_v2(Traits, NumberPartners, Neighbours, RestProfile, !Random),
-% %				ebea.player.selection.opinion.checkPartnerOpinion(Traits, RestProfile)
-% 			then
-% 				/* play the game */
-% 				ebea.player.energy.stepPlayGame2(PlayerParameters^energyPar, Game, Player, RestProfile, MPayoffs, !NextRoundPopulation, !PlayerProfile, !Random),
-% 				/* update the selection traits */
-% 				(
-% 					MPayoffs = yes(Payoffs),
-% 					ebea.player.selection.opinion.updateOpinions(Game, PlayerParameters, [Player | RestProfile], Payoffs, !NextRoundPopulation)
-% 					;
-% 					MPayoffs = no
-% 				)
-% 			else
-% 				ebea.population.update(
-% 					Player^id,
-% 					ebea.player.selection.opinion.increaseUncertainty(PlayerParameters^selectionPar),
-% 					!NextRoundPopulation)
-% 			)
-% 		else
-% 			throw("ebea.player.selection.stepSelectPartnersPlayGame/10: Invalid combination of chromosome and traits")
-% 		)
-% 	).
-
-
-
-
-stepSelectPartnersPlayGame(
-	PredPlayGame,
-	PlayerParameters,
-	Game,
-	Player,
-	Neighbours,
-	!NextRoundPopulation,
-	!Random
-) :-
-	NumberPartners = game.numberPlayers(Game) - 1,
-	Chromosome = Player^chromosome^selectionGenes,
-	Traits = Player^traits^selectionTrait,
-	(if
-		NumberPartners > ebea.population.neighbours.size(Neighbours)
-	then
-		true
-	else
-		Chromosome = random,
-		(if
-			Traits = random
-		then
-			/* create the strategy profile */
-			ebea.population.neighbours.randomElements(NumberPartners, Neighbours, PartnersID, !Random),
-			list.map(ebea.population.players.player(!.NextRoundPopulation^players), PartnersID) = RestProfile,
-			/* play the game */
-			PredPlayGame(Player, RestProfile, _MPayoffs, !NextRoundPopulation, !Random),
-			/* no selection traits to update */
-			true
-		else
-			throw("ebea.player.selection.stepSelectPartnersPlayGame2/10: Invalid combination of chromosome and phenotipic trait")
-		)
-		;
-		Chromosome = normalPartnerSelection(PS),
-		(if
-			Traits = partnerSelection(_, no)
-		then
-			/* create the strategy profile */
-			ebea.player.selection.pcv.select(NumberPartners, Neighbours, Traits^pcv, !Random, SelectedSlot, PartnersIDs),
-			list.map(ebea.population.players.player(!.NextRoundPopulation^players), PartnersIDs) = RestProfile,
-			/* play the game */
-			PredPlayGame(Player, RestProfile, MPayoffs, !NextRoundPopulation, !Random),
-			/* update the selection traits */
-			(
-				MPayoffs = yes(Payoffs),
-				PlayerPayoff = array.lookup(Payoffs, 0)
-				;
-				MPayoffs = no,
-				PlayerPayoff = game.lowestPayoff(Game)
-			),
-			ebea.player.selection.pcv.updateProbCombVectors(
-				Game, PlayerParameters^energyPar^energyScaling,
-				NumberPartners, PS, PartnersIDs, Neighbours, SelectedSlot, PlayerPayoff,
-				!Random,
-				Traits^pcv, NextProbCombVector
-			),
-			ebea.population.update(
-				Player^id,
-				ebea.player.selection.pcv.updatePlayerProbCombVectors(NextProbCombVector),
-				!NextRoundPopulation
-			)
-		else
-			throw("ebea.player.selection.stepSelectPartnersPlayGame2/10: Invalid combination of chromosome and phenotipic trait")
-		)
-		;
-		Chromosome = weightedPartnerSelection(_),
-		(if
-			Traits = partnerSelection(_, yes(WV))
-		then
-			true
-		else
-			throw("ebea.player.selection.stepSelectPartnersPlayGame/10: Invalid combination of chromosome and phenotipic trait")
-		)
-		;
-		(
-			Chromosome = opinion_old(_, _) ;
-			Chromosome = opinion_old(_, _, _, _)
-		),
-		(if
-			Traits = opinion(_, _)
-		then
-			(if
-				ebea.player.selection.opinion.selectPartners(
-					Traits,
-					NumberPartners,
-					!.NextRoundPopulation^players,
-					Neighbours,
-					RestProfile,
-					!Random)
-			then
-				/* play the game */
-				PredPlayGame(Player, RestProfile, MPayoffs, !NextRoundPopulation, !Random),
-				/* update the selection traits */
-				(
-					MPayoffs = yes(Payoffs),
-					ebea.player.selection.opinion.updateOpinions(Game, PlayerParameters, [Player | RestProfile], Payoffs, !NextRoundPopulation)
-					;
-					MPayoffs = no
-				)
-			else
-				ebea.population.update(
-					Player^id,
-					ebea.player.selection.opinion.increaseUncertainty(PlayerParameters^selectionPar),
-					!NextRoundPopulation)
-			)
-		else
-			throw("ebea.player.selection.stepSelectPartnersPlayGame/10: Invalid combination of chromosome and traits")
-		)
-	).
 
 
 
@@ -881,7 +384,8 @@ stepSelectPartnersPlayGame2(
 			),
 			ebea.player.selection.pcv.updateProbCombVectors(
 				Game, PlayerParameters^energyPar^energyScaling,
-				NumberPartners, PS, PartnersIDs, Neighbours, SelectedSlot, PlayerPayoff,
+				PS, PartnersIDs, SelectedSlot, PlayerPayoff,
+				ebea.population.neighbours.randomElements(NumberPartners, Neighbours),
 				!Random,
 				Traits^pcv, NextProbCombVector
 			),
@@ -894,11 +398,45 @@ stepSelectPartnersPlayGame2(
 			throw("ebea.player.selection.stepSelectPartnersPlayGame2/10: Invalid combination of chromosome and phenotipic trait")
 		)
 		;
-		Chromosome = weightedPartnerSelection(_),
+		Chromosome = weightedPartnerSelection(PS),
 		(if
-			Traits = partnerSelection(_, yes(WV))
+			Traits = partnerSelection(_, yes(OldWeightVector))
 		then
-			true
+			/* create the strategy profile */
+			ebea.player.selection.pcv.select(NumberPartners, Neighbours, Traits^pcv, !Random, SelectedSlot, PartnersIDs),
+			list.map(ebea.population.players.player(!.NextRoundPopulation^players), PartnersIDs) = RestProfile,
+			/* play the game */
+			ebea.player.energy.stepPlayGame2(PlayerParameters^energyPar, Game, Player, RestProfile, MPayoffs, !NextRoundPopulation, !PlayerProfile, !Random),
+			/* update the selection traits */
+			(
+				MPayoffs = yes(Payoffs),
+				PlayerPayoff = array.lookup(Payoffs, 0),
+				WeightFactor = PlayerPayoff - game.lowestPayoff(Game)
+				;
+				MPayoffs = no,
+				PlayerPayoff = game.lowestPayoff(Game),
+				WeightFactor = 0.0
+			),
+			ebea.player.selection.pcv.probabilityFloat(PS, Traits^pcv, SelectedSlot, ProbabilitySelectedCombination),
+			list.foldl(
+				ebea.player.selection.wv.updateWeight(
+					ProbabilitySelectedCombination,
+					WeightFactor),
+				PartnersIDs,
+				OldWeightVector,
+				NextWeightVector),
+			ebea.player.selection.pcv.updateProbCombVectors(
+				Game, PlayerParameters^energyPar^energyScaling,
+				PS, PartnersIDs, SelectedSlot, PlayerPayoff,
+				ebea.player.selection.wv.drawAsList(NextWeightVector, NumberPartners),
+				!Random,
+				Traits^pcv, NextProbCombVector
+			),
+			ebea.population.update(
+				Player^id,
+				ebea.player.selection.wv.updatePlayerProbCombVectorsWeightVector(NextProbCombVector, NextWeightVector),
+				!NextRoundPopulation
+			)
 		else
 			throw("ebea.player.selection.stepSelectPartnersPlayGame/10: Invalid combination of chromosome and phenotipic trait")
 		)
@@ -910,17 +448,8 @@ stepSelectPartnersPlayGame2(
 		(if
 			Traits = opinion(_, _)
 		then
-			% /* create the strategy profile */
-			% ebea.player.selection.opinion.selectPartners(Traits, NumberPartners, Neighbours, RestProfile, !Random),
-			% /* play the game */
-			% ebea.player.energy.stepPlayGame(PlayerParameters^energyPar, Game, Player, RestProfile, Payoffs, !NextRoundPopulation, !PlayerProfile, !Random),
-			% /* update the selection traits */
-			% ebea.player.selection.opinion.updateOpinions(Game, PlayerParameters, [Player | RestProfile], Payoffs, !NextRoundPopulation)
-
-			/* create the strategy profile */
-%			ebea.player.selection.opinion.selectPartners_v1(Traits, NumberPartners, Neighbours, RestProfile, !Random),
-			%rng.randomElementsList(NumberPartners, Neighbours, RestProfile, !Random),
 			(if
+				/* create the strategy profile */
 				ebea.player.selection.opinion.selectPartners(
 					Traits,
 					NumberPartners,
@@ -928,11 +457,154 @@ stepSelectPartnersPlayGame2(
 					Neighbours,
 					RestProfile,
 					!Random)
-%				ebea.player.selection.opinion.selectPartners_v2(Traits, NumberPartners, Neighbours, RestProfile, !Random),
-%				ebea.player.selection.opinion.checkPartnerOpinion(Traits, RestProfile)
 			then
 				/* play the game */
 				ebea.player.energy.stepPlayGame2(PlayerParameters^energyPar, Game, Player, RestProfile, MPayoffs, !NextRoundPopulation, !PlayerProfile, !Random),
+				/* update the selection traits */
+				(
+					MPayoffs = yes(Payoffs),
+					ebea.player.selection.opinion.updateOpinions(Game, PlayerParameters, [Player | RestProfile], Payoffs, !NextRoundPopulation)
+					;
+					MPayoffs = no
+				)
+			else
+				/* update the selection traits */
+				ebea.population.update(
+					Player^id,
+					ebea.player.selection.opinion.increaseUncertainty(PlayerParameters^selectionPar),
+					!NextRoundPopulation)
+			)
+		else
+			throw("ebea.player.selection.stepSelectPartnersPlayGame/10: Invalid combination of chromosome and traits")
+		)
+	).
+
+
+stepSelectPartnersPlayGame3(
+	PlayerParameters, Game, Player, Neighbours,
+	!NextRoundPopulation,
+	!PlayerProfile,
+	!Random,
+	!SiteActionAccumulator
+) :-
+	NumberPartners = game.numberPlayers(Game) - 1,
+	Chromosome = Player^chromosome^selectionGenes,
+	Traits = Player^traits^selectionTrait,
+	(if
+		NumberPartners > ebea.population.neighbours.size(Neighbours)
+	then
+		true
+	else
+		Chromosome = random,
+		(if
+			Traits = random
+		then
+			/* create the strategy profile */
+			ebea.population.neighbours.randomElements(NumberPartners, Neighbours, PartnersID, !Random),
+			list.map(ebea.population.players.player(!.NextRoundPopulation^players), PartnersID) = RestProfile,
+			/* play the game */
+			ebea.player.energy.stepPlayGame3(PlayerParameters^energyPar, Game, Player, RestProfile, _MPayoffs, !NextRoundPopulation, !PlayerProfile, !Random, !SiteActionAccumulator),
+			/* no selection traits to update */
+			true
+		else
+			throw("ebea.player.selection.stepSelectPartnersPlayGame/10: Invalid combination of chromosome and phenotipic trait")
+		)
+		;
+		Chromosome = normalPartnerSelection(PS),
+		(if
+			Traits = partnerSelection(_, no)
+		then
+			/* create the strategy profile */
+			ebea.player.selection.pcv.select(NumberPartners, Neighbours, Traits^pcv, !Random, SelectedSlot, PartnersIDs),
+			list.map(ebea.population.players.player(!.NextRoundPopulation^players), PartnersIDs) = RestProfile,
+			/* play the game */
+			ebea.player.energy.stepPlayGame3(PlayerParameters^energyPar, Game, Player, RestProfile, MPayoffs, !NextRoundPopulation, !PlayerProfile, !Random, !SiteActionAccumulator),
+			/* update the selection traits */
+			(
+				MPayoffs = yes(Payoffs),
+				PlayerPayoff = array.lookup(Payoffs, 0)
+				;
+				MPayoffs = no,
+				PlayerPayoff = game.lowestPayoff(Game)
+			),
+			ebea.player.selection.pcv.updateProbCombVectors(
+				Game, PlayerParameters^energyPar^energyScaling,
+				PS, PartnersIDs, SelectedSlot, PlayerPayoff,
+				ebea.population.neighbours.randomElements(NumberPartners, Neighbours),
+				!Random,
+				Traits^pcv, NextProbCombVector
+			),
+			ebea.population.update(
+				Player^id,
+				ebea.player.selection.pcv.updatePlayerProbCombVectors(NextProbCombVector),
+				!NextRoundPopulation
+			)
+		else
+			throw("ebea.player.selection.stepSelectPartnersPlayGame/10: Invalid combination of chromosome and phenotipic trait")
+		)
+		;
+		Chromosome = weightedPartnerSelection(PS),
+		(if
+			Traits = partnerSelection(_, yes(OldWeightVector))
+		then
+			/* create the strategy profile */
+			ebea.player.selection.pcv.select(NumberPartners, Neighbours, Traits^pcv, !Random, SelectedSlot, PartnersIDs),
+			list.map(ebea.population.players.player(!.NextRoundPopulation^players), PartnersIDs) = RestProfile,
+			/* play the game */
+			ebea.player.energy.stepPlayGame3(PlayerParameters^energyPar, Game, Player, RestProfile, MPayoffs, !NextRoundPopulation, !PlayerProfile, !Random, !SiteActionAccumulator),
+			/* update the selection traits */
+			(
+				MPayoffs = yes(Payoffs),
+				PlayerPayoff = array.lookup(Payoffs, 0),
+				WeightFactor = PlayerPayoff - game.lowestPayoff(Game)
+				;
+				MPayoffs = no,
+				PlayerPayoff = game.lowestPayoff(Game),
+				WeightFactor = 0.0
+			),
+			ebea.player.selection.pcv.probabilityFloat(PS, Traits^pcv, SelectedSlot, ProbabilitySelectedCombination),
+			list.foldl(
+				ebea.player.selection.wv.updateWeight(
+					ProbabilitySelectedCombination,
+					WeightFactor),
+				PartnersIDs,
+				OldWeightVector,
+				NextWeightVector),
+			ebea.player.selection.pcv.updateProbCombVectors(
+				Game, PlayerParameters^energyPar^energyScaling,
+				PS, PartnersIDs, SelectedSlot, PlayerPayoff,
+				ebea.player.selection.wv.drawAsList(NextWeightVector, NumberPartners),
+				!Random,
+				Traits^pcv, NextProbCombVector
+			),
+			ebea.population.update(
+				Player^id,
+				ebea.player.selection.wv.updatePlayerProbCombVectorsWeightVector(NextProbCombVector, NextWeightVector),
+				!NextRoundPopulation
+			)
+		else
+			throw("ebea.player.selection.stepSelectPartnersPlayGame/10: Invalid combination of chromosome and phenotipic trait")
+		)
+		;
+		(
+			Chromosome = opinion_old(_, _) ;
+			Chromosome = opinion_old(_, _, _, _)
+		),
+		(if
+			Traits = opinion(_, _)
+		then
+			(if
+				/* create the strategy profile */
+				ebea.player.selection.opinion.selectPartners(
+					Traits,
+					NumberPartners,
+					!.NextRoundPopulation^players,
+					Neighbours,
+					RestProfile,
+					!Random)
+			then
+				/* play the game */
+				ebea.player.energy.stepPlayGame3(PlayerParameters^energyPar, Game, Player, RestProfile, MPayoffs, !NextRoundPopulation, !PlayerProfile, !Random, !SiteActionAccumulator),
 				/* update the selection traits */
 				(
 					MPayoffs = yes(Payoffs),
@@ -950,135 +622,6 @@ stepSelectPartnersPlayGame2(
 			throw("ebea.player.selection.stepSelectPartnersPlayGame/10: Invalid combination of chromosome and traits")
 		)
 	).
-
-
-stepSelectPartnersPlayGame3(
-	PlayerParameters, Game, Player, Neighbours,
-	!NextRoundPopulation,
-	PlayerProfile1, PlayerProfile2,
-	!Random,
-	SiteActionAccumulator1, SiteActionAccumulator2
-) :-
-	PredPlayGame =
-	(pred(
-			LPlayer   :: in,
-			LPartners :: in,
-			LMPayoffs :: out,
-			!.LNextRoundPopulation :: in,  !:LNextRoundPopulation :: out,
-			!.LRandom              :: in,  !:LRandom              :: out) is det :-
-		ebea.player.energy.stepPlayGame3High(
-			PlayerParameters^energyPar,
-			Game,
-			PlayerProfile1, PlayerProfile2,
-			SiteActionAccumulator1, SiteActionAccumulator2,
-			LPlayer,
-			LPartners,
-			LMPayoffs,
-			!LNextRoundPopulation,
-			!LRandom)
-	),
-	stepSelectPartnersPlayGame(
-		PredPlayGame,
-		PlayerParameters,
-		Game,
-		Player,
-		Neighbours,
-		!NextRoundPopulation,
-		!Random).
-	% NumberPartners = game.numberPlayers(Game) - 1,
-	% Chromosome = Player^chromosome^selectionGenes,
-	% Traits = Player^traits^selectionTrait,
-	% (if
-	% 	NumberPartners > ebea.population.neighbours.size(Neighbours)
-	% then
-	% 	true
-	% else
-	% 	Chromosome = random,
-	% 	(if
-	% 		Traits = random
-	% 	then
-	% 		/* create the strategy profile */
-	% 		ebea.population.neighbours.randomElements(NumberPartners, Neighbours, PartnersID, !Random),
-	% 		list.map(ebea.population.players.player(!.NextRoundPopulation^players), PartnersID) = RestProfile,
-	% 		/* play the game */
-	% 		ebea.player.energy.stepPlayGame3(PlayerParameters^energyPar, Game, Player, RestProfile, _MPayoffs, !NextRoundPopulation, !PlayerProfile, !Random, !SiteActionAccumulator),
-	% 		/* no selection traits to update */
-	% 		true
-	% 	else
-	% 		throw("ebea.player.selection.stepSelectPartnersPlayGame/10: Invalid combination of chromosome and phenotipic trait")
-	% 	)
-	% 	;
-	% 	Chromosome = normalPartnerSelection(PS),
-	% 	(if
-	% 		Traits = partnerSelection(_, _)
-	% 	then
-	% 		/* create the strategy profile */
-	% 		ebea.player.selection.pcv.select(NumberPartners, Neighbours, Traits^pcv, !Random, SelectedSlot, PartnersIDs),
-	% 		list.map(ebea.population.players.player(!.NextRoundPopulation^players), PartnersIDs) = RestProfile,
-	% 		/* play the game */
-	% 		ebea.player.energy.stepPlayGame3(PlayerParameters^energyPar, Game, Player, RestProfile, MPayoffs, !NextRoundPopulation, !PlayerProfile, !Random, !SiteActionAccumulator),
-	% 		/* update the selection traits */
-	% 		(
-	% 			MPayoffs = yes(Payoffs),
-	% 			PlayerPayoff = array.lookup(Payoffs, 0)
-	% 			;
-	% 			MPayoffs = no,
-	% 			PlayerPayoff = game.lowestPayoff(Game)
-	% 		),
-	% 		ebea.player.selection.pcv.updateProbCombVectors(
-	% 			Game, PlayerParameters^energyPar^energyScaling,
-	% 			NumberPartners, PS, PartnersIDs, Neighbours, SelectedSlot, PlayerPayoff,
-	% 			!Random,
-	% 			Traits^pcv, NextProbCombVector
-	% 		),
-	% 		ebea.population.update(
-	% 			Player^id,
-	% 			ebea.player.selection.pcv.updatePlayerProbCombVectors(NextProbCombVector),
-	% 			!NextRoundPopulation
-	% 		)
-	% 	else
-	% 		throw("ebea.player.selection.stepSelectPartnersPlayGame/10: Invalid combination of chromosome and phenotipic trait")
-	% 	)
-	% 	;
-	% 	Chromosome = weightedPartnerSelection(PS),
-	% 	throw("ebea.player.selection.stepSelectPartnersPlayGame/10: Not implemented")
-	% 	;
-	% 	(
-	% 		Chromosome = opinion_old(_, _) ;
-	% 		Chromosome = opinion_old(_, _, _, _)
-	% 	),
-	% 	(if
-	% 		Traits = opinion(_, _)
-	% 	then
-	% 		/* create the strategy profile */
-	% 		(if
-	% 			ebea.player.selection.opinion.selectPartners(
-	% 				Traits,
-	% 				NumberPartners,
-	% 				!.NextRoundPopulation^players,
-	% 				Neighbours,
-	% 				RestProfile,
-	% 				!Random)
-	% 		then
-	% 			/* play the game */
-	% 			ebea.player.energy.stepPlayGame3(PlayerParameters^energyPar, Game, Player, RestProfile, MPayoffs, !NextRoundPopulation, !PlayerProfile, !Random, !SiteActionAccumulator),
-	% 			/* update the selection traits */
-	% 			(
-	% 				MPayoffs = yes(Payoffs),
-	% 				ebea.player.selection.opinion.updateOpinions(Game, PlayerParameters, [Player | RestProfile], Payoffs, !NextRoundPopulation)
-	% 				;
-	% 				MPayoffs = no
-	% 			)
-	% 		else
-	% 			ebea.population.update(
-	% 				Player^id,
-	% 				ebea.player.selection.opinion.increaseUncertainty(PlayerParameters^selectionPar),
-	% 				!NextRoundPopulation)
-	% 		)
-	% 	else
-	% 		throw("ebea.player.selection.stepSelectPartnersPlayGame/10: Invalid combination of chromosome and traits")
-	% 	)
-	% ).
 
 stepProcessBornPlayersCheckForDeadPlayers(Game, DeadPlayerIDs, NewBornIDs, Neighbours, !Player, !Random) :-
 	NumberPartners = game.numberPlayers(Game) - 1,
@@ -1193,6 +736,176 @@ parseTraits(T) -->
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of private predicates and functions
+
+:- pred stepSelectPartnersPlayGame(
+	pred(
+		player(CS, T),
+		list(player(CS, T)),
+		maybe(array(float)),
+		population(CS, T),  population(CS, T),
+		R,                  R,
+		A,                  A
+		) ::
+		in(pred(in, in, out, in, out, in, out, in, out) is det),
+	ebea.player.parameters(P)             :: in,
+	G                                     :: in,
+	player(CS, T)                         :: in,
+	ebea.population.neighbours.neighbours :: in,
+	population(CS, T)                       :: in,  population(CS, T)                       :: out,
+	R                                       :: in,  R                                       :: out,
+	A                                       :: in,  A                                       :: out
+) is det
+	<= (
+	abstractGame(G),
+	ePRNG(R)
+).
+
+stepSelectPartnersPlayGame(
+	PredPlayGame,
+	PlayerParameters,
+	Game,
+	Player,
+	Neighbours,
+	!NextRoundPopulation,
+	!Random,
+	!Extra
+) :-
+	NumberPartners = game.numberPlayers(Game) - 1,
+	Chromosome = Player^chromosome^selectionGenes,
+	Traits = Player^traits^selectionTrait,
+	(if
+		NumberPartners > ebea.population.neighbours.size(Neighbours)
+	then
+		true
+	else
+		Chromosome = random,
+		(if
+			Traits = random
+		then
+			/* create the strategy profile */
+			ebea.population.neighbours.randomElements(NumberPartners, Neighbours, PartnersID, !Random),
+			list.map(ebea.population.players.player(!.NextRoundPopulation^players), PartnersID) = RestProfile,
+			/* play the game */
+			PredPlayGame(Player, RestProfile, _MPayoffs, !NextRoundPopulation, !Random, !Extra),
+			/* no selection traits to update */
+			true
+		else
+			throw("ebea.player.selection.stepSelectPartnersPlayGame2/10: Invalid combination of chromosome and phenotipic trait")
+		)
+		;
+		Chromosome = normalPartnerSelection(PS),
+		(if
+			Traits = partnerSelection(_, no)
+		then
+			/* create the strategy profile */
+			ebea.player.selection.pcv.select(NumberPartners, Neighbours, Traits^pcv, !Random, SelectedSlot, PartnersIDs),
+			list.map(ebea.population.players.player(!.NextRoundPopulation^players), PartnersIDs) = RestProfile,
+			/* play the game */
+			PredPlayGame(Player, RestProfile, MPayoffs, !NextRoundPopulation, !Random, !Extra),
+			/* update the selection traits */
+			(
+				MPayoffs = yes(Payoffs),
+				PlayerPayoff = array.lookup(Payoffs, 0)
+				;
+				MPayoffs = no,
+				PlayerPayoff = game.lowestPayoff(Game)
+			),
+			ebea.player.selection.pcv.updateProbCombVectors(
+				Game, PlayerParameters^energyPar^energyScaling,
+				PS, PartnersIDs, SelectedSlot, PlayerPayoff,
+				ebea.population.neighbours.randomElements(NumberPartners, Neighbours),
+				!Random,
+				Traits^pcv, NextProbCombVector
+			),
+			ebea.population.update(
+				Player^id,
+				ebea.player.selection.pcv.updatePlayerProbCombVectors(NextProbCombVector),
+				!NextRoundPopulation
+			)
+		else
+			throw("ebea.player.selection.stepSelectPartnersPlayGame2/10: Invalid combination of chromosome and phenotipic trait")
+		)
+		;
+		Chromosome = weightedPartnerSelection(PS),
+		(if
+			Traits = partnerSelection(_, yes(OldWeightVector))
+		then
+			/* create the strategy profile */
+			ebea.player.selection.pcv.select(NumberPartners, Neighbours, Traits^pcv, !Random, SelectedSlot, PartnersIDs),
+			list.map(ebea.population.players.player(!.NextRoundPopulation^players), PartnersIDs) = RestProfile,
+			/* play the game */
+			PredPlayGame(Player, RestProfile, MPayoffs, !NextRoundPopulation, !Random, !Extra),
+			/* update the selection traits */
+			(
+				MPayoffs = yes(Payoffs),
+				PlayerPayoff = array.lookup(Payoffs, 0),
+				WeightFactor = PlayerPayoff - game.lowestPayoff(Game)
+				;
+				MPayoffs = no,
+				PlayerPayoff = game.lowestPayoff(Game),
+				WeightFactor = 0.0
+			),
+			ebea.player.selection.pcv.probabilityFloat(PS, Traits^pcv, SelectedSlot, ProbabilitySelectedCombination),
+			list.foldl(
+				ebea.player.selection.wv.updateWeight(
+					ProbabilitySelectedCombination,
+					WeightFactor),
+				PartnersIDs,
+				OldWeightVector,
+				NextWeightVector),
+			ebea.player.selection.pcv.updateProbCombVectors(
+				Game, PlayerParameters^energyPar^energyScaling,
+				PS, PartnersIDs, SelectedSlot, PlayerPayoff,
+				ebea.player.selection.wv.drawAsList(NextWeightVector, NumberPartners),
+				!Random,
+				Traits^pcv, NextProbCombVector
+			),
+			ebea.population.update(
+				Player^id,
+				ebea.player.selection.wv.updatePlayerProbCombVectorsWeightVector(NextProbCombVector, NextWeightVector),
+				!NextRoundPopulation
+			)
+		else
+			throw("ebea.player.selection.stepSelectPartnersPlayGame/10: Invalid combination of chromosome and phenotipic trait")
+		)
+		;
+		(
+			Chromosome = opinion_old(_, _) ;
+			Chromosome = opinion_old(_, _, _, _)
+		),
+		(if
+			Traits = opinion(_, _)
+		then
+			(if
+				/* create the strategy profile */
+				ebea.player.selection.opinion.selectPartners(
+					Traits,
+					NumberPartners,
+					!.NextRoundPopulation^players,
+					Neighbours,
+					RestProfile,
+					!Random)
+			then
+				/* play the game */
+				PredPlayGame(Player, RestProfile, MPayoffs, !NextRoundPopulation, !Random, !Extra),
+				/* update the selection traits */
+				(
+					MPayoffs = yes(Payoffs),
+					ebea.player.selection.opinion.updateOpinions(Game, PlayerParameters, [Player | RestProfile], Payoffs, !NextRoundPopulation)
+					;
+					MPayoffs = no
+				)
+			else
+				/* update the selection traits */
+				ebea.population.update(
+					Player^id,
+					ebea.player.selection.opinion.increaseUncertainty(PlayerParameters^selectionPar),
+					!NextRoundPopulation)
+			)
+		else
+			throw("ebea.player.selection.stepSelectPartnersPlayGame/10: Invalid combination of chromosome and traits")
+		)
+	).
 
 
 :- func fold = ebea.player.selection.ac.

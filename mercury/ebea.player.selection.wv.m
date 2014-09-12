@@ -92,6 +92,18 @@
 	weightVector(T) :: in,  weightVector(T) :: out
 ) is det.
 
+
+
+/**
+ * updatePlayerProbCombVectorsWeightVector(ProbCombVector, WeightVector, Player) = Result
+  
+ * Updates the data of a player after he has played a game.  In this module
+ * this corresponds to replacing the probability and combination vectors and weight vector.
+  
+ */
+:- func updatePlayerProbCombVectorsWeightVector(probabilityCombinationVector, weightVector, player(C, T)) = player(C, T).
+
+
 :- pred parse(weightVector, list(int), list(int)).
 :- mode parse(in, out, in) is det.
 :- mode parse(out, in, out) is semidet.
@@ -177,6 +189,19 @@ updateWeight(ProbabilitySelectedCombination, ScaledPayoff, ForElement, !WeightVe
 		!.WeightVector^sum - OldWeight + NewWeight,
 		!.WeightVector^size
 	).
+
+updatePlayerProbCombVectorsWeightVector(PCV, WV, Player) = Result :-
+	Player^traits^selectionTrait = SelectionPhe,
+	Traits = partnerSelection(PCV, yes(WV)),
+	PlayerTraits = 'selectionTrait :='(Player^traits, Traits),
+	Result = 'traits :='(Player, PlayerTraits)
+	;
+	Player^traits^selectionTrait = random,
+	throw("ebea.player.selection.wv.updatePlayerProbCombVectorsWeightVector/3: Invalid player traits")
+	;
+	Player^traits^selectionTrait = opinion(_, _),
+	throw("ebea.player.selection.wv.updatePlayerProbCombVectorsWeightVector/3: Invalid player traits")
+	.
 
 parse(wv(Elements, Sum, Size)) -->
 	parseElements(Elements),

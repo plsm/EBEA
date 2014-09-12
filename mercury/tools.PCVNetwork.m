@@ -602,7 +602,7 @@ playerIDNet(PCV, ID) :-
 ) is det.
 
 printEdges(DotStream, Parameters, PlayerID, PCV, SlotIndex, !IO) :-
-	probability(PCV, SlotIndex, Probability),
+	ebea.player.selection.pcv.probabilityRaw(PCV, SlotIndex, Probability),
 	list.foldl(
 		printAnEdge(DotStream, Parameters, PlayerID, Probability, SlotIndex),
 		array.lookup(PCV, SlotIndex)^combination,

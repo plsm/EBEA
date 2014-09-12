@@ -168,10 +168,6 @@ mutateGene(Parameters, Index, !Distribution, !Random, Chromosome, Result) :-
 
 born(_, _) = throw("Not used").
 
-
-
-
-
 default = random.
 
 dialog =

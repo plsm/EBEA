@@ -96,7 +96,7 @@
 :- mode select(in, in, in, in, out, out, out) is det.
 
 /**
- * updateProbCombVectors(Game, EnergyScaling, CombinationSize, Chromosome, SelectedCombinationIDs, Partners, SelectedSlot, Payoff, !Random, !ProbCombVectors)
+ * updateProbCombVectors(Game, EnergyScaling, Chromosome, SelectedCombinationIDs, SelectedSlot, Payoff, PredGenerateCombination, !Random, !ProbCombVectors)
 
  * Update the probability and combination vectors given the game result and
  * the selected combination.  If the payoff was lower than the threshold,
@@ -109,16 +109,20 @@
  * remainder is assigned to a random slot.  Which can be the selected slot.
  */
 :- pred updateProbCombVectors(
-	G, energyScaling,
-	int, ebea.player.selection.pcv.chromosome, list(key), ebea.population.neighbours.neighbours,
-	int, float,
-	R, R,
-	probabilityCombinationVector, probabilityCombinationVector
-	)
-	<= (abstractGame(G), ePRNG(R)).
-:- mode updateProbCombVectors(in, in, in, in, in, in, in, in, in, out, in, out) is det.
-%:- mode updateProbCombVectors(in, in, in, in(bound(partnerSelection(ground,ground,ground,ground))), in, in, in, in, in, out, di, uo) is det.
-%:- mode update(in, in(pred(di, uo, out) is det), in, in, di, uo, di, uo) is det.
+	G                                    :: in,
+	energyScaling                        :: in,
+	ebea.player.selection.pcv.chromosome :: in,
+	list(key)                            :: in,
+	int                                  :: in,
+	float                                :: in,
+	pred(combination, R, R) :: in(pred(out, in, out) is det),
+	R                            :: in,  R                            :: out,
+	probabilityCombinationVector :: in,  probabilityCombinationVector :: out
+) is det
+	<= (
+	abstractGame(G),
+	ePRNG(R)
+).
 
 
 /**
@@ -174,12 +178,20 @@
 
 
 /**
- * probability(ProbCombVectors, Index, Value)
+ * probabilityRaw(ProbCombVectors, Index, Value)
 
  * Return the raw probability of selecting the {@code Index} combination.
  */
-:- pred probability(probabilityCombinationVector, int, int).
-:- mode probability(in, in, out) is det.
+:- pred probabilityRaw(probabilityCombinationVector, int, int).
+:- mode probabilityRaw(in, in, out) is det.
+
+/**
+ * probabilityFloat(ProbCombVectors, Index, Value)
+
+ * Return the probability of selecting the {@code Index} combination as a floating point value.
+ */
+:- pred probabilityFloat(ebea.player.selection.pcv.chromosome, probabilityCombinationVector, int, float).
+:- mode probabilityFloat(in, in, in, out) is det.
 
 :- pred parse(probabilityCombinationVector, list(int), list(int)).
 :- mode parse(in, out, in) is det.
@@ -237,7 +249,17 @@ select(NumberPartners, Neighbours, ProbCombVectors, !Random, SelectedSlot, Combi
 		CombinationIDs = TmpCombinationIDs
 	).
 
-updateProbCombVectors(Game, EnergyScaling, CombinationSize, Chromosome, SelectedCombinationIDs, Partners, SelectedSlot, Payoff, !Random, !ProbCombVectors) :-
+updateProbCombVectors(
+	Game,
+	EnergyScaling,
+	Chromosome,
+	SelectedCombinationIDs,
+	SelectedSlot,
+	Payoff,
+	PredGenerateCombination,
+	!Random,
+	!ProbCombVectors)
+:-
 	VectorSize = array.size(!.ProbCombVectors),
 	(if
 		scaledPayoffToThreshold(Game, EnergyScaling, Payoff) >= Chromosome^payoffThreshold
@@ -260,7 +282,7 @@ updateProbCombVectors(Game, EnergyScaling, CombinationSize, Chromosome, Selected
 			true
 		else
 			TP0 = array.lookup(!.ProbCombVectors, VectorSize - 1)^probability,
-			ebea.population.neighbours.randomElements(CombinationSize, Partners, NewCombinationIDs, !Random),
+			PredGenerateCombination(NewCombinationIDs, !Random),
 			(if
 				array.size(!.ProbCombVectors) = 1
 			then
@@ -269,7 +291,7 @@ updateProbCombVectors(Game, EnergyScaling, CombinationSize, Chromosome, Selected
 				array.slow_set(0, Slot, !ProbCombVectors)
 				%array.set(0, Slot, !ProbCombVectors)
 			else
-				probability(!.ProbCombVectors, SelectedSlot, OldProbability),
+				probabilityRaw(!.ProbCombVectors, SelectedSlot, OldProbability),
 				rng.nextInt(0, array.size(!.ProbCombVectors) - 1, RemainderSlot, !Random),
 				HowMuch = float.round_to_int(float(OldProbability) * (1.0 - Chromosome^probabilityUpdateFactor)),
 				Distribute = HowMuch / (array.size(!.ProbCombVectors) - 1),
@@ -361,7 +383,7 @@ copyPercentageCombinations(Percentage, Source, !Destiny, !Random) :-
 	Remaining = int.min(Percentage * array.size(Source) / 100, array.size(!.Destiny)),
 	copyCombination(Remaining, array.size(Source) - 1, array.copy(Source), !Destiny, !Random).
 */
-probability(ProbCombVectors, Index, Value) :-
+probabilityRaw(ProbCombVectors, Index, Value) :-
 	(if
 		Index = 0
 	then
@@ -372,6 +394,11 @@ probability(ProbCombVectors, Index, Value) :-
 		array.lookup(ProbCombVectors, Index, SlotI),
 		Value = SlotI^probability - SlotP^probability
 	).
+
+probabilityFloat(Parameters, ProbCombVectors, Index, Value) :-
+	probabilityRaw(ProbCombVectors, Index, Raw),
+	Value = float(Raw) / float(1 << Parameters^bitsPerProbability)
+	.
 
 :- pragma promise_pure(parse/3).
 
@@ -573,7 +600,7 @@ testLoop(PCV, !IO) :-
 	),
 	PredPrintProbability =
 	(pred(Index::in, IOdi::di, IOuo::uo) is det :-
-		probability(PCV, Index, Value),
+		probabilityRaw(PCV, Index, Value),
 		io.format(" %4d", [i(Value)], IOdi, IOuo)
 	),
 	io.print("pv:   ", !IO),
