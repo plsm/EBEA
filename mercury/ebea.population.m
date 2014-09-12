@@ -239,32 +239,11 @@ ebea.population.players, ebea.population.site.
  */
 :- func transform_player(func(player(C, P)) = T, population(C, P)) = list(T).
 
-% /**
-%  * fold2_Player(Pred, Population, !Accumulator1, !Accumulator2)
-
-%  * Calls {@code Pred} for every player in the population with the two
-%  * accumulators.
-%  */
-
-% :- pred fold2_Player(pred(player(C, P), A, A, B, B), population(C, P), A, A, B, B).
-% :- mode fold2_Player(in(pred(in, in, out, in, out) is det), in, in, out, in, out) is det.
-% :- mode fold2_Player(in(pred(in, in, out, di, uo) is det), in, in, out, di, uo) is det.
-
-% /**
-%  * fold2_PlayerNeighbour(Pred, Population, !Accumulator1, !Accumulator2)
-  
-%  * Iterate through all pairs where a pair is a player and his neighbours
-%  * calling {@code Pred} with the two accumulators.
-  
-%  */
-% :- pred fold2_PlayerNeighbour(pred(player(C, T), list(player(C, T)), A, A, B, B), population(C, T), A, A, B, B).
-% :- mode fold2_PlayerNeighbour(in(pred(in, in, in, out, in, out) is det), in, in, out, in, out) is det.
-
 /**
  * fold3_PlayerNeighbour(Pred, Population, !Accumulator1, !Accumulator2, !Accumulator3)
   
  * Iterate through all pairs where a pair is a player and his neighbours
- * calling {@code Pred} with the two accumulators.
+ * calling {@code Pred} with the three accumulators.
   
  */
 :- pred fold3_PlayerNeighbour(pred(player(C, T), neighbours, A1, A1, A2, A2, A3, A3), population(C, T), A1, A1, A2, A2, A3, A3).
@@ -286,6 +265,11 @@ ebea.population.players, ebea.population.site.
 
 :- pred mapfold_PlayerNeighbour_sv(pred(ebea.population.neighbours.neighbours, player(C, T), player(C, T), A, A), population(C, T), population(C, T), A, A).
 :- mode mapfold_PlayerNeighbour_sv(in(pred(in, in, out, in, out) is det), in, out, in, out) is det.
+
+:- func map_PlayerNeighbour(
+	func(player(C, T), ebea.population.neighbours.neighbours) = player(C, T),
+	population(C, T)
+	) = population(C, T).
 
 /**
  * Convert a population dynamic value to a string a vice-versa.  The string
@@ -359,41 +343,43 @@ ebea.population.players, ebea.population.site.
 
 createInitialPopulation(PlayerParameters, Configuration, Population, !Random) :-
 	Configuration^geometry = Geometry,
-	(
-	Geometry = wellmixed,
-	(
-		Configuration^sites = [],
-		throw("ebea.population.createInitialPopulation/5: no sites")
-		;
-		Configuration^sites = [Site | _],
-		ebea.population.players.init(EmptyPlayers, InitialKey),
-		list.foldl4(
-			ebea.population.site.initialisePlayers(PlayerParameters, 0),
-			Site^chromosomes,
-			InitialKey, NextKey,
-			[], SitePlayerKeys,
-			EmptyPlayers, PopulationPlayers,
-			!Random),
-		SiteState^carryingCapacity = float(Site^carryingCapacity),
-		SingleSite = site(SiteState, SiteState, SitePlayerKeys, array.init(0, -1)),
-		Population = pop(array.init(1, SingleSite), PopulationPlayers, NextKey)
-	)
+	(	%
+		Geometry = wellmixed,
+		(
+			Configuration^sites = [],
+			throw("ebea.population.createInitialPopulation/5: no sites")
+			;
+			Configuration^sites = [Site | _],
+			ebea.population.players.init(EmptyPlayers, InitialKey),
+			list.foldl4(
+				ebea.population.site.initialisePlayers(PlayerParameters, 0),
+				Site^chromosomes,
+				InitialKey, NextKey,
+				[], SitePlayerKeys,
+				EmptyPlayers, PopulationPlayers,
+				!Random),
+			SiteState^carryingCapacity = float(Site^carryingCapacity),
+			SingleSite = site(SiteState, SiteState, SitePlayerKeys, array.init(0, -1)),
+			Population = pop(array.init(1, SingleSite), PopulationPlayers, NextKey)
+		)
 	;
-	Geometry = lattice(_, _, _, _),
-	SiteIndexes = 0..(Geometry^xSize * Geometry^ySize - 1),
-	ebea.population.players.init(EmptyPlayers, InitialKey),
-	list.map_foldl4(
-		ebea.population.site.createLatticeInitialSite(
-			float(Configuration^defaultCarryingCapacity),
-			Geometry,
-			PlayerParameters),
-		SiteIndexes,      InitialSites,
-		Configuration^sites, _,
-		InitialKey,       NextKey,
-		EmptyPlayers,     PopulationPlayers,
-		!Random),
-	Population = pop(array.from_list(InitialSites), PopulationPlayers, NextKey)
-	).
+		Geometry = lattice(_, _, _, _),
+		SiteIndexes = 0..(Geometry^xSize * Geometry^ySize - 1),
+		ebea.population.players.init(EmptyPlayers, InitialKey),
+		list.map_foldl4(
+			ebea.population.site.createLatticeInitialSite(
+				float(Configuration^defaultCarryingCapacity),
+				Geometry,
+				PlayerParameters),
+			SiteIndexes,      InitialSites,
+			Configuration^sites, _,
+			InitialKey,       NextKey,
+			EmptyPlayers,     PopulationPlayers,
+			!Random),
+		Population = pop(array.from_list(InitialSites), PopulationPlayers, NextKey)
+	),
+	true
+	.
 
 
 
@@ -541,6 +527,16 @@ mapfold_PlayerNeighbour(Pred, PopulationIn, PopulationOut, !Accumulator) :-
 mapfold_PlayerNeighbour_sv(Pred, PopulationIn, PopulationOut, !Accumulator) :-
 	ebea.population.players.mapFold(mapfold_real_PlayerNeighbour_sv(Pred, PopulationIn), PopulationIn^players, MappedPlayers, !Accumulator),
 	PopulationOut = 'players :='(PopulationIn, MappedPlayers).
+
+
+map_PlayerNeighbour(MapPlayerNeighbourFunc, Population) = Result :-
+	MapPlayerFunc =
+	(func(OldPlayer) = NewPlayer :-
+		ebea.population.neighbours.init(Population^sites, OldPlayer) = Neighbours,
+		NewPlayer = MapPlayerNeighbourFunc(OldPlayer, Neighbours)
+	),
+	Result = 'players :='(Population, ebea.population.players.map(MapPlayerFunc, Population^players))
+	.
 
 stringDynamic("birth+death", birthPlusDeath).
 stringDynamic("birth>death", birthThenDeath).
