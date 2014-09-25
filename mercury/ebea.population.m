@@ -17,6 +17,7 @@
 :- import_module ebea.population.neighbours, ebea.population.configuration,
 ebea.population.players, ebea.population.site.
 :- import_module chromosome, ebea.player, rng, rng.distribution, parseable.
+:- import_module game.
 :- import_module array, char, io, list, maybe.
 
 /**
@@ -109,12 +110,14 @@ ebea.population.players, ebea.population.site.
 
 
 :- pred createInitialPopulation(
+	G                                                 :: in,
 	ebea.player.parameters(P)                         :: in,
 	ebea.population.configuration.configuration(C, _) :: in,
 	population(C, T) :: out,
 	R :: in,  R :: out
 ) is det
 	<= (
+	abstractGame(G),
 	chromosome(C, T, P),
 	ePRNG(R)
 ).
@@ -341,7 +344,7 @@ ebea.population.players, ebea.population.site.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of exported predicates and functions
 
-createInitialPopulation(PlayerParameters, Configuration, Population, !Random) :-
+createInitialPopulation(Game, PlayerParameters, Configuration, Population, !Random) :-
 	Configuration^geometry = Geometry,
 	(	%
 		Geometry = wellmixed,
@@ -360,7 +363,7 @@ createInitialPopulation(PlayerParameters, Configuration, Population, !Random) :-
 				!Random),
 			SiteState^carryingCapacity = float(Site^carryingCapacity),
 			SingleSite = site(SiteState, SiteState, SitePlayerKeys, array.init(0, -1)),
-			Population = pop(array.init(1, SingleSite), PopulationPlayers, NextKey)
+			Population0 = pop(array.init(1, SingleSite), PopulationPlayers, NextKey)
 		)
 	;
 		Geometry = lattice(_, _, _, _),
@@ -376,9 +379,10 @@ createInitialPopulation(PlayerParameters, Configuration, Population, !Random) :-
 			InitialKey,       NextKey,
 			EmptyPlayers,     PopulationPlayers,
 			!Random),
-		Population = pop(array.from_list(InitialSites), PopulationPlayers, NextKey)
+		Population0 = pop(array.from_list(InitialSites), PopulationPlayers, NextKey)
 	),
-	true
+	Population = map_PlayerNeighbour(ebea.player.selection.initSelectionTraits(Game), Population0)
+%	,trace [io(!IO)] (io.print(Population, !IO), io.nl(!IO))
 	.
 
 
@@ -995,6 +999,7 @@ foldSite(Pred, Site, !AC) :-
 :- pragma memo(deathProbability/2).
 
 deathProbability(CarryingCapacity, PopulationSize) = Result :-
+%	trace [io(!IO)] io.format("carrying capacity %f pop size %d  =  %f\n", [f(CarryingCapacity), i(PopulationSize), f(Result)], !IO),
 	Base = 6.0 * (CarryingCapacity - float(PopulationSize)) / CarryingCapacity,
 	Result = 1.0 / (1.0 + math.exp(Base)).
 

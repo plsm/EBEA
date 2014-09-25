@@ -72,6 +72,18 @@
 :- pred born(ebea.player.selection.chromosome.chromosome, ebea.player.selection.traits, R, R) <= ePRNG(R).
 :- mode born(in, out, in, out) is det.
 
+%% ************************************************************************
+%% initSelectionTraits(Player, Neighbours) = Result
+%%
+%% Initialise the selection traits that depend on neighbours that are not
+%% available when creating the initial population.
+
+:- func initSelectionTraits(
+	G,
+	player(CS, T),
+	ebea.population.neighbours.neighbours
+	) = player(CS, T)
+<= abstractGame(G).
 
 /**
  * stepSelectPartnersPlayGame2(PlayerParameters, Game, Player, Neighbours, !NextRoundPopulation, !Random)
@@ -333,6 +345,31 @@ born(Chromosome, Result, !Random) :-
 	.
 
 
+initSelectionTraits(Game, Player, Neighbours) = Result :-
+	Player^traits^selectionTrait = random,
+	Result = Player
+	;
+	Player^traits^selectionTrait = partnerSelection(_, no),
+	Result = Player
+	;
+	Player^traits^selectionTrait = partnerSelection(PS, yes(_)),
+	InitialWeight = game.paretoPayoff(Game) - game.lowestPayoff(Game),
+	ElementGenerator =
+	(pred(E::out) is nondet :-
+		ebea.population.neighbours.member(E, Neighbours)
+	),
+	WV = ebea.player.selection.wv.init(ElementGenerator, InitialWeight),
+	Result = 'traits :='(
+		Player,
+		'selectionTrait :='(
+			Player^traits,
+			partnerSelection(PS, yes(WV))
+			)
+		)
+	;
+	Player^traits^selectionTrait = opinion(_, _),
+	Result = Player
+	.
 
 
 

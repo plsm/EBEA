@@ -177,8 +177,32 @@ removeElements(Elements, !WeightVector) :-
 	),
 	removeElements(RestElements, !WeightVector)
 	.
-
+/*
+updateWeight(DefaultWeight, ProbabilitySelectedCombination, ScaledPayoff, ForElement, !WeightVector) :-
+	trace [io(!IO)] io.format("weight vector %s\n", [s(string(!.WeightVector))], !IO),
+	(if
+		map.search(!.WeightVector^elements, ForElement, AnWeight)
+	then
+		OldWeight = AnWeight,
+		NewWeight =
+			OldWeight * (1.0 - ProbabilitySelectedCombination)
+			+ ScaledPayoff * ProbabilitySelectedCombination,
+		map.det_update(ForElement, NewWeight, !.WeightVector^elements, NewElements)
+	else
+		OldWeight = DefaultWeight,
+		NewWeight =
+			OldWeight * (1.0 - ProbabilitySelectedCombination)
+			+ ScaledPayoff * ProbabilitySelectedCombination,
+		map.det_insert(ForElement, NewWeight, !.WeightVector^elements, NewElements)
+	),
+	!:WeightVector = wv(
+		NewElements,
+		!.WeightVector^sum - OldWeight + NewWeight,
+		!.WeightVector^size
+	).
+*/
 updateWeight(ProbabilitySelectedCombination, ScaledPayoff, ForElement, !WeightVector) :-
+%	trace [io(!IO)] io.format("weight vector %s\n", [s(string(!.WeightVector))], !IO),
 	OldWeight = map.lookup(!.WeightVector^elements, ForElement),
 	NewWeight =
 		OldWeight * (1.0 - ProbabilitySelectedCombination)
@@ -191,7 +215,7 @@ updateWeight(ProbabilitySelectedCombination, ScaledPayoff, ForElement, !WeightVe
 	).
 
 updatePlayerProbCombVectorsWeightVector(PCV, WV, Player) = Result :-
-	Player^traits^selectionTrait = SelectionPhe,
+%	Player^traits^selectionTrait = SelectionPhe,
 	Traits = partnerSelection(PCV, yes(WV)),
 	PlayerTraits = 'selectionTrait :='(Player^traits, Traits),
 	Result = 'traits :='(Player, PlayerTraits)

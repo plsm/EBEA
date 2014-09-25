@@ -347,16 +347,16 @@ runGame3(Mode, Game, Parameters, Streams, NumberIterations, Population, !Distrib
 	).
 
 iterationData2(Data, IterationNumber, !Population, ThisStats, NextStats, !Distribution, !Random, !IO) :-
-	%io.print('\r', !IO), io.print(IterationNumber, !IO), io.print(' ', !IO), io.print('a', !IO), io.flush_output(io.stdout_stream, !IO),
+	io.print('\r', !IO), io.print(IterationNumber, !IO), io.print(' ', !IO), io.print('a', !IO), io.flush_output(io.stdout_stream, !IO),
 	ebea.population.fold3_PlayerNeighbour(
 		ebea.player.selection.stepSelectPartnersPlayGame2(Data^gp^playerParameters, Data^game),
 		!.Population,
 		!Population,
 		[], PlayerProfiles,
 		!Random),
-	%io.print('\r', !IO), io.print(IterationNumber, !IO), io.print(' ', !IO), io.print('b', !IO), io.flush_output(io.stdout_stream, !IO),
+	io.print('\r', !IO), io.print(IterationNumber, !IO), io.print(' ', !IO), io.print('b', !IO), io.flush_output(io.stdout_stream, !IO),
 	ebea.population.map_players(ebea.player.age.stepClockTick, !Population),
-	%io.print('\r', !IO), io.print(IterationNumber, !IO), io.print(' ', !IO), io.print('c', !IO), io.flush_output(io.stdout_stream, !IO),
+	io.print('\r', !IO), io.print(IterationNumber, !IO), io.print(' ', !IO), io.print('c', !IO), io.flush_output(io.stdout_stream, !IO),
 	ebea.population.stepBirthDeath(
 		Data^gp,
 		!Distribution,
@@ -364,7 +364,7 @@ iterationData2(Data, IterationNumber, !Population, ThisStats, NextStats, !Distri
 		!Population,
 		Births,
 		CemeteryCarryingCapacity, CemeteryOldAge, CemeteryStarvation),
-	%io.print('\r', !IO), io.print(IterationNumber, !IO), io.print(' ', !IO), io.print('d', !IO), io.flush_output(io.stdout_stream, !IO),
+	io.print('\r', !IO), io.print(IterationNumber, !IO), io.print(' ', !IO), io.print('d', !IO), io.flush_output(io.stdout_stream, !IO),
 	ebea.population.mapfold_PlayerNeighbour_sv(
 		ebea.player.selection.stepProcessBornPlayersCheckForDeadPlayers(
 			Data^game,
@@ -372,7 +372,7 @@ iterationData2(Data, IterationNumber, !Population, ThisStats, NextStats, !Distri
 			list.map(ebea.player.'ID', Births)),
 		!Population,
 		!Random),
-	%io.print('\r', !IO), io.print(IterationNumber, !IO), io.print(' ', !IO), io.print('e', !IO), io.flush_output(io.stdout_stream, !IO),
+	io.print('\r', !IO), io.print(IterationNumber, !IO), io.print(' ', !IO), io.print('e', !IO), io.flush_output(io.stdout_stream, !IO),
 	NextStats = stats(
 		%NextStats^reduceEvolution =
 		ebea.population.fold_players(
@@ -389,7 +389,7 @@ iterationData2(Data, IterationNumber, !Population, ThisStats, NextStats, !Distri
 		%NextStats^births =
 		ThisStats^births + list.length(Births)
 	),
-	%io.print('\r', !IO), io.print(IterationNumber, !IO), io.print(' ', !IO), io.print('f', !IO), io.flush_output(io.stdout_stream, !IO),
+	io.print('\r', !IO), io.print(IterationNumber, !IO), io.print(' ', !IO), io.print('f', !IO), io.flush_output(io.stdout_stream, !IO),
 	ebea.core.printIterationDataToStreams(Data^s, Data^game, IterationNumber, !.Population, PlayerProfiles, Births, CemeteryCarryingCapacity, CemeteryOldAge, CemeteryStarvation, !IO)
 	.
 
@@ -457,9 +457,9 @@ iterationData3(Data, IterationNumber, !Population, !Stats, !Distribution, !Rando
 
 runLoopData2(Mode, Data, TimeLeft, Iteration, !Population, !Stats, !Distribution, !Random, !IO) :-
 	NumberPlayers = game.numberPlayers(Data^game),
-	% io.print("\r", !IO),
-	% io.print(Iteration, !IO),
-	% io.flush_output(io.stdout_stream, !IO),
+	io.print("\r", !IO),
+	io.print(Iteration, !IO),
+	io.flush_output(io.stdout_stream, !IO),
 	
 	iterationData2(Data, Iteration, !Population, !Stats, !Distribution, !Random, !IO),
 	(
