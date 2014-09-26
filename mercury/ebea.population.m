@@ -16,8 +16,13 @@
 
 :- import_module ebea.population.neighbours, ebea.population.configuration,
 ebea.population.players, ebea.population.site.
-:- import_module chromosome, ebea.player, rng, rng.distribution, parseable.
-:- import_module game.
+:- import_module
+	chromosome,
+	game,
+	ebea.player,
+	rng,
+	rng.distribution,
+	parseable.
 :- import_module array, char, io, list, maybe.
 
 /**
@@ -381,7 +386,7 @@ createInitialPopulation(Game, PlayerParameters, Configuration, Population, !Rand
 			!Random),
 		Population0 = pop(array.from_list(InitialSites), PopulationPlayers, NextKey)
 	),
-	Population = map_PlayerNeighbour(ebea.player.selection.initSelectionTraits(Game), Population0)
+	Population = map_PlayerNeighbour(ebea.player.selection.initTraits(Game), Population0)
 %	,trace [io(!IO)] (io.print(Population, !IO), io.nl(!IO))
 	.
 

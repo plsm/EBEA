@@ -549,14 +549,23 @@ runVS4Game2(RunMode, AllConfig, GameConfig, Streams, !Random, !IO) :-
 	Parameters^migrationProbability = float(AllConfig^migrationProbability),
 	Parameters^dynamic = AllConfig^dynamic,
 	Parameters^playerParameters = PlayerParameters,
-	
+
 	ebea.population.createInitialPopulation(
 		GameConfig^game,
 		PlayerParameters,
 		GameConfig^initialPopulation,
 		Population,
 		!Random),
-	ebea.core.runGame2(RunMode, GameConfig^game, Parameters, Streams, AllConfig^numberIterations, Population, rng.distribution.init, _, !Random, !IO),
+	ebea.core.runGame2(
+		RunMode,
+		GameConfig^game,
+		Parameters,
+		Streams,
+		AllConfig^numberIterations,
+		Population,
+		rng.distribution.init, _,
+		!Random,
+		!IO),
 	ebea.streams.closeOutputStreams(Streams, !IO)
 	.
 
