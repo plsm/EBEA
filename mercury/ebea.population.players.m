@@ -66,6 +66,10 @@
 :- pred player(players(C, T), key, player(C, T)).
 :- mode player(in, out, out) is nondet.
 
+:- pred search(players(C, T), int, player(C, T)).
+:- mode search(in, in, out) is semidet.
+
+
 /**
  * fold(Closure, Players, AC) = Result
  *
@@ -186,6 +190,9 @@ player(Players, Key) = Result :-
 
 player(Players, Key, Player) :-
 	map.member(Players, Key, Player).
+
+search(Players, Key, Player) :-
+	map.search(Players, key(Key), Player).
 
 append(Players, []) = Players.
 append(Players, [Player | Rest]) = append(map.det_insert(Players, Player^id, Player), Rest).

@@ -347,6 +347,8 @@ runGame3(Mode, Game, Parameters, Streams, NumberIterations, Population, !Distrib
 	).
 
 iterationData2(Data, IterationNumber, !Population, ThisStats, NextStats, !Distribution, !Random, !IO) :-
+	io.print(!.Population, !IO),
+	io.nl(!IO),
 	io.print('\r', !IO), io.print(IterationNumber, !IO), io.print(' ', !IO), io.print('a', !IO), io.flush_output(io.stdout_stream, !IO),
 	ebea.population.fold3_PlayerNeighbour(
 		ebea.player.selection.stepSelectPartnersPlayGame2(Data^gp^playerParameters, Data^game),
@@ -394,6 +396,8 @@ iterationData2(Data, IterationNumber, !Population, ThisStats, NextStats, !Distri
 	.
 
 iterationData3(Data, IterationNumber, !Population, !Stats, !Distribution, !Random, !IO) :-
+	io.print(!.Population, !IO),
+	io.nl(!IO),
 	Data^parameters3^siteDynamics = SiteDynamics,
 	(
 		SiteDynamics = static,
@@ -443,6 +447,16 @@ iterationData3(Data, IterationNumber, !Population, !Stats, !Distribution, !Rando
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of private predicates and functions
+
+
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Initialise selection traits of newborn players
+
+initSelectionTraits(NewBornKey, !Population) :-
+	TheNewBorn = ebea.population.players.player(!.Population^players, NewBornKey),
+	ebea.population.neighbours.init(!.Population^sites, TheBornKey) = Neighbours,
+	true.
+	
 
 :- pred runLoopData2(
 	runMode(C, T),

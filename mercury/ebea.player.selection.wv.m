@@ -108,6 +108,11 @@
 :- mode parse(in, out, in) is det.
 :- mode parse(out, in, out) is semidet.
 
+
+:- pred fold(pred(ebea.population.players.key, float, A, A), weightVector, A, A).
+:- mode fold(in(pred(in, in, in, out) is det), in, in, out) is det.
+:- mode fold(in(pred(in, in, di, uo) is det), in, di, uo) is det.
+
 :- implementation.
 
 :- import_module float, int, map, solutions.
@@ -203,6 +208,9 @@ updateWeight(DefaultWeight, ProbabilitySelectedCombination, ScaledPayoff, ForEle
 */
 updateWeight(ProbabilitySelectedCombination, ScaledPayoff, ForElement, !WeightVector) :-
 %	trace [io(!IO)] io.format("weight vector %s\n", [s(string(!.WeightVector))], !IO),
+	(if
+		map.search(!.WeightVector^elements, ForElement, AnWeight)
+	then
 	OldWeight = map.lookup(!.WeightVector^elements, ForElement),
 	NewWeight =
 		OldWeight * (1.0 - ProbabilitySelectedCombination)
@@ -212,7 +220,12 @@ updateWeight(ProbabilitySelectedCombination, ScaledPayoff, ForElement, !WeightVe
 		NewElements,
 		!.WeightVector^sum - OldWeight + NewWeight,
 		!.WeightVector^size
+	)
+	else
+	trace [io(!IO)] io.format("DEBUG weight vector %s\n", [s(string(!.WeightVector))], !IO),
+	map.lookup(!.WeightVector^elements, ForElement, _)
 	).
+	
 
 updatePlayerProbCombVectorsWeightVector(PCV, WV, Player) = Result :-
 %	Player^traits^selectionTrait = SelectionPhe,
@@ -232,6 +245,8 @@ parse(wv(Elements, Sum, Size)) -->
 	parseable.float32(Sum),
 	parseable.int32(Size).
 
+fold(Pred, wv(Elements, _, _), !AC) :-
+	map.foldl(Pred, Elements, !AC).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of private predicates and functions

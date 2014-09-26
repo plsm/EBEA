@@ -1,0 +1,98 @@
+
+MMC = mmc
+
+
+#--debug                                                               \
+#--stack-segments \
+#--grade asm_fast.gc.decldebug.stseg                                                              \
+#--grade asm_fast.gc.debug.stseg                                                              \
+#--grade asm_fast.gc.trseg.debug.stseg                                                              \
+
+
+MFLAGS_COMMON = \
+--make                                                               \
+--grade asm_fast.gc                                                              \
+--output-compile-error-lines  500                                    \
+--max-error-line-width        120                                    \
+--mercury-library-directory   /home/pedro/local/lib/mercury/               \
+--mercury-library             mercury_utils
+
+MFLAGS_JAVA_GRADE = \
+--java-classpath   /home/pedro/local/lib/mercury/lib/java/ui_swing.jar               \
+--java-classpath   /home/pedro/local/lib/mercury/lib/java/mercury_utils.jar  \
+--mercury-library  ui_swing
+
+MFLAGS_OTHER_GRADES = \
+--mercury-library  ui_console
+
+JAVAC = javac
+
+JAR = jar
+
+################################################################################
+# STANDARD GNU TARGETS
+
+.PHONY: all
+all: build
+
+.PHONY: build
+build:
+	$(MAKE) build-console
+	$(MAKE) build-swing
+
+.PHONY: install
+install:
+	$(MAKE) install-console
+	$(MAKE) install-swing
+
+# clean targets
+
+.PHONY: clean
+clean:
+	cd mercury ; rm -f *.err *~ *.mh ; rm -fr Mercury
+	rm -f manifest.mf
+
+
+# documentation targets
+
+info:
+
+dvi:
+html:
+pdf:
+ps:
+
+dist:
+
+check:
+
+################################################################################
+# SPECIFIC TARGETS
+
+# targets for the console version
+
+build-console:
+	cd ./mercury/ ; $(MMC) $(MFLAGS_COMMON) $(MFLAGS_OTHER_GRADES) EBEAtk_console
+
+install-console:
+	cd ./mercury/ ; cp EBEAtk_console $(PREFIX)/bin
+
+# targets for the swing version
+
+build-swing:
+	cd ./mercury/ ; $(MMC) $(MFLAGS_COMMON) $(MFLAGS_JAVA_GRADE) --grade java EBEAtk_swing
+
+install-swing: manifest.mf
+
+manifest.mf:
+	@echo "Extension-Name: mc4ap"                        > manifest.mf
+	@echo "Implementation-Title: Energy Based Evolutionary Algorithm "        >> manifest.mf
+	@echo "Implementation-Version: 1.0 "   >> manifest.mf
+	@echo "Implementation-Vendor: Pedro Mariano"        >> manifest.mf
+	@echo "Implementation-URL: https://github.com/plsm/ebea "           >> manifest.mf
+
+# other targets
+
+build-debug:
+	cd ./mercury/ ; $(MMC) $(MFLAGS_COMMON) $(MFLAGS_OTHER_GRADES) EBEAtk_debug
+
