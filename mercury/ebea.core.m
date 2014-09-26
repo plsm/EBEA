@@ -257,6 +257,7 @@
 
 :- import_module ebea.player, ebea.player.chromosome, ebea.player.age,
 ebea.player.selection, ebea.population.players, ebea.population.site,
+ebea.population.neighbours,
 ebea.streams.birth, ebea.streams.death, ebea.streams.phenotype,
 ebea.streams.siteState,
 ebea.streams.playerProfile.
@@ -367,13 +368,18 @@ iterationData2(Data, IterationNumber, !Population, ThisStats, NextStats, !Distri
 		Births,
 		CemeteryCarryingCapacity, CemeteryOldAge, CemeteryStarvation),
 	io.print('\r', !IO), io.print(IterationNumber, !IO), io.print(' ', !IO), io.print('d', !IO), io.flush_output(io.stdout_stream, !IO),
+	BirthIDs = list.map(ebea.player.'ID', Births),
 	ebea.population.mapfold_PlayerNeighbour_sv(
 		ebea.player.selection.stepProcessBornPlayersCheckForDeadPlayers(
 			Data^game,
 			list.append(CemeteryCarryingCapacity, list.append(CemeteryOldAge, CemeteryStarvation)),
-			list.map(ebea.player.'ID', Births)),
+			BirthIDs),
 		!Population,
 		!Random),
+	list.foldl(
+		initSelectionTraits(Data^game),
+		BirthIDs,
+		!Population),
 	io.print('\r', !IO), io.print(IterationNumber, !IO), io.print(' ', !IO), io.print('e', !IO), io.flush_output(io.stdout_stream, !IO),
 	NextStats = stats(
 		%NextStats^reduceEvolution =
@@ -423,13 +429,18 @@ iterationData3(Data, IterationNumber, !Population, !Stats, !Distribution, !Rando
 			!Population,
 			Births,
 			CemeteryCarryingCapacity, CemeteryOldAge, CemeteryStarvation),
+		BirthIDs = list.map(ebea.player.'ID', Births),
 		ebea.population.mapfold_PlayerNeighbour_sv(
 			ebea.player.selection.stepProcessBornPlayersCheckForDeadPlayers(
 				Data^game3,
 				list.append(CemeteryCarryingCapacity, list.append(CemeteryOldAge, CemeteryStarvation)),
-				list.map(ebea.player.'ID', Births)),
+				BirthIDs),
 			!Population,
 			!Random),
+		list.foldl(
+			initSelectionTraits(Data^game3),
+			BirthIDs,
+			!Population),
 		ebea.population.stepUpdateSitesState(SiteDynamics, SiteActionAccumulator, !Population),
 		!:Stats = stats(
 			ebea.population.fold_players(
@@ -452,10 +463,22 @@ iterationData3(Data, IterationNumber, !Population, !Stats, !Distribution, !Rando
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Initialise selection traits of newborn players
 
-initSelectionTraits(NewBornKey, !Population) :-
-	TheNewBorn = ebea.population.players.player(!.Population^players, NewBornKey),
-	ebea.population.neighbours.init(!.Population^sites, TheBornKey) = Neighbours,
-	true.
+:- pred initSelectionTraits(
+	G   :: in,
+	ebea.population.players.key :: in,
+	ebea.population.population(C, T) :: in,  ebea.population.population(C, T) :: out
+) is det
+<= abstractGame(G).
+
+initSelectionTraits(Game, NewBornKey, !Population) :-
+	UpdatePlayerFunc =
+	(func(TheNewBorn) = Result :-
+		ebea.population.neighbours.init(!.Population^sites, TheNewBorn) = Neighbours,
+		ebea.player.selection.initTraits(Game, TheNewBorn, Neighbours) = Result
+	),
+	ebea.population.players.update(NewBornKey, UpdatePlayerFunc, !.Population^players, NewPlayers),
+	!:Population = 'players :='(!.Population, NewPlayers)
+	.
 	
 
 :- pred runLoopData2(
