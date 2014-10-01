@@ -72,7 +72,13 @@ check:
 # targets for the console version
 
 build-console:
-	cd ./mercury/ ; $(MMC) $(MFLAGS_COMMON) $(MFLAGS_OTHER_GRADES) EBEAtk_console
+	cd ./mercury/ ; $(MMC) $(MFLAGS_COMMON) \
+		$(MFLAGS_JAVA_GRADE) \
+		--java-classpath /home/pedro/local/lib/mercury/lib/java/ui_console.jar \
+		--mercury-library ui_console  \
+		--grade java  \
+		EBEAtk_console
+#	cd ./mercury/ ; $(MMC) $(MFLAGS_COMMON) $(MFLAGS_OTHER_GRADES) EBEAtk_console
 
 install-console:
 	cd ./mercury/ ; cp EBEAtk_console $(PREFIX)/bin
@@ -94,5 +100,5 @@ manifest.mf:
 # other targets
 
 build-debug:
-	cd ./mercury/ ; $(MMC) $(MFLAGS_COMMON) $(MFLAGS_OTHER_GRADES) EBEAtk_debug
+	cd ./mercury/ ; $(MMC) $(MFLAGS_COMMON) $(MFLAGS_JAVA_GRADE) --java-classpath   /home/pedro/local/lib/mercury/lib/java/ui_console.jar  --mercury-library  ui_console --grade java EBEAtk_debug
 

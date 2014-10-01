@@ -137,6 +137,7 @@ menuLoop(Population, !IO) :-
 
 playerInfo(Population, !IO) :-
 	io.print("Player key? ", !IO),
+	io.flush_output(io.stdout_stream, !IO),
 	io.read_line_as_string(ILine, !IO),
 	(if
 		ILine = ok(Line),

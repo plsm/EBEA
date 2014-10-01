@@ -375,7 +375,7 @@ stepDeath(Parameters, Population, Player, Filter, !Random,
 	(if
 		DiesCC = yes
 	then
-		trace [io(!IO)] io.format("Player %4s died with prob %7.5f   %s \n", [s(string(Player^id)), f(Value), s(string(!.Random))], !IO),
+%		trace [io(!IO)] io.format("Player %4s died with prob %7.5f   %s \n", [s(string(Player^id)), f(Value), s(string(!.Random))], !IO),
 		Dies = yes(carryingCapacity)
 	else
 		ebea.player.energy.stepSurvive(Parameters^playerParameters^energyPar, Player, !Random, DiesS),

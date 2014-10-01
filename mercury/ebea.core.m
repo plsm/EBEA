@@ -402,8 +402,8 @@ iterationData2(Data, IterationNumber, !Population, ThisStats, NextStats, !Distri
 	.
 
 iterationData3(Data, IterationNumber, !Population, !Stats, !Distribution, !Random, !IO) :-
-	io.print(!.Population, !IO),
-	io.nl(!IO),
+	% io.print(!.Population, !IO),
+	% io.nl(!IO),
 	Data^parameters3^siteDynamics = SiteDynamics,
 	(
 		SiteDynamics = static,

@@ -681,13 +681,13 @@ stepProcessBornPlayersCheckForDeadPlayers(Game, DeadPlayerIDs, NewBornIDs, Neigh
 				OldWeightVector, TmpWeightVector
 			),
 			ebea.player.selection.wv.removeElements(DeadPlayerIDs, TmpWeightVector, NewWeightVector),
-			(if
-				OldWeightVector \= NewWeightVector
-			then
-				trace [io(!IO)] io.format("\nweight vector changed to %s\n\n", [s(string(NewWeightVector))], !IO)
-			else
-				true
-			),
+			% (if
+			% 	OldWeightVector \= NewWeightVector
+			% then
+			% 	trace [io(!IO)] io.format("\nweight vector changed to %s\n\n", [s(string(NewWeightVector))], !IO)
+			% else
+			% 	true
+			% ),
 			TmpTraits = 'mwv :='(Traits, yes(NewWeightVector))
 		),
 		NextTraits = 'pcv :='(TmpTraits, NextPCV),
