@@ -17,6 +17,7 @@
 :- include_module processPlayerProfile.
 :- include_module processPhenotype.
 :- include_module utils.
+:- include_module siteDynamics.
 
 :- implementation.
 

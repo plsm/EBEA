@@ -9,6 +9,7 @@
 :- interface.
 
 :- import_module ebea.population, ebea.population.site.
+:- import_module parseable.iou.
 
 :- type iterationSitesStateRecord --->
 	issr(
@@ -22,6 +23,14 @@
 	).
 
 :- instance parseable(iterationSitesStateRecord).
+
+:- pred read(
+	io.binary_input_stream :: in,
+	parseable.iou.result(io.result(iterationSitesStateRecord)) :: out,
+	parseable.iou.cache :: in,  parseable.iou.cache :: out,
+	io.state :: di,  io.state :: uo
+) is det.
+
 
 :- pred write(
 	io.binary_output_stream :: in,
@@ -57,6 +66,9 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of exported predicates and functions
+
+read(Stream, RIResult, !Cache, !IO) :-
+	parseable.iou.read(Stream, 4096, no, !Cache, RIResult, !IO).
 
 write(Stream, Iteration, Population, !IO) :-
 	IterationSitesStateRecord = issr(

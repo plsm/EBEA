@@ -21,6 +21,7 @@
 :- import_module ui_swing, userInterface.
 :- import_module data, data.config, data.config.io, data.config.pretty.
 :- import_module tools, tools.export_playerProfiles_graphviz, tools.'PCVNetwork', tools.populationDynamics.
+:- import_module tools.siteDynamics.
 :- import_module int, dir, list, maybe, string, time.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -32,6 +33,7 @@
 		parameters_playerProfile :: tools.export_playerProfiles_graphviz.parameters,
 		parameters_PCV           :: tools.'PCVNetwork'.parameters,
 		parameters_PD            :: tools.populationDynamics.parameters,
+		parameters_SD            :: tools.siteDynamics.parameters,
 		filename                 :: maybe(string),
 		fileChooser              :: fileChooser
 	).
@@ -73,6 +75,10 @@ menu = m(
 			[mi(label("Run"),			actionDataIO('PCVMovie')),
 			 mi(label("Config"),    edit('new dialog'(parameters_PCV, set('parameters_PCV :='), tools.'PCVNetwork'.dialog_parameters)))
 			])),
+		 mi(label("Site dynamics"),   submenu(
+			[mi(label("Run"),			actionDataIO(siteDynamics)),
+			 mi(label("Config"),    edit('new dialog'(parameters_SD, set('parameters_SD :='), tools.siteDynamics.dialog_parameters)))
+			])),
 		 mi(label("Population dynamics"),   submenu(
 			[mi(label("Run"),			actionDataIO(populationDynamics)),
 			 mi(label("Config"),    edit('new dialog'(parameters_PD, set('parameters_PD :='), tools.populationDynamics.dialog_parameters)))
@@ -102,6 +108,7 @@ initData(FileChooser) = data(
 	tools.export_playerProfiles_graphviz.default_parameters,
 	tools.'PCVNetwork'.default_parameters,
 	tools.populationDynamics.default_parameters,
+	tools.siteDynamics.default_parameters,
 	no,
 	FileChooser).
 
@@ -116,6 +123,9 @@ initData(FileChooser) = data(
 
 :- func parameters_PD(data) = tools.populationDynamics.parameters.
 :- func 'parameters_PD :='(data, tools.populationDynamics.parameters) = data.
+
+:- func parameters_SD(data) = tools.siteDynamics.parameters.
+:- func 'parameters_SD :='(data, tools.siteDynamics.parameters) = data.
 
 
 
@@ -249,6 +259,18 @@ playerProfilesMovie(Data, !IO) :-
 
 populationDynamics(Data, !IO) :-
 	tools.populationDynamics.runTool(Data^config, Data^parameters_PD, "./", Feedback, !IO),
+	io.print(Feedback, !IO),
+	io.nl(!IO)
+	.
+
+/**
+ * Menu option.
+ */
+:- pred siteDynamics(data, io.state, io.state).
+:- mode siteDynamics(in, di, uo) is det.
+
+siteDynamics(Data, !IO) :-
+	tools.siteDynamics.runTool(Data^config, Data^parameters_SD, "./", Feedback, !IO),
 	io.print(Feedback, !IO),
 	io.nl(!IO)
 	.
