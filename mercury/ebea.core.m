@@ -56,9 +56,9 @@
 		interactively(processPred, interactivePred, processPred)
 	).
 
-:- type interactivePred(C, T) == pred(population(C, T), bool, io.state, io.state).
+:- type interactivePred(C, T) == pred(population(C, T), int, bool, io.state, io.state).
 
-:- inst interactivePred == (pred(in, out, di, uo) is det).
+:- inst interactivePred == (pred(in, in, out, di, uo) is det).
 
 :- type processPred(C, T) == pred(population(C, T), io.state, io.state).
 
@@ -348,18 +348,18 @@ runGame3(Mode, Game, Parameters, Streams, NumberIterations, Population, !Distrib
 	).
 
 iterationData2(Data, IterationNumber, !Population, ThisStats, NextStats, !Distribution, !Random, !IO) :-
-	io.print(!.Population, !IO),
-	io.nl(!IO),
-	io.print('\r', !IO), io.print(IterationNumber, !IO), io.print(' ', !IO), io.print('a', !IO), io.flush_output(io.stdout_stream, !IO),
+	% io.print(!.Population, !IO),
+	% io.nl(!IO),
+	% io.print('\r', !IO), io.print(IterationNumber, !IO), io.print(' ', !IO), io.print('a', !IO), io.flush_output(io.stdout_stream, !IO),
 	ebea.population.fold3_PlayerNeighbour(
 		ebea.player.selection.stepSelectPartnersPlayGame2(Data^gp^playerParameters, Data^game),
 		!.Population,
 		!Population,
 		[], PlayerProfiles,
 		!Random),
-	io.print('\r', !IO), io.print(IterationNumber, !IO), io.print(' ', !IO), io.print('b', !IO), io.flush_output(io.stdout_stream, !IO),
+	% io.print('\r', !IO), io.print(IterationNumber, !IO), io.print(' ', !IO), io.print('b', !IO), io.flush_output(io.stdout_stream, !IO),
 	ebea.population.map_players(ebea.player.age.stepClockTick, !Population),
-	io.print('\r', !IO), io.print(IterationNumber, !IO), io.print(' ', !IO), io.print('c', !IO), io.flush_output(io.stdout_stream, !IO),
+	% io.print('\r', !IO), io.print(IterationNumber, !IO), io.print(' ', !IO), io.print('c', !IO), io.flush_output(io.stdout_stream, !IO),
 	ebea.population.stepBirthDeath(
 		Data^gp,
 		!Distribution,
@@ -367,12 +367,13 @@ iterationData2(Data, IterationNumber, !Population, ThisStats, NextStats, !Distri
 		!Population,
 		Births,
 		CemeteryCarryingCapacity, CemeteryOldAge, CemeteryStarvation),
-	io.print('\r', !IO), io.print(IterationNumber, !IO), io.print(' ', !IO), io.print('d', !IO), io.flush_output(io.stdout_stream, !IO),
-	BirthIDs = list.map(ebea.player.'ID', Births),
+	% io.print('\r', !IO), io.print(IterationNumber, !IO), io.print(' ', !IO), io.print('d', !IO), io.flush_output(io.stdout_stream, !IO),
+	DeathIDs = list.append(CemeteryCarryingCapacity, list.append(CemeteryOldAge, CemeteryStarvation)),
+	BirthIDs = list.delete_elems(list.map(ebea.player.'ID', Births), DeathIDs),
 	ebea.population.mapfold_PlayerNeighbour_sv(
 		ebea.player.selection.stepProcessBornPlayersCheckForDeadPlayers(
 			Data^game,
-			list.append(CemeteryCarryingCapacity, list.append(CemeteryOldAge, CemeteryStarvation)),
+			DeathIDs,
 			BirthIDs),
 		!Population,
 		!Random),
@@ -380,7 +381,7 @@ iterationData2(Data, IterationNumber, !Population, ThisStats, NextStats, !Distri
 		initSelectionTraits(Data^game),
 		BirthIDs,
 		!Population),
-	io.print('\r', !IO), io.print(IterationNumber, !IO), io.print(' ', !IO), io.print('e', !IO), io.flush_output(io.stdout_stream, !IO),
+	% io.print('\r', !IO), io.print(IterationNumber, !IO), io.print(' ', !IO), io.print('e', !IO), io.flush_output(io.stdout_stream, !IO),
 	NextStats = stats(
 		%NextStats^reduceEvolution =
 		ebea.population.fold_players(
@@ -397,7 +398,7 @@ iterationData2(Data, IterationNumber, !Population, ThisStats, NextStats, !Distri
 		%NextStats^births =
 		ThisStats^births + list.length(Births)
 	),
-	io.print('\r', !IO), io.print(IterationNumber, !IO), io.print(' ', !IO), io.print('f', !IO), io.flush_output(io.stdout_stream, !IO),
+	% io.print('\r', !IO), io.print(IterationNumber, !IO), io.print(' ', !IO), io.print('f', !IO), io.flush_output(io.stdout_stream, !IO),
 	ebea.core.printIterationDataToStreams(Data^s, Data^game, IterationNumber, !.Population, PlayerProfiles, Births, CemeteryCarryingCapacity, CemeteryOldAge, CemeteryStarvation, !IO)
 	.
 
@@ -429,11 +430,12 @@ iterationData3(Data, IterationNumber, !Population, !Stats, !Distribution, !Rando
 			!Population,
 			Births,
 			CemeteryCarryingCapacity, CemeteryOldAge, CemeteryStarvation),
-		BirthIDs = list.map(ebea.player.'ID', Births),
+		DeathIDs = list.append(CemeteryCarryingCapacity, list.append(CemeteryOldAge, CemeteryStarvation)),
+		BirthIDs = list.delete_elems(list.map(ebea.player.'ID', Births), DeathIDs),
 		ebea.population.mapfold_PlayerNeighbour_sv(
 			ebea.player.selection.stepProcessBornPlayersCheckForDeadPlayers(
 				Data^game3,
-				list.append(CemeteryCarryingCapacity, list.append(CemeteryOldAge, CemeteryStarvation)),
+				DeathIDs,
 				BirthIDs),
 			!Population,
 			!Random),
@@ -494,9 +496,9 @@ initSelectionTraits(Game, NewBornKey, !Population) :-
 
 runLoopData2(Mode, Data, TimeLeft, Iteration, !Population, !Stats, !Distribution, !Random, !IO) :-
 	NumberPlayers = game.numberPlayers(Data^game),
-	io.print("\r", !IO),
-	io.print(Iteration, !IO),
-	io.flush_output(io.stdout_stream, !IO),
+	% io.print("\r", !IO),
+	% io.print(Iteration, !IO),
+	% io.flush_output(io.stdout_stream, !IO),
 	
 	iterationData2(Data, Iteration, !Population, !Stats, !Distribution, !Random, !IO),
 	(
@@ -504,7 +506,7 @@ runLoopData2(Mode, Data, TimeLeft, Iteration, !Population, !Stats, !Distribution
 		Stop = no
 		;
 		Mode = interactively(_, _, _),
-		(Mode^itera)(!.Population, Stop, !IO)
+		(Mode^itera)(!.Population, Iteration, Stop, !IO)
 	),
 	(if
 		ebea.population.size(!.Population) < NumberPlayers
@@ -558,7 +560,7 @@ runLoopData3(Mode, Data, TimeLeft, Iteration, !Population, !Stats, !Distribution
 	Mode = interactively(_, _, _),
 	NumberPlayers = game.numberPlayers(Data^game3),
 	iterationData3(Data, Iteration, !Population, !Stats, !Distribution, !Random, !IO),
-	(Mode^itera)(!.Population, Stop, !IO),
+	(Mode^itera)(!.Population, Iteration, Stop, !IO),
 	(if
 		ebea.population.size(!.Population) < NumberPlayers
 		;
@@ -685,14 +687,18 @@ printIterationDataToStreams(Streams, Game, Iteration, Population, PlayerProfiles
 
 
 :- pred printLastIterationDataToStreams(
-		stats(A),
-		ebea.streams.outStreams,
-		int,
-		ebea.population.population(C, T),
-		io, io)
-	<= (
-		  %asymmetricGame(G, C),
-		  chromosome(C, T, P), foldable(C, A), printable(C), printable(T), printable(A)).
+	stats(A),
+	ebea.streams.outStreams,
+	int,
+	ebea.population.population(C, T),
+	io, io)
+<= (
+	chromosome(C, T, P),
+	foldable(C, A),
+	printable(C),
+	printable(T),
+	printable(A)
+).
 :- mode printLastIterationDataToStreams(in, in, in, in, di, uo) is det.
 
 printLastIterationDataToStreams(Stats, Streams, Iteration, Population, !IO)

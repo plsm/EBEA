@@ -96,11 +96,13 @@ init(Config, Population, !IO) :-
 :- pred step(
 	data.config.config               :: in,
 	ebea.population.population(C, T) :: in,
+	int                              :: in,
 	bool                      :: out,
 	io.state :: di,  io.state :: uo
 ) is det.
 
-step(Config, Population, no, !IO) :-
+step(Config, Population, Iteration, no, !IO) :-
+	io.format("Iteration #%d\n\n", [i(Iteration)], !IO),
 	menuLoop(Population, !IO).
 
 
@@ -200,7 +202,7 @@ weightVectors(Population, !IO) :-
 		then
 			PredPrintWeight =
 			(pred(K::in, W::in, !.IOy::di, !:IOy::uo) is det :-
-				io.format("  ( %10s %10f )", [s(string(K)), f(W)], !IOy)
+				io.format("  %5i %5.3f", [i(ebea.population.players.key2int(K)), f(W)], !IOy)
 			),
 			ebea.player.selection.wv.fold(PredPrintWeight, WV, !IOx)
 		else

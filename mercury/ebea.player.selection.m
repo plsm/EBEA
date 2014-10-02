@@ -309,6 +309,7 @@ initTraits(Game, Player, Neighbours) = Result :-
 		Result = Player
 	;
 		Traits = partnerSelection(PCV, yes(_)),
+		% trace [io(!IO)] io.format("Selection traits initialised to %s\n", [s(string(WeightVector))], !IO),
 		PredElementGenerator =
 		(pred(E::out) is nondet :-
 			ebea.population.neighbours.member(E, Neighbours)
