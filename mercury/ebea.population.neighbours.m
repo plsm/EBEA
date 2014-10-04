@@ -381,49 +381,6 @@ pickAux(WeightFunc, [H | T], RestNeighbours, RndWeight) = Result :-
 		Result = pickAux(WeightFunc, T, RestNeighbours, RndWeight - HWeight)
 	).
 
-
-% pick(_, [], _, _, _, _) :- throw("pick/6: invalid weight").
-
-% pick(Weight, [H | T], RndWeight, PickedID, !PickedIndex) :-
-% 	pick(Weight, T, H, RndWeight, PickedID, !PickedIndex).
-
-
-% :- func pick(float, list(ebea.population.players.key), neighbours, float, ebea.population.players.key, int, int).
-
-% pick(Weight, [], RestNeighbours, RndWeight, PickedID, !PickedIndex) :-
-% 	pick(Weight, RestNeighbours, RndWeight, PickedID, !PickedIndex).
-
-% pick(WeightFunc, [H | T], RestNeighbours, RndWeight, PickedID, !PickedIndex) :-
-% 	HWeight = WeightFunc(H),
-% 	(if
-% 		RndWeight < HWeight
-% 	then
-% 		PickedID = H
-% 	else
-% 		pick(WeightFunc, T, RestNeighbours, RndWeight - HWeight, PickedID, !.PickedIndex + 1, !:PickedIndex)
-% 	).
-
-	
-% :- func index(neighbours, int, list(int)) = ebea.population.players.key.
-
-% index([H | T], Index, Skip) = index(H, T, Index, Skip).
-
-% :- func index(list(ebea.population.players.key), neighbours, int, list(int)) = ebea.population.players.key.
-
-% index([], RestNeighbours, Index, Skip) = index(RestNeighbours, Index, Skip).
-% index([H | T], RestNeighbours, Index, Skip) = Result :-
-% 	(if
-% 		list.member(Index, Skip)
-% 	then
-% 		index(T, RestNeighbours, Index - 1, Skip)
-% 	else if
-% 		Index = 0
-% 	then
-% 		Result = Element^id
-% 	else
-% 		index(T, RestNeighbours, Index - 1, Skip)
-% 	).
-
 :- end_module ebea.population.neighbours.
 
 %%% Local Variables: 

@@ -86,23 +86,6 @@
 :- func foldlSite(list(playerBirthRecord(C)), int) = ebea.player.ac(A)
 	<= foldable(C, A).
 
-
-% /**
-%  * Read the birth records that correspond to the initial population.  The
-%  * predicate returns the advanced result and the cache that should be used
-%  * in calls to predicate {@code read/9}.
-%  */
-% :- pred readInitialPopulation(
-% 	io.binary_input_stream,
-% 	G,
-% 	parseable.iou.delayedResult(io.result(iterationBirthRecords(C))),
-% 	maybe(iterationBirthRecords(C)),
-% 	parseable.iou.cache,
-% 	io.state, io.state
-% 	)
-% 	<= (asymmetricGame(G, C), parseable(C)).
-% :- mode readInitialPopulation(in, in, out, out, out, di, uo).
-
 :- pred parse(iterationBirthRecords(C), list(int), list(int))
 	<= parseable(C).
 :- mode parse(in, out, in) is det.
@@ -224,9 +207,6 @@ foldlSite(List, SiteIndex) = Result :-
 	),
 	Result = list.foldl(Fold, List, ebea.player.initAc).
 
-% readInitialPopulation(Stream, Game, DIResult, MAdvancedResult, Cache, !IO) :-
-% 	read(Stream, -1, DIResult, no, MAdvancedResult, parseable.iou.cacheInit, Cache, !IO).
-
 parse(ibr(Iteration, PlayerBirthRecords)) -->
 	parseable.int32(Iteration),
 	parseable.parseList(withLength, PlayerBirthRecords).
@@ -236,15 +216,6 @@ search(ID, L, R) :-
 
 table_reset_for_search_3(!IO) :-
 	table_reset_for_memo_search_3(!IO).
-
-% search(ID, [H | T], R) :-
-% 	(if
-% 		H^id = ID
-% 	then
-% 		R = H
-% 	else
-% 		search(ID, T, R)
-% 	).
 
 birthsAtSite([], _) = 0.
 birthsAtSite([Record | Rest], SiteIndex) =
@@ -279,33 +250,6 @@ work_search(ID, [H | T], R) :-
 		work_search(ID, T, R)
 	).
 
-
-% :- pred readStream(
-% 	io.binary_input_stream :: in,
-% 	parseable.iou.ioResult(list(iterationBirthRecords(C))) :: out,
-% 	parseable.iou.cache            :: in, parseable.iou.cache            :: out,
-% 	list(iterationBirthRecords(C)) :: in, list(iterationBirthRecords(C)) :: out,
-% 	io.state                       :: di, io.state                       :: uo
-% ) is det
-% 	<= parseable(C).
-
-% readStream(Stream, Result, !Cache, !List, !IO) :-
-% 	parseable.iou.read(Stream, 4096, no, !Cache, MIResult, !IO),
-% 	(	%
-% 		MIResult = ok(ok(AResult)),
-% 		list.cons(AResult, !List),
-% 		readStream(Stream, Result, !Cache, !List, !IO)
-% 		;
-% 		MIResult = ok(eof),
-% 		Result = ok(list.reverse(!.List))
-% 		;
-% 		MIResult = ok(error(Error)),
-% 		Result = error(Error)
-% 		;
-% 		MIResult = parseError,
-% 		Result = parseError
-% 	).
-	
 :- func map_playerBirthRecord(player(C, T)) = playerBirthRecord(C).
 
 map_playerBirthRecord(player(ID, SiteIndex, Chromosome, _Traits)) = pbr(ID, SiteIndex, Chromosome).

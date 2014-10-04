@@ -41,7 +41,6 @@
 		mutationProbability  :: float,
 		agePar               :: ebea.player.age.parameters,
 		energyPar            :: ebea.player.energy.parameters,
-%		opinionPar           :: ebea.player.opinion.parameters,
 		selectionPar         :: ebea.player.selection.parameters,
 		gamePar              :: P
 	).
@@ -65,7 +64,6 @@
 /**
  * Accumulator used to reduce the genomes of a collection of players.
  */
-%:- type ac(A).
 :- type ac(A) --->
 	ac(
 		ebea.player.age.ac,
@@ -125,13 +123,10 @@
  */
 :- func foldChromosome(player(C, T), ac(A)) = ac(A)
 	<= foldable(C, A).
-%	<= (chromosome(C, T, P), foldable(C, A)).
 
 :- pred printAc(io.output_stream, ebea.player.ac(A), io, io)
 	<= printable(A).
 :- mode printAc(in, in, di, uo) is det.
-
-
 
 /**
  * Print a player to the given stream.
@@ -152,14 +147,6 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Definition of exported types
 
-% :- type ac(A) --->
-% 	ac(
-% 		ebea.player.age.ac,
-% 		ebea.player.energy.ac,
-% 		ebea.player.selection.ac,
-% 		A
-% 	).
-
 :- instance printable(ac(A)) <= printable(A)
 	where
 	[
@@ -168,9 +155,6 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Definition of private types
-
-%:- instance chromosome(ebea.player.chromosome.chromosome(C), ebea.player.traits, ebea.player.parameters(P), ebea.player.ac(A))
-%	<= chromosome(C, T, P, A).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of exported predicates and functions
@@ -345,18 +329,6 @@ removeIndex(Index, List, Element, Rest) :-
 		List = [],
 		throw("removeIndex/4: invalid element index list pair")
 	).
-
-
-
-
-
-
-
-
-
-
-
-
 
 :- end_module ebea.player.
 

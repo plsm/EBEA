@@ -99,7 +99,6 @@
 
 read(Stream, RIResult, !Cache, !IO) :-
 	parseable.iou.read(Stream, 4096, no, !Cache, RIResult, !IO).
-%	parseable.iou.read(Stream, 4096, no, ebea.streams.phenotype.parse, !Cache, RIResult, !IO).
 
 write(Stream, Iteration, Population, !IO) :-
 	List = ebea.population.transform_player(map_PlayerPhenotypicRecord, Population),
@@ -135,7 +134,6 @@ map_PlayerPhenotypicRecord(player(ID, _SiteIndex, _Chromosome, Traits)) = ppr(ID
 
 parse_playerPhenotypicRecord(ppr(ID, Age, Energy, Selection)) -->
 	ebea.population.players.parseKey(ID),
-	%parseable.int32(ID),
 	ebea.player.age.parseTrait(Age),
 	ebea.player.energy.parseTrait(Energy),
 	ebea.player.selection.parseTraits(Selection)

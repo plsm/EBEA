@@ -150,15 +150,6 @@ parse(C) -->
 	data.config.io.filterV1003.parseGameConfig(PGP),
 	data.config.io.filterV1003.parseGameConfig(PGP_PA),
 	data.config.io.filterV1003.parseGameConfig(Ultimatum)
-	% parseGames(SelectedGame),
-	% parse_GameConfig_old_v1003(Cfg_2x2),
-	% parse_GameConfig_old_v1003(BattleSexes),
-	% parse_GameConfig_old_v1003(Centipede),
-	% parse_GameConfig_old_v1003(GiveTake),
-	% parse_GameConfig_old_v1003(Investment),
-	% parse_GameConfig_old_v1003(PGP),
-	% parse_GameConfig_old_v1003(PGP_PA),
-	% parse_GameConfig_old_v1003(Ultimatum)
 	.
 
 parseGameConfig(Config) -->

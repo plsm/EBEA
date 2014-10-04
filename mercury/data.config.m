@@ -134,10 +134,6 @@ ebea.player.age, ebea.player.energy, ebea.player.selection.
 :- type 'config_pgp+pa'     == gameConfig(gl.'pgp+pa'.game.game,    gl.'pgp+pa'.strategy.strategy,    gl.'pgp+pa'.parameters.parameters,    unit).
 :- type config_ultimatum    == gameConfig(gl.ultimatum.game.game,   gl.ultimatum.strategy.strategy,   gl.ultimatum.parameters.parameters,   unit).
 
-
-% :- func initSelectedGamePred(config, interactivePred(C, T)) = selectedGamePred.
-% :- mode initSelectedGamePred(in, in(interactivePred)) = out(selectedGamePred) is det.
-
 :- func default = config.
 
 :- func dialog = list(dialogItem(config)).
@@ -257,9 +253,6 @@ dialog =
 	di(label("game"),    selectOneOf(
 		get_selectedGame,
 		set_selectedGame,
-/*		getCurrentChoice,
-		setChoice,
-		setData,*/
 		[
 		 ci(label("2 player 2 action"),  [di(label("next"), 'new editField'( get_cfg_2x2,      set(set_cfg_2x2),     dialog_2x2))]),
 		 ci(label("battle of sexes"),    [di(label("next"), 'new editField'( get_battlesexes,  set(set_battlesexes), dialog_battlesexes))]),
@@ -281,26 +274,6 @@ errors(Config, Error) :-
 	;
 	gl.ultimatum.game.errors(Config^ultimatum^game, Error)
 	.
-
-% initSelectedGamePred(Config, Pred) = Result :-
-% 	Config^selectedGame = '2x2',
-% 	Result = 'new 2x2'(Pred)
-% 	;
-% 	Config^selectedGame = battlesexes,
-% 	Result = battlesexes(Pred)
-% 	;
-% 	Config^selectedGame = centipede,
-% 	Result = centipede(Pred)
-% 	;
-% 	Config^selectedGame = pgp,
-% 	Result = pgp(Pred)
-% 	;
-% 	Config^selectedGame = 'pgp+pa',
-% 	Result = 'pgp+pa'(Pred)
-% 	;
-% 	Config^selectedGame = ultimatum,
-% 	Result = ultimatum(Pred)
-% 	.
 
 runEBEA(RunMode, Config, !IO) :-
 	(if
@@ -637,52 +610,6 @@ runVS4Game3(RunMode, AllConfig, GameConfig, Streams, MapUpdateState, !Random, !I
 	),
 	ebea.streams.closeOutputStreams(Streams, !IO)
 	.
-
-
-
-% :- pred callErrors(list(pred(string)), maybe(string), maybe(string)).
-% :- mode callErrors(in(list_skel(pred(out) is semidet)), in, out) is det.
-% :- mode callErrors(in(list_skel(pred(out) is nondet)), in, out) is det.
-
-% callErrors([], !MErrors).
-% callErrors([PredError | RestPreds], !MErrors) :-
-% 	callError(PredError, !MErrors),
-% 	callErrors(RestPreds, !MErrors).
-
-
-% :- pred callError(pred(string), maybe(string), maybe(string)).
-% :- mode callError(in(pred(out) is nondet), in, out) is det.
-
-% callError(Pred, !MErrors) :-
-% 	solutions.solutions(Pred, ListErrors)
-% 	(if
-% 		Pred(Msg)
-% 	then
-% 		!.MErrors = no,
-% 		!:MErrors = yes(Msg)
-% 		;
-% 		!.MErrors = yes(Msgs),
-% 		!:MErrors = yes(Msgs ++ "\n" ++ Msg)
-% 	else
-% 		true
-% 	).
-
-% :- pred callError(pred(string), maybe(string), maybe(string)).
-% :- mode callError(in(pred(out) is nondet), in, out) is det.
-
-% callError(Pred, !MErrors) :-
-% 	(if
-% 		Pred(Msg)
-% 	then
-% 		!.MErrors = no,
-% 		!:MErrors = yes(Msg)
-% 		;
-% 		!.MErrors = yes(Msgs),
-% 		!:MErrors = yes(Msgs ++ "\n" ++ Msg)
-% 	else
-% 		true
-% 	).
-
 
 :- func dialog(
 	list(dialogItem(G)),

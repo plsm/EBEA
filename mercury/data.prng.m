@@ -93,23 +93,6 @@ dialogItem =
 			]
 		)
 	).
-/*
-dialog =
-%		getCurrentChoice,
-%		setChoice,
-	[
-	di(label("Mersenne Twister"), subdialog(
-		[
-		di(label("Clock"),   newValue(mt(clock))),
-		di(label("Seed"),    updateFieldInt(getSeed, setSeed(st_mt)))
-		])),
-	di(label("Linear Congruential Generator"),       subdialog(
-		[
-		di(label("Clock"),   newValue(lcg(clock))),
-		di(label("Seed"),    updateFieldInt(getSeed, setSeed(st_random)))
-		]))
-	].
-*/														 
 
 
 
@@ -133,7 +116,7 @@ parse(lcg(Seed)) -->
 :- func getCurrentChoice_supplyParameter(data.config.config) = maybe(currentChoice(supplyParameter)).
 
 getCurrentChoice_supplyParameter(Config) = yes(cc(Index, Random)) :-
-	Random = Config^random,/*data.config.*/
+	Random = Config^random,
 	(	%
 		Random = mt(_),
 		Index = 0
@@ -141,9 +124,6 @@ getCurrentChoice_supplyParameter(Config) = yes(cc(Index, Random)) :-
 		Random = lcg(_),
 		Index = 1
 	).
-
-%getCurrentChoice_supplyParameter(mt(_))     = yes(0).
-%getCurrentChoice_supplyParameter(random(_)) = yes(1).
 
 :- func setChoice_supplyParameter(data.config.config, int) = setResult(selectChoice(config, supplyParameter)).
 
@@ -173,67 +153,6 @@ setChoice_supplyParameter(OldConfig, Index) = ok(sc(NewConfig, NewSupplyParamete
 		)
 	)
 	.
-
-/*
-:- func setChoice_supplyParameter(supplyParameter, int) = setResult(supplyParameter).
-
-setChoice_supplyParameter(SupplyParameter, Index) = ok(Result) :-
-	SupplyParameter = mt(_),
-	(if
-		Index = 0, R = SupplyParameter ;
-		Index = 1, R = random(clock)
-	then
-		Result = R
-	else
-		throw("setChoice_supplyParameter/2: invalid index")
-	)
-	;
-	SupplyParameter = random(_),
-	(if
-		Index = 0, R = mt(clock) ;
-		Index = 1, R = SupplyParameter
-	then
-		Result = R
-	else
-		throw("setChoice_supplyParameter/2: invalid index")
-	)
-	.
-*/
-/*
-:- func get_seed(supplyParameter) = seed.
-
-get_seed(mt(Result)) = Result.
-get_seed(random(Result)) = Result.
-
-:- func set_seed(supplyParameter, seed) = userInterface.setResult(supplyParameter).
-
-set_seed(mt(_),     Seed) = ok(mt(Seed)).
-set_seed(random(_), Seed) = ok(random(Seed)).
-*/
-
-
-
-
-
-
-
-
-/*
-:- func getSeed(supplyParameter) = int.
-
-getSeed(mt(Seed)) = getValueSeed(Seed).
-getSeed(random(Seed)) = getValueSeed(Seed).
-
-:- func getValueSeed(seed) = int.
-
-getValueSeed(clock) = 123709.
-getValueSeed(value(Result)) = Result.
-
-:- func setSeed(supplyType, supplyParameter, int) = setResult(supplyParameter).
-
-setSeed(st_mt, _, Value) = ok(mt(value(Value))).
-setSeed(st_random, _, Value) = ok(random(value(Value))).
-*/
 
 :- end_module data.prng.
 

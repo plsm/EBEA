@@ -311,8 +311,6 @@ initData3(Game, Parameters, Streams, Population, data(Game, Parameters, Streams)
 	Stats^deathsStarvation = 0,
 	Stats^births = 0.
 
-%:- pragma promise_pure(run/9).
-
 runGame2(Mode, Game, Parameters, Streams, NumberIterations, Population, !Distribution, !Random, !IO) :-
 	initData2(Game, Parameters, Streams, Population, Data, Stats),
 	printInitialDataToStreams(Data^s, Population, !IO),
@@ -496,10 +494,6 @@ initSelectionTraits(Game, NewBornKey, !Population) :-
 
 runLoopData2(Mode, Data, TimeLeft, Iteration, !Population, !Stats, !Distribution, !Random, !IO) :-
 	NumberPlayers = game.numberPlayers(Data^game),
-	% io.print("\r", !IO),
-	% io.print(Iteration, !IO),
-	% io.flush_output(io.stdout_stream, !IO),
-	
 	iterationData2(Data, Iteration, !Population, !Stats, !Distribution, !Random, !IO),
 	(
 		Mode = background,
@@ -600,13 +594,11 @@ runLoopData3(Mode, Data, TimeLeft, Iteration, !Population, !Stats, !Distribution
 printInitialDataToStreams(Streams, Population, !IO) :-
 	Streams = detailedTxt(_, _, _, _),
 	ebea.population.fold_players(printBirth(Streams^tosBirth, -1), Population, !IO)
-%	list.foldl(printBirth(Streams^tosBirth, -1), ebea.population.players(Population), !IO)
 	;
 	Streams = detailedBin(_, _, _, _, _),
 	ebea.streams.siteState.write(Streams^bosSiteState, -1, Population, !IO),
 	ebea.population.fold_players(ebea.streams.birth.foldInit, Population, []) = Births,
 	ebea.streams.birth.writeInit(Streams^bosBirth, Births, !IO)
-%	ebea.streams.birth.write(Streams^bosBirth, -1, ebea.population.players(Population), !IO)
 	;
 	Streams = dynamics(_),
 	io.print(Streams^sopopulation, "-1 ", !IO),
@@ -827,7 +819,6 @@ printPlayerProfile(Stream, Iteration, PlayerProfile, !IO) :-
 
 :- pred printBirth(io.output_stream, int, player(C, T), io, io)
 	<= printable(C).
-%	<= (chromosome(C, T, P), printable(C)).
 :- mode printBirth(in, in, in, di, uo) is det.
 
 printBirth(Stream, Iteration, Player, !IO) :-

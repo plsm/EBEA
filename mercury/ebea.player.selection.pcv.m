@@ -43,9 +43,9 @@
 
 :- type combination == list(ebea.population.players.key).
 
-%:- inst pcv == bound(parterSelection(ground)).
+:- inst pcv == bound(parterSelection(ground, ground)).
 
-%:- inst playerPCV == bound(player(ground, ground, ground, bound(traits(ground, ground, pcv)))).
+:- inst playerPCV == bound(player(ground, ground, ground, bound(traits(ground, ground, pcv)))).
 
 /**
  * initProbabilityCombinationVector(Quotient, Remainder, Index) = Result
@@ -165,12 +165,6 @@
  * !Destiny}.  The probabilities in {@code !Destiny} remain unchanged.
   
  */
-% :- pred copyPercentageCombinations(int, probabilityCombinationVector, probabilityCombinationVector, probabilityCombinationVector, R, R)
-% 	<= ePRNG(R).
-% :- mode copyPercentageCombinations(in, in, array_di, array_uo, in, out) is det.
-% %:- mode copyPercentageCombinations(in, in, in, out, in, out) is det.
-
-
 :- pred copyPercentageCombinations(ebea.player.selection.parameters, player(C, T), player(C, T), player(C, T), R, R)
 	<= ePRNG(R).
 %:- mode copyPercentageCombinations(in, in(playerPCV), in(playerPCV), out, in, out) is det.
@@ -314,7 +308,6 @@ updateProbCombVectors(
 				else
 					true
 				)
-				%trace [io(!IO)] (io.format("Before  %s\n", [s(string(!.ProbCombVectors))], !IO))
 			)
 		)
 	).
@@ -378,11 +371,7 @@ copyPercentageCombinations(Parameters, Parent, !Offspring, !Random) :-
 	else
 		throw("copyPercentageCombinations/6: never reached")
 	).
-/*
-copyPercentageCombinations(Percentage, Source, !Destiny, !Random) :-
-	Remaining = int.min(Percentage * array.size(Source) / 100, array.size(!.Destiny)),
-	copyCombination(Remaining, array.size(Source) - 1, array.copy(Source), !Destiny, !Random).
-*/
+
 probabilityRaw(ProbCombVectors, Index, Value) :-
 	(if
 		Index = 0
@@ -513,7 +502,6 @@ copyCombination(Remaining, Size, Source, !Destiny, !Random) :-
 :- mode search(in, in, in, in, out, out) is det.
 
 search(Low, High, SelectedProbability, ProbCombVectors, SelectedSlot, Combination) :-
-%	trace [io(!IOT)] (io.format("search %d  [%d %d]\n", [i(SelectedProbability), i(Low), i(High)], !IOT)),
 	(if
 		Low >= High
 	then
@@ -634,7 +622,6 @@ testLoop(PCV, !IO) :-
 testLoop(Percentage, Trial, Parent, Offspring, !Random, !IO) :-
 	Remaining = int.min(Percentage * array.size(Parent) / 100, array.size(Offspring)),
 	copyCombination(Remaining, array.size(Parent) - 1, array.copy(Parent), Offspring, NewOffspring, !Random),
-%	copyPercentageCombinations(Percentage, Parent, Offspring, NewOffspring, !Random),
 	io.print(NewOffspring, !IO),
 	io.nl(!IO),
 	(if

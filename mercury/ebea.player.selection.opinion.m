@@ -54,25 +54,6 @@
 	<= ePRNG(R)
 	.
 
-% /**
-%  * Select a number of partners based on the opinion of the given player and
-%  * partners.  The probability of a partner being selected is inversely
-%  * proportional to the absolute opinion difference.
-%  */
-
-% :- pred selectPartners_v1(ebea.player.selection.traits, int, list(player(C, T)), list(player(C, T)), R, R) <= ePRNG(R).
-% :- mode selectPartners_v1(in(opinion), in, in, out, in, out) is det.
-
-% /**
-%  * Select a number of partners based on the opinion of the given player and
-%  * partners.  The probability of a partner being selected is inversely
-%  * proportional to the absolute opinion difference.
-%  */
-
-% :- pred selectPartners_v2(ebea.player.selection.traits, int, list(player(C, T)), list(player(C, T)), R, R) <= ePRNG(R).
-% :- mode selectPartners_v2(in(opinion), in, in, out, in, out) is semidet.
-
-
 /**
  * After the players have played the game, they update the opinions they have.
  */
@@ -107,7 +88,6 @@ checkPartnerOpinion(TraitPlayer, Profile) :-
 	Partner^traits^selectionTrait = TraitPartner,
 	TraitPartner = opinion(_, _),
 	overlap(TraitPlayer, TraitPartner) > TraitPlayer^uncertainty,
-%	overlap(TraitPlayer, TraitPartner) > TraitPartner^uncertainty,
 	checkPartnerOpinion(TraitPlayer, RestProfile)
 	.
 
@@ -120,12 +100,6 @@ selectPartners(TraitPlayer, NumberPartners, Players, Neighbours, SelectedPartner
 		!Random),
 	SelectedPartners = list.map(ebea.population.players.player(Players), SelectedPartnerIDs)
 	.
-
-% selectPartners_v1(TraitPlayer, NumberPartners, Neighbours, Partners, !Random) :-
-% 	list.foldl3(selectAPartner_v1(TraitPlayer), 1..NumberPartners, [], Partners, Neighbours, _, !Random).
-
-% selectPartners_v2(TraitPlayer, NumberPartners, Neighbours, Partners, !Random) :-
-% 	list.foldl3(selectAPartner_high(weight_v2, TraitPlayer), 1..NumberPartners, [], Partners, Neighbours, _, !Random).
 
 updateOpinions(Game, Parameters, Players, Payoffs, !NextRoundPopulation) :-
 	Players = [FocalPlayer | SelectedPartners],
@@ -250,209 +224,6 @@ weight(TraitPlayer, TraitPartner) = Result :-
 	)
 	.
 
-
-
-% /**
-%  * This function is used to reduce the neighbours to a sum of neighbours'
-%  * weight.  The weight is given by function {@code weight/2}.
-
-%  */
-% :- func computeTotalWeight(ebea.player.selection.traits, ebea.population.players.players(C, T), ebea.population.players.key, float) = float.
-% :- mode computeTotalWeight(in(opinion), in, in, in) = out is det.
-
-% computeTotalWeight(TraitPlayer, Players, NeighbourID, AC) =
-% 	AC +
-% 	weight(TraitPlayer, ebea.population.players.player(Players, NeighbourID)^traits^selectionTrait)
-% 	.
-
-
-
-
-% :- func computeTotalWeight_v1(ebea.player.selection.traits, list(player(C, T))) = float.
-% :- mode computeTotalWeight_v1(in(opinion), in) = out is det.
-
-% computeTotalWeight_v1(TraitPlayer, Partners) = list.foldl(computeTotalWeight_v1(TraitPlayer), Partners, 0.0).
-
-% :- func computeTotalWeight_v1(ebea.player.selection.traits, player(C, T), float) = float.
-% :- mode computeTotalWeight_v1(in(opinion), in, in) = out is det.
-
-% computeTotalWeight_v1(TraitPlayer, Partner, AC) = AC + weight_v1(TraitPlayer, Partner^traits^selectionTrait).
-
-% /**
-%  * Return the weight of a partner that is used in computing its probability of being selected.
-%  */
-% :- func weight_v1(ebea.player.selection.traits, ebea.player.selection.traits) = float.
-% :- mode weight_v1(in(opinion), in) = out is det.
-
-% weight_v1(TraitPlayer, TraitPartner) = Result :-
-% 	TraitPartner = random,
-% 	Result = 1.0
-% 	;
-% 	TraitPartner = partnerSelection(_),
-% 	Result = 1.0
-% 	;
-% 	TraitPartner = opinion(_, _),
-% 	Result = 10.0 * (2.0 - float.abs(TraitPartner^opinionValue - TraitPlayer^opinionValue) + 1.0)
-% 	.
-
-% /**
-%  * pickPartner(TraitPlayer, Weight, PickedPartner, Partners, RemainingPartners)
-  
-%  * Pick a partner that corresponds to the randomly computed weight.
-%  * Parameter {@code Partners} contains the available partners.  We select
-%  * partner without substitution, therefore parameter {@code
-%  * RemainingPartners} is unified with the partners that were not selected.
-
-%  * <p><b>Pre-condition</b>: there must be at least one partner in {@code Partners}.
-  
-%  */
-% :- pred pickPartner_v1(ebea.player.selection.traits, float, player(C, T), list(player(C, T)), list(player(C, T))).
-% :- mode pickPartner_v1(in(opinion), in, out, in, out) is det.
-
-% pickPartner_v1(TraitPlayer, TotalWeight, PickedPartner, Partners, RemainingPartners) :-
-% 	(if
-% 		Partners = [Partner | RestPartners]
-% 	then
-% 		Weight = weight_v1(TraitPlayer, Partner^traits^selectionTrait),
-% 		(if
-% 			TotalWeight < Weight
-% 		then
-% 			PickedPartner = Partner,
-% 			RemainingPartners = RestPartners
-% 		else
-% 			RemainingPartners = [Partner | RestRemainingPartners],
-% 			pickPartner_v1(
-% 				TraitPlayer,
-% 				TotalWeight - Weight,
-% 				PickedPartner,
-% 				RestPartners,
-% 				RestRemainingPartners)
-% 		)
-% 	else
-% 		throw("Error in computing a partner")
-% 	).
-
-% /**
-%  * selectAPartner_v1(TraitPlayer, Index, !AvailablePartners, !Random)
-
-%  * Select the {@code Index}th partner for the given player without
-%  * replacement.  Partners are selected with a probability that is inversely
-%  * proportional to the opinion difference between the focal player and
-%  * potential partner.
-  
-%  */
-% :- pred selectAPartner_v1(ebea.player.selection.traits, int, list(player(C, T)), list(player(C, T)),
-% 	list(player(C, T)), list(player(C, T)),
-% 	R, R)
-% 	<= ePRNG(R).
-% :- mode selectAPartner_v1(in(opinion), in, in, out, in, out, in, out) is det.
-
-% selectAPartner_v1(TraitPlayer, _, !PickedPartners, !AvailablePartners, !Random) :-
-% 	rng.nextFloat(Rnd, !Random),
-% 	Weight = Rnd * computeTotalWeight_v1(TraitPlayer, !.AvailablePartners),
-% 	pickPartner_v1(TraitPlayer, Weight, PickedPartner, !AvailablePartners),
-% 	list.cons(PickedPartner, !PickedPartners).
-
-
-% /**
-%  * selectAPartner_high(WeightFunc, TraitPlayer, Index, !AvailablePartners, !Random)
-
-%  * Select the {@code Index}th partner for the given player without
-%  * replacement.  Partners are selected with a probability that is inversely
-%  * proportional to the opinion difference between the focal player and
-%  * potential partner.
-  
-%  */
-% :- pred selectAPartner_high(ebea.player.selection.opinion.weightFunc, ebea.player.selection.traits, int, list(player(C, T)), list(player(C, T)),
-% 	list(player(C, T)), list(player(C, T)),
-% 	R, R)
-% 	<= ePRNG(R).
-% :- mode selectAPartner_high(in(weightFunc), in(opinion), in, in, out, in, out, in, out) is semidet.
-
-% selectAPartner_high(WeightFunc, TraitPlayer, _, !PickedPartners, !AvailablePartners, !Random) :-
-% 	rng.nextFloat(Rnd, !Random),
-% 	TotalWeight = list.foldl(computeTotalWeight_high(WeightFunc, TraitPlayer), !.AvailablePartners, 0.0),
-% 	TotalWeight > 0.0,
-% 	Weight = Rnd * TotalWeight,
-% 	pickPartner_high(WeightFunc, TraitPlayer, Weight, PickedPartner, !AvailablePartners),
-% 	list.cons(PickedPartner, !PickedPartners).
-
-
-
-
-% /**
-%  * pickPartner_high(WeightFunc, TraitPlayer, Weight, PickedPartner, Partners, RemainingPartners)
-  
-%  * Pick a partner that corresponds to the randomly computed weight.
-%  * Parameter {@code Partners} contains the available partners.  We select
-%  * partner without substitution, therefore parameter {@code
-%  * RemainingPartners} is unified with the partners that were not selected.
-
-%  * <p><b>Pre-condition</b>: there must be at least one partner in {@code Partners}.
-  
-%  */
-% :- pred pickPartner_high(ebea.player.selection.opinion.weightFunc, ebea.player.selection.traits, float, player(C, T), list(player(C, T)), list(player(C, T))).
-% :- mode pickPartner_high(in(weightFunc), in(opinion), in, out, in, out) is det.
-% %:- mode pickPartner_high(in((func(in(opinion), in) = out) is det), in(opinion), in, out, in, out) is det.
-
-% pickPartner_high(WeightFunc, TraitPlayer, TotalWeight, PickedPartner, Partners, RemainingPartners) :-
-% 	(if
-% 		Partners = [Partner | RestPartners]
-% 	then
-% 		Weight = WeightFunc(TraitPlayer, Partner^traits^selectionTrait),
-% 		(if
-% 			TotalWeight < Weight
-% 		then
-% 			PickedPartner = Partner,
-% 			RemainingPartners = RestPartners
-% 		else
-% 			RemainingPartners = [Partner | RestRemainingPartners],
-% 			pickPartner_high(
-% 				WeightFunc,
-% 				TraitPlayer,
-% 				TotalWeight - Weight,
-% 				PickedPartner,
-% 				RestPartners,
-% 				RestRemainingPartners)
-% 		)
-% 	else
-% 		throw("Error in computing a partner")
-% 	).
-
-% :- func computeTotalWeight_high(ebea.player.selection.opinion.weightFunc, ebea.player.selection.traits, player(C, T), float) = float.
-% :- mode computeTotalWeight_high(in(weightFunc), in(opinion), in, in) = out is det.
-
-% computeTotalWeight_high(WeightFunc, TraitPlayer, Partner, AC) = AC + WeightFunc(TraitPlayer, Partner^traits^selectionTrait).
-
-% /**
-%  * Return the weight of a partner that is used in computing its probability
-%  * of being selected.
-%  */
-
-% :- func weight_v2(ebea.player.selection.traits, ebea.player.selection.traits) = float.
-% :- mode weight_v2(in(opinion), in) = out is det.
-
-% weight_v2(TraitPlayer, TraitPartner) = Result :-
-% 	TraitPartner = random,
-% 	Result = 0.0
-% 	;
-% 	TraitPartner = partnerSelection(_),
-% 	Result = 0.0
-% 	;
-% 	TraitPartner = opinion(_, _),
-% 	DiffOpinion = float.abs(TraitPartner^opinionValue - TraitPlayer^opinionValue),
-% 	(if
-% 		overlap(TraitPlayer, TraitPartner) > TraitPlayer^uncertainty
-% 	then
-% 		Result = 10.0 * (2.0 - DiffOpinion + 1.0)
-% 	else
-% 		Result = 0.0
-% 	)
-% 	.
-
-
-%
-
 /**
  * updateOpinion(Game, EnergyScaling, Payoffs, FocalPlayer, SelectedPartner, !Index, !Population)
 
@@ -481,9 +252,7 @@ updateOpinion(Game, Parameters, Payoffs, FocalPlayer, SelectedPartner, Index, In
 	SelectionTrait_SP = SelectedPartner^traits^selectionTrait,
 	(if
 		SelectionTrait_FP = opinion(_, _),
-%		FocalPlayer^chromosome^selectionGenes = opinion(PayoffThreshold_FP, _),
 		SelectionTrait_SP = opinion(_, _),
-%		SelectedPartner^chromosome^selectionGenes = opinion(PayoffThreshold_SP, _),
 		SelectionTrait_FP \= SelectionTrait_SP
 	then
 		PayoffThreshold = paretoPayoff(Game),
@@ -508,33 +277,6 @@ updateOpinion(Game, Parameters, Payoffs, FocalPlayer, SelectedPartner, Index, In
 	else
 		true
 	).
-		
-	% TraitSelectedPartner = SelectedPartner^traits^selectionTrait,
-	% (
-	% 	TraitSelectedPartner = random
-	% 	;
-	% 	TraitSelectedPartner = partnerSelection(_)
-	% 	;
-	% 	TraitSelectedPartner = opinion(_, _),
-	% 	ChromosomeSelectedPartner = SelectedPartner^chromosome^selectionGenes,
-	% 	(
-	% 		ChromosomeSelectedPartner = random,
-	% 		throw("Invalid combination of selection chromosome and trait")
-	% 		;
-	% 		ChromosomeSelectedPartner = partnerSelection(_, _, _, _),
-	% 		throw("Invalid combination of selection chromosome and trait")
-	% 		;
-	% 		ChromosomeSelectedPartner = opinion(PayoffThreshold),
-	% 		PlayerPayoff = array.lookup(Payoffs, 0),
-	% 		(if
-	% 			scaledPayoffToThreshold(Game, EnergyScaling, PlayerPayoff) > PayoffThreshold
-	% 		then
-	% 			true
-	% 		else
-	% 			true
-	% 		)
-	% 	)
-	% ).
 
 :- func updatePlayerOpinion(ebea.player.selection.traits, player(C, T)) = player(C, T).
 :- mode updatePlayerOpinion(in(opinion), in) = out is det.
@@ -543,10 +285,6 @@ updatePlayerOpinion(Opinion, Player) = Result :-
 	PlayerTraits = 'selectionTrait :='(Player^traits, Opinion),
 	Result = 'traits :='(Player, PlayerTraits).
 
-%:- pred opinionChromosomeTrait(player(C, T), ebea.player.selection.chromosome, ebea.player.selection.traits).
-%:- mode opinionChromosomeTrait(in, out, out(opinion)) is semidet.
-
-		
 /**
  * Compute the overlap between the opinions of two players.  The overlap is
  * represented by <i>h<sub>ij</sub></i>.
@@ -629,41 +367,6 @@ updateTrait(no, Parameters, Trait1, Trait2) = Result :-
 		Result = Trait2
 	)
 	.
-	
-
-
-
-% :- pred updateTrait(ebea.player.selection.parameters, ebea.player.selection.traits, ebea.player.selection.traits, ebea.player.selection.traits).
-% :- mode updateTrait(in, in(opinion), in(opinion), out(opinion)) is det.
-
-% updateTrait(Parameters, Trait1, Trait2, Result) :-
-% 	overlap(Trait1, Trait2) > Trait1^uncertainty,
-% 	(
-% 		Trait1^opinionValue \= Trait2^opinionValue
-% 		;
-% 		Trait1^uncertainty \= Trait2^uncertainty
-% 	),
-% 	Result^opinionValue = Trait2^opinionValue +
-% 		(if
-% 			Trait1^opinionValue \= Trait2^opinionValue
-% 		then
-% 			Parameters^mu
-% 			* relativeAgreement(Trait1, Trait2)
-% 			* (Trait1^opinionValue - Trait2^opinionValue)
-% 		else
-% 			0.0
-% 		),
-% 	Result^uncertainty = Trait2^uncertainty +
-% 		(if
-% 			Trait1^uncertainty \= Trait2^uncertainty
-% 		then
-% 			Parameters^mu
-% 			* relativeAgreement(Trait1, Trait2)
-% 			* (Trait1^uncertainty - Trait2^uncertainty)
-% 		else
-% 			0.0
-% 		)
-% 	.
 
 :- end_module ebea.player.selection.opinion.
 

@@ -83,8 +83,6 @@ default(StrategyChromosome) =
 dialog(DialogStrategyGenes) =
 	[
 %	di(label("age genes"),        'new editField'(  get_ageGenes,        set(set_ageGenes),       ebea.player.age.dialogChromosome)),
-%	di(label("energy genes"),     'new editField'(  get_energyGenes,     set(set_energyGenes),    ebea.player.energy.dialogChromosome)),
-%	di(label("selection genes"),  'new editField'(  get_selectionGenes,  set(set_selectionGenes), [di(label("selection"), ebea.player.selection.dialogChromosome)])),
 	di(label("selection genes"),  'new editField'(  get_selectionGenes,  set(set_selectionGenes), ebea.player.selection.chromosome.dialog)),
 	di(label("strategy genes"),   'new editField'(  get_strategyGenes,   set(set_strategyGenes),  DialogStrategyGenes))
 	].

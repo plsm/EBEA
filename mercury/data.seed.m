@@ -80,11 +80,6 @@ parse(value(Value)) -->
 :- func getCurrentChoice_seed(supplyParameter) = maybe(currentChoice(seed)).
 
 getCurrentChoice_seed(SupplyParameter) = yes(cc(Index, Seed)) :-
-	% (
-	% 	SupplyParameter = mt(Seed)
-	% ;
-	% 	SupplyParameter = random(Seed)
-	% ),
 	Seed = SupplyParameter^seed,
 	(
 		Seed = clock,
@@ -122,40 +117,6 @@ setChoice_seed(OldSupplyParameter, Index) = ok(sc(NewSupplyParameter, NewSeed)) 
 			throw("setChoice_seed/2: invalid index")
 		)
 	).
-
-/*
-  
-:- func getCurrentChoice_seed(seed) = maybe(int).
-
-getCurrentChoice_seed(clock)   = yes(0).
-getCurrentChoice_seed(seed(_)) = yes(1).
-
-:- func setChoice_seed(seed, int) = setResult(seed).
-
-setChoice_seed(Seed, Index) = ok(Result) :-
-	Seed = clock,
-	(if
-		Index = 0, R = Seed ;
-		Index = 1, R = seed(123709)
-	then
-		Result = R
-	else
-		throw("setChoice_seed/2: invalid index")
-	)
-	;
-	Seed = seed(_),
-	(if
-		Index = 0, R = clock ;
-		Index = 1, R = Seed
-	then
-		Result = R
-	else
-		throw("setChoice_seed/2: invalid index")
-	)
-	.
-
-
-  */
 
 :- end_module data.seed.
 

@@ -131,7 +131,6 @@ pool size parent-offspring transmission: %d%%\n",
 % 		[f(highestPayoff(Game)), f(minimumPayoff(Game)), f(paretoPayoff(Game))],
 % 				 !IO).
 
-
 :- pred print_2x2(io.output_stream, format, config, config_2x2, io.state, io.state).
 :- mode print_2x2(in, in, in, in, di, uo) is det.
 

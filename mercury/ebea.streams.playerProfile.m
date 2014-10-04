@@ -74,7 +74,6 @@ write(Stream, Game, Iteration, PlayerProfiles, !IO) :-
 parse(NumberPlayers, ippr(Iteration, PlayerProfiles)) -->
 	parseable.int32(Iteration),
 	parsePlayerProfiles(NumberPlayers, PlayerProfiles)
-%	parseable.parseList(withLength, parseable.parseList(onlyElements(NumberPlayers)), PlayerProfiles)
 	.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

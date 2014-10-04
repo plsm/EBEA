@@ -171,25 +171,6 @@
 	foldable(A, AA)
 ).
 
-
-:- pred stepPlayGame3High(
-	ebea.player.energy.parameters :: in,
-	G                             :: in,
-	list(list(ebea.population.players.key)) :: in,  list(list(ebea.population.players.key)) :: out,
-	array(AA)                               :: di,  array(AA)                               :: uo,
-	player(CS, T)                 :: in,
-	list(player(CS, T))           :: in,
-	maybe(array(float)) :: out,
-	population(CS, T) :: in,  population(CS, T) :: out,
-	R                 :: in,  R                 :: out
-) is det
-	<= (
-	asymmetricGame(G, CS, A),
-	ePRNG(R),
-	foldable(A, AA)
-).
-
-
 /**
  * stepSurvive(Parameters, Player, !Random, Dies)
   
@@ -235,8 +216,6 @@
 
 :- instance printable(ebea.player.energy.chromosome).
 
-%:- instance printable(ebea.player.energy.trait).
-
 :- instance printable(ebea.player.energy.ac).
 
 :- implementation.
@@ -269,12 +248,6 @@
 [
 	pred(print/4) is ebea.player.energy.printChromosome
 ].
-
-% :- instance printable(ebea.player.energy.trait)
-% 	where
-% [
-% 	pred(print/4) is ebea.player.energy.printTrait
-% ].
 
 :- instance printable(ebea.player.energy.ac)
 	where
@@ -329,7 +302,6 @@ stepPlayGame2(
 	!NextRoundPopulation,
 	!PlayerProfiles,
 	!Random) :-
-%	trace [io(!IO)] (io.format("ebea.player.energy.round/9:\n\tplayer: %s\n\tpartners: %s\n", [s(string(ForPlayer)), s(string(Partners))], !IO)),
 	
 	NumberPlayers = game.numberPlayers(Game),
 	InitProfile =
@@ -365,29 +337,6 @@ stepPlayGame2(
 		;
 		MPayoffs = no
 	).
-
-stepPlayGame3High(
-	EnergyParameters,
-	Game,
-	!PlayerProfiles,
-	!SiteActionAccumulator,
-	ForPlayer,
-	Partners,
-	MPayoffs,
-	!NextRoundPopulation,
-	!Random
-) :-
-	stepPlayGame3(
-	EnergyParameters,
-	Game,
-	ForPlayer,
-	Partners,
-	MPayoffs,
-	!NextRoundPopulation,
-	!PlayerProfiles,
-	!Random,
-	!SiteActionAccumulator
-		     ).
 
 stepPlayGame3(
 	EnergyParameters,

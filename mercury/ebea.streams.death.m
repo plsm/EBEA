@@ -127,19 +127,11 @@ parse(idr(Iteration, CarryingCapacity, OldAge, Starvation)) -->
 	parseable.parseList(withLength, OldAge),
 	parseable.parseList(normalType, Starvation).
 
-% parse(idr(Iteration, CarryingCapacity, OldAge, Starvation)) -->
-% 	parseable.int32(Iteration),
-% 	parseable.parseList(withLength, ebea.population.players.parseKey, CarryingCapacity),
-% 	parseable.parseList(withLength, ebea.population.players.parseKey, OldAge),
-% 	parseable.parseList(normalType, ebea.population.players.parseKey, Starvation).
-
 deathsAtSite(_, [], _) = 0.
 deathsAtSite(BirthRecords, [PlayerID | Rest], SiteIndex) =
 	(if
 		ebea.streams.birth.search(PlayerID, BirthRecords, R),
-%		list.member(R, BirthRecords),
 		R^siteIndex = SiteIndex
-%		R^id = PlayerID
 	then
 		1
 	else

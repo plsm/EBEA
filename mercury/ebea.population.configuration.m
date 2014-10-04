@@ -128,7 +128,6 @@ default(DefaultStrategyChromosome) = Result :-
 dialog(DefaultStrategyChromosome, DialogStrategyChromosome) =
 	[
 	 di(label("geometry"), 'new selectOneOf'(selectedGeometry, selectGeometry, set(set_geometry), listGeometryChoices)),
-%	di(label("geometry"),  'new editField'(  get_geometry,  set(set_geometry),  ebea.population.parameters.dialog_geometry)),
 	 di(label("sites"),
 		'new editListFieldAny'(  get_sites,     set(set_sites),
 	 		ebea.population.site.parameters.default(DefaultStrategyChromosome),
@@ -200,15 +199,6 @@ parse_geometry(P) -->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of private predicates and functions
 
-
-% :- pred geometries(geometry, int, int, geometry).
-% :- mode geometries(in, out, out, out) is det.
-% :- mode geometries(in, out, in, out) is semidet.
-
-% geometries(wellmixed,           0, 0, wellmixed).
-% geometries(lattice(_, _, _, _), 1, 0, wellmixed).
-% geometries(wellmixed,           0, 1, lattice(default_xSize, default_ySize, default_neighbourhood, default_boundary)).
-% geometries(lattice(X, Y, N, B), 1, 1, lattice(X, Y, N, B)).
 
 :- func selectedGeometry(ebea.population.configuration.configuration(CS, MU)) = maybe(currentChoice(geometry)).
 

@@ -80,8 +80,6 @@
 
 :- instance foldable(ebea.player.age.chromosome, ebea.player.age.ac).
 
-%:- instance printable(ebea.player.age.trait).
-
 :- instance parseable(ebea.player.age.parameters).
 
 :- instance printable(ebea.player.age.ac).
@@ -119,12 +117,6 @@ where
 	func(fold/2)   is ebea.player.age.fold,
 	func(initAC/0) is ebea.player.age.initAC
 ].
-
-% :- instance printable(ebea.player.age.trait)
-% 	where
-% [
-% 	pred(print/4) is ebea.player.age.printTrait
-% ].
 
 :- instance printable(ebea.player.age.ac)
 	where

@@ -181,25 +181,6 @@
 	<= (ePRNG(R), chromosome(C, T, P))
 .
 
-% :- pred stepDeath(
-% 	ebea.population.parameters(P),
-% 	player(C, T), site,
-% 	R, R,
-% 	list(player(C, T)), list(player(C, T)),
-% 	list(player(C, T)), list(player(C, T)),
-% 	list(player(C, T)), list(player(C, T)),
-% 	list(player(C, T)), list(player(C, T))
-% 	)
-% 	<= (ePRNG(R), chromosome(C, T, P)).
-% :- mode stepDeath(in, in, in, in, out, in, out, in, out, in, out, in, out) is det.
-
-
-% /**
-%  * This function is used to put newborn players in their site.
-%  */
-% :- func placePlayerXX(player(C, T), array(site)) = array(site).
-% :- mode placePlayerXX(in, array_di) = array_uo is det.
-
 /**
  * This function is used to put newborn players in their site.  Players may
  * migrate to new sites depending on parameter {@code
@@ -326,34 +307,6 @@ createLatticeInitialSite(
 
 	
 numberPlayers(Site) = list.length(Site^playerIDs).
-
-% neighbours(ArraySites, Players, Player, Neighbours) :-
-% 	array.member(ArraySites, Site),
-% 	%
-% 	list.delete(Site^playerIDs, PlayerID, RestIDs),
-% 	Player = ebea.population.getPlayer(Players, PlayerID),
-% 	SiteNeighbours = list.map(ebea.population.getPlayer(Players), RestIDs),
-% 	%
-% 	array.foldl(AppendPlayersSite, Site^neighbourSiteIdxs, SiteNeighbours) = Neighbours,
-% 	AppendPlayersSite =
-% 	(func(I, AC) = R :-
-% 		S = array.lookup(ArraySites, I),
-% 		R = list.append(list.map(ebea.population.getPlayer(Players), S^playerIDs), AC)
-% 	).
-
-
-% neighbours(ArraySites, Players, Player) = Neighbours :-
-% 	array.lookup(ArraySites, Player^siteIndex) = Site,
-% 	%
-% 	list.delete_all(Site^playerIDs, Player^id) = RestIDs,
-% 	SiteNeighbours = list.map(ebea.population.getPlayer(Players), RestIDs),
-% 	%
-% 	array.foldl(AppendPlayersSite, Site^neighbourSiteIdxs, SiteNeighbours) = Neighbours,
-% 	AppendPlayersSite =
-% 	(func(I, AC) = R :-
-% 		S = array.lookup(ArraySites, I),
-% 		R = list.append(list.map(ebea.population.getPlayer(Players), S^playerIDs), AC)
-% 	).
 
 stepBirth(Parameters, Player, Parent, !Distribution, !Random, !NextID, !Nursery) :-
 	ebea.player.reproduce(Parameters, Player, Parent, !.NextID, MOffspring, !Distribution, !Random),
@@ -544,10 +497,6 @@ makeCopy(PlayerParameters, SiteIndex, Chromosome, _, !KeyGenerator, !SitePlayerK
 	ebea.population.players.insert(NewPlayer, !KeyGenerator, !PopulationPlayers)
 	.
 
-% :- pred ixy(geometry, int, int, int).
-% :- mode ixy(in, in, out, out) is det.
-% :- mode ixy(in, out, in, in) is det.
-
 :- func ix(geometry, int) = int.
 
 ix(wellmixed, I) = I.
@@ -564,6 +513,7 @@ xyi(wellmixed, _, _) = throw("Not applicable").
 xyi(lattice(XL, _, _, _), X, Y) = X + Y * XL.
 
 :- func makeConnections(geometry, int) = list(int).
+
 makeConnections(Geometry, SiteIndex) = solutions.solutions(neighbour(Geometry, ix(Geometry, SiteIndex), iy(Geometry, SiteIndex))).
 
 :- pred neighbour(geometry, int, int, int).

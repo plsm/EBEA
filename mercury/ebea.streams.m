@@ -96,25 +96,6 @@
 
 :- instance parseable(level).
 
-% /**
-%  * scanStreams(Stream, IMStreams, !IO)
-  
-%  * Open the streams where statistical is going to be recorded.  If there is
-%  * an IO error while opening the streams, parameter {@code MStreams} is
-%  * unified with {@code no}.
-  
-%  */
-% :- pred scanStreams(io.input_stream, scanable.result(outStreams), io.state, io.state).
-% :- mode scanStreams(in, out, di, uo) is det.
-
-% /**
-%  * Scans the text file for the level of detail of the streams used or to be
-%  * used by an EBEA run.
-%  */
-
-% :- pred scanLevel(io.input_stream, scanable.result(level), io.state, io.state).
-% :- mode scanLevel(in, out, di, uo) is det.
-
 /**
  * openOutputStreams(Level, MSuffix, IMStreams, !IO)
   
@@ -132,14 +113,6 @@
  */
 :- pred closeOutputStreams(outStreams, io, io).
 :- mode closeOutputStreams(in, di, uo) is det.
-
-% /**
-%  * openInputStreams(Level, MFileNameSuffix, MStreams, !IO)
-  
-%  * Opens streams in input mode used by EBEA at the specified level.
-%  */
-% :- pred openInputStreams(level, maybe(string), maybe_error(inStreams), io.state, io.state).
-% :- mode openInputStreams(in, in, out, di, uo) is det.
 
 /**
  * openInputStreams(Directory, Level, MFileNameSuffix, MStreams, !IO)
@@ -167,7 +140,7 @@
 
 :- implementation.
 
-:- import_module exception, list, maybe, string.
+:- import_module dir, exception, list, maybe, string.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Definition of exported types
@@ -300,39 +273,6 @@ openInputStreams(Directory, Level, MSuffix, IMStreams, !IO) :-
 		RStreamSummary = error(Error),
 		IMStreams = error(string.format("IO error opening `summary.csv` file: %s", [s(io.error_message(Error))]))
 	).
-
-
-% scanStreams(Stream, IMStreams, !IO) :-
-% 	io.read_line_as_string(Stream, ILine, !IO),
-% 	(if
-% 		ILine = ok(ULine)
-% 	then
-% 		(if
-% 			levelDetail(string.to_lower(string.strip(ULine)), Level)
-% 		then
-% 			openOutputStreams(Level, IMStreams, !IO)
-% 		else
-% 			IMStreams = ok(error("Expecting a line with level of detail for saving EBEA data"))
-% 		)
-% 	else
-% 		IMStreams = scanable.noOkToResult("level of detail for saving EBEA data", ILine)
-% 	).
-
-% scanLevel(Stream, IMLevel, !IO) :-
-% 	io.read_line_as_string(Stream, ILine, !IO),
-% 	(if
-% 		ILine = ok(ULine)
-% 	then
-% 		(if
-% 			levelDetail(string.to_lower(string.strip(ULine)), Level)
-% 		then
-% 			IMLevel = ok(ok(Level))
-% 		else
-% 			IMLevel = ok(error("Expecting a line with level of detail for saving EBEA data"))
-% 		)
-% 	else
-% 		IMLevel = scanable.noOkToResult("level of detail for saving EBEA data", ILine)
-% 	).
 
 closeInputStreams(Streams, !IO) :-
 	Streams = detailedTxt(_, _, _, _),
@@ -532,14 +472,6 @@ selectChoice(_, Index) = ok(Level) :-
 		throw("ebea.streams.selectChoice/2: Never reached")
 	).
 
-% :- pred levelDetail(string, level).
-% :- mode levelDetail(in, out) is semidet.
-% :- mode levelDetail(out, in) is det.
-
-% levelDetail("detailed", detailed).
-% levelDetail("dynamics", dynamics).
-% levelDetail("summary", summary).
-
 /**
  * Return the file name to open either for reading or writing.
  */
@@ -556,10 +488,10 @@ filename(Base, yes(Suffix), bin) = Base ++ Suffix ++ ".bin".
  */
 :- func filename(string, string, maybe(string), fileType) = string.
 
-filename(Directory, Base, no,          csv) = Directory ++ Base           ++ ".csv".
-filename(Directory, Base, yes(Suffix), csv) = Directory ++ Base ++ Suffix ++ ".csv".
-filename(Directory, Base, no,          bin) = Directory ++ Base           ++ ".bin".
-filename(Directory, Base, yes(Suffix), bin) = Directory ++ Base ++ Suffix ++ ".bin".
+filename(Directory, Base, no,          csv) = string.format("%s%c%s.csv",   [s(Directory), c(dir.directory_separator), s(Base)]).
+filename(Directory, Base, yes(Suffix), csv) = string.format("%s%c%s%s.csv", [s(Directory), c(dir.directory_separator), s(Base), s(Suffix)]).
+filename(Directory, Base, no,          bin) = string.format("%s%c%s.bin",   [s(Directory), c(dir.directory_separator), s(Base)]).
+filename(Directory, Base, yes(Suffix), bin) = string.format("%s%c%s%s.bin", [s(Directory), c(dir.directory_separator), s(Base), s(Suffix)]).
 
 
 :- end_module ebea.streams.

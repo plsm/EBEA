@@ -104,29 +104,6 @@ populationSize(Parameters) = list.foldl(Sum, Parameters^chromosomes, 0) :-
 		R = AC + IP^quantity
 	).
 
-% /**
-%  * Initialise the players in some site given the initial site state parameters.
-%  */
-% :- pred initialisePlayers(ebea.player.parameters(P), int, initialPlayers(CS), list(player(CS, T)), list(player(CS, T)), int, int, R, R)
-% 	<= (chromosome(CS, T, P), ePRNG(R)).
-% :- mode initialisePlayers(in, in, in, in, out, in, out, in, out) is det.
-
-
-% initialisePlayers(PlayerParameters, SiteIndex, InitialPlayers, !ListPlayers, !ID, !Random) :-
-% 	(if
-% 		InitialPlayers^quantity >= 0
-% 	then
-% 		InitChromosome =
-% 		(pred(ID2::in, AC2::in, Result2::out, RndIn2::in, RndOu2::out) is det :-
-% 			ebea.player.init(PlayerParameters, InitialPlayers^chromosome, ID2, SiteIndex, Off, RndIn2, RndOu2),
-% 			Result2 = [Off | AC2]
-% 		),
-% 		int.fold_up2(InitChromosome, !.ID, !.ID + InitialPlayers^quantity - 1, !ListPlayers, !Random),
-% 		!:ID = !.ID + InitialPlayers^quantity
-% 	else
-% 		throw("ebea.population.site.parameters.initialisePlayers/1: Invalid number of chromosome copies")
-% 	).
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of private predicates and functions
 

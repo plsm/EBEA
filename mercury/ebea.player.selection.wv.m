@@ -182,32 +182,8 @@ removeElements(Elements, !WeightVector) :-
 	),
 	removeElements(RestElements, !WeightVector)
 	.
-/*
-updateWeight(DefaultWeight, ProbabilitySelectedCombination, ScaledPayoff, ForElement, !WeightVector) :-
-	trace [io(!IO)] io.format("weight vector %s\n", [s(string(!.WeightVector))], !IO),
-	(if
-		map.search(!.WeightVector^elements, ForElement, AnWeight)
-	then
-		OldWeight = AnWeight,
-		NewWeight =
-			OldWeight * (1.0 - ProbabilitySelectedCombination)
-			+ ScaledPayoff * ProbabilitySelectedCombination,
-		map.det_update(ForElement, NewWeight, !.WeightVector^elements, NewElements)
-	else
-		OldWeight = DefaultWeight,
-		NewWeight =
-			OldWeight * (1.0 - ProbabilitySelectedCombination)
-			+ ScaledPayoff * ProbabilitySelectedCombination,
-		map.det_insert(ForElement, NewWeight, !.WeightVector^elements, NewElements)
-	),
-	!:WeightVector = wv(
-		NewElements,
-		!.WeightVector^sum - OldWeight + NewWeight,
-		!.WeightVector^size
-	).
-*/
+
 updateWeight(ProbabilitySelectedCombination, ScaledPayoff, ForElement, !WeightVector) :-
-%	trace [io(!IO)] io.format("weight vector %s\n", [s(string(!.WeightVector))], !IO),
 	(if
 		map.search(!.WeightVector^elements, ForElement, AnWeight)
 	then
@@ -228,7 +204,7 @@ updateWeight(ProbabilitySelectedCombination, ScaledPayoff, ForElement, !WeightVe
 	
 
 updatePlayerProbCombVectorsWeightVector(PCV, WV, Player) = Result :-
-%	Player^traits^selectionTrait = SelectionPhe,
+	Player^traits^selectionTrait = SelectionPhe,
 	Traits = partnerSelection(PCV, yes(WV)),
 	PlayerTraits = 'selectionTrait :='(Player^traits, Traits),
 	Result = 'traits :='(Player, PlayerTraits)
@@ -288,9 +264,6 @@ drawAsList(WeightVector, WithRepetition, HowMany, !List, !Random) :-
 		)
 	).
 
-
-
-
 :- pred drawElement(
 	weightVector(T) :: in,
 	T               :: out,
@@ -298,7 +271,6 @@ drawAsList(WeightVector, WithRepetition, HowMany, !List, !Random) :-
 ) is det
 	<= ePRNG(R)
 .
-
 
 drawElement(WeightVector, Result, !Random) :-
 	(if
@@ -365,8 +337,6 @@ pickElementByIndex(AnElement, _, !Index, !MResult) :-
 		!:Index = !.Index - 1
 	).
 
-
-
 :- pred parseElements(map(ebea.population.players.key, float), list(int), list(int)).
 :- mode parseElements(in, out, in) is det.
 :- mode parseElements(out, in, out) is semidet.
@@ -381,9 +351,6 @@ parseElements(Elements::out, !.List::in, !:List::out) :-
 	parseable.parseList(normalType, Keys, !List),
 	parseable.parseList(normalType, Values, !List),
 	Elements = map.set_from_corresponding_lists(map.init, Keys, Values).
-
-
-
 
 :- end_module ebea.player.selection.wv.
 

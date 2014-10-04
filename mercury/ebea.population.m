@@ -138,11 +138,6 @@ ebea.population.players, ebea.population.site.
  */
 :- func lastID(population(C, P)) = ebea.population.players.key.
 
-
-%:- func players(population(C, P)) = list(player(C, P)).
-
-
-
 /**
  * stepBirthDeath(Parameters, !Random, !Population, Nursery, Cemetery)
  
@@ -185,15 +180,6 @@ ebea.population.players, ebea.population.site.
 ) is det.
 
 /**
- * Return the player with the given identification.  Throws an exception if
- * the player does not exist.
-
- * TODO: migrate to new population type
- */
-
-% :- func player(int, population(C, P)) = player(C, P).
-
-/**
  * update(ID, Player, Population) = Result
 
  * Update the player with identification {@code ID} in the population.  If
@@ -229,10 +215,6 @@ ebea.population.players, ebea.population.site.
 
 :- pred fold_sites(func(player(C, P), A) = A, population(C, P), A, array(A)).
 :- mode fold_sites(in, in, in, out) is det.
-
-
-
-
 
 /**
  * Applies the given closure to every players in the population in order to
@@ -297,17 +279,6 @@ ebea.population.players, ebea.population.site.
 
 :- func deathChar(death) = char.
 
-% /**
-%  * readParameters(Stream, MParameters, !IO)
-  
-%  * Read the parameters that govern the population dynamics from the given
-%  * text stream.  If there is some IO error, value {@code no} is returned
-%  * and a message is printed in the standard error stream.
-%  */
-
-% :- pred readParameters(io.input_stream, ebea.player.parameters(P), maybe(ebea.population.parameters(P)), io, io).
-% :- mode readParameters(in, in, out, di, uo) is det.
-
 /**
  * printCarryingCapacityFunction(Stream, Parameters, MaxX, !IO)
   
@@ -317,7 +288,6 @@ ebea.population.players, ebea.population.site.
  * in the vertical axis is the probability.
  */
 
-%:- pred printCarryingCapacityFunction(io.output_stream, ebea.population.parameters(P), int, io, io).
 :- pred printCarryingCapacityFunction(io.output_stream, float, int, io, io).
 :- mode printCarryingCapacityFunction(in, in, in, di, uo) is det.	
 
@@ -387,7 +357,6 @@ createInitialPopulation(Game, PlayerParameters, Configuration, Population, !Rand
 		Population0 = pop(array.from_list(InitialSites), PopulationPlayers, NextKey)
 	),
 	Population = map_PlayerNeighbour(ebea.player.selection.initTraits(Game), Population0)
-%	,trace [io(!IO)] (io.print(Population, !IO), io.nl(!IO))
 	.
 
 
@@ -420,7 +389,6 @@ stepBirthDeath(
 		[], CemeteryCarryingCapacity,
 		[], CemeteryOldAge,
 		[], CemeteryStarvation),
-%	list.foldl(placePlayer, Nursery, Population^sites) = NextSites,
 	ebea.population.site.placePlayers(Parameters^migrationProbability, Nursery, Newborn, Population^sites, Sites0, !Random),
 	ebea.population.site.removePlayers(CemeteryCarryingCapacity, [], CemeteryIDsCarryingCapacity, Sites0, Sites1),
 	ebea.population.site.removePlayers(CemeteryOldAge, [], CemeteryIDsOldAge, Sites1, Sites2),
@@ -505,7 +473,6 @@ fold_sites(Func, Population, AC, array.from_list(Result)) :-
 	(func(S) = R :-
 		ebea.population.site.fold_player(Population, S, Func, AC) = R
 	)
-%	array.init(array.size(Population^sites), AC) = Result
 	.
 
 map_players(Closure, !Population) :-
@@ -514,14 +481,6 @@ map_players(Closure, !Population) :-
 
 transform_player(Closure, Population) = Result :-
 	ebea.population.players.transform(Closure, Population^players) = Result.
-
-% fold2_PlayerNeighbour(Pred, Population, !Accumulator1, !Accumulator2) :-
-% 	promise_equivalent_solutions [!:Accumulator1, !:Accumulator2]
-% 		solutions.unsorted_aggregate2(ebea.population.neighbours(Population), Fold2_PlayerNeighbour, !Accumulator1, !Accumulator2),
-% 	Fold2_PlayerNeighbour =
-% 	(pred({Player, Neighbours}::in, Acc1::in, NextAcc1::out, Acc2::in, NextAcc2::out) is det :-
-% 		Pred(Player, Neighbours, Acc1, NextAcc1, Acc2, NextAcc2)
-% 	).
 
 fold3_PlayerNeighbour(Pred, Population, !Accumulator1, !Accumulator2, !Accumulator3) :-
 	ebea.population.players.fold3(fold3_real_PlayerNeighbour(Pred, Population), Population^players, !Accumulator1, !Accumulator2, !Accumulator3).
@@ -557,64 +516,6 @@ deathChar(starvation, s).
 
 deathChar(Death) = Char :-
 	deathChar(Death, Char).
-
-% readParameters(Stream, PlayerParameters, MParameters, !IO) :-
-% 	io.read_line_as_string(Stream, RLine, !IO),
-% 	(if
-% 		RLine = ok(Line)
-% 	then
-% 		(if
-% 			string.words(Line) = [SCarryingCapacity, SDynamic | Rest],
-% 			util.comment(Rest)
-% 		then
-% 			(if
-% 				string.to_float(SCarryingCapacity, CarryingCapacity),
-% 				CarryingCapacity >= 0.0,
-% 				stringDynamic(SDynamic, Dynamic)
-% 			then
-% 				Parameters^carryingCapacity = CarryingCapacity,
-% 				Parameters^dynamic = Dynamic,
-% 				Parameters^pla = PlayerParameters,
-% 				MParameters = yes(Parameters)
-% 			else
-% 				(if
-% 					not stringDynamic(SDynamic, _)
-% 				then
-% 					io.format(io.stderr_stream, "Invalid population dynamics: %s.\n Expecting one of:", [s(SDynamic)], !IO),
-% 					High =
-% 					(pred(D::out) is multi :-
-% 						stringDynamic(D, _)
-% 					),
-% 					solutions.aggregate(High, util.spacePrint(io.stderr_stream), !IO),
-% 					io.nl(io.stderr_stream, !IO)
-% 				else
-% 					true
-% 				),
-% 				(if
-% 					string.to_float(SCarryingCapacity, CarryingCapacity),
-% 					CarryingCapacity < 0.0
-% 				then
-% 					io.print(io.stderr_stream, "Carrying capacity must be a positive value\n", !IO)
-% 				else
-% 					true
-% 				),
-% 				(if
-% 					not string.to_float(SCarryingCapacity, _)
-% 				then
-% 					io.print(io.stderr_stream, "Invalid carrying capacity value.\n", !IO)
-% 				else
-% 					true
-% 				),
-% 				MParameters = no
-% 			)
-% 		else
-% 			io.print(io.stderr_stream, "Invalid number of parameters for population: required carrying capacity and dynamics\n", !IO),
-% 			MParameters = no
-% 		)
-% 	else
-% 		io.print(io.stderr_stream, "Error reading population parameters from stream.\n", !IO),
-% 		MParameters = no
-% 	).
 
 printCarryingCapacityFunction(Stream, CarryingCapacity, MaxPopSize, !IO) :-
 	PrintPointPred =
@@ -675,70 +576,6 @@ debug(_Population, !IO) :-
 
 playerSite(Population, Player) = array.lookup(Population^sites, Player^siteIndex).
 
-% /**
-%  * Update the players in the given population using the player and its site.
-%  */
-% :- pred mapfold4_PlayerSite(
-% 	pred(player(C, T), site, player(C, T), T1, T1, T2, T2, T3, T3, T4, T4),
-% 	population(C, T), list(player(C, T)),
-% 	T1, T1, T2, T2, T3, T3, T4, T4).
-% :- mode mapfold4_PlayerSite(in(pred(in, in, out, in, out, in, out, in, out, in, out) is det), in, out, in, out, in, out, in, out, in, out) is det.
-
-% mapfold4_PlayerSite(Pred, Population, MappedPlayers, !Accumulator1, !Accumulator2, !Accumulator3, !Accumulator4) :-
-% 	list.map_foldl4(MapFold, Population^players, MappedPlayers, !Accumulator1, !Accumulator2, !Accumulator3, !Accumulator4),
-% 	MapFold =
-% 	(pred(Pla::in, Alp::out, Acc1::in, Cca1::out, Acc2::in, Cca2::out, Acc3::in, Cca3::out, Acc4::in, Cca4::out) is det :-
-% 		Pred(Pla, playerSite(Population, Pla), Alp, Acc1, Cca1, Acc2, Cca2, Acc3, Cca3, Acc4, Cca4)
-% 	).
-
-% :- pred fold5_PlayerSite(
-% 	pred(player(C, T), site, T1, T1, T2, T2, T3, T3, T4, T4, T5, T5),
-% 	population(C, T),
-% 	T1, T1,
-% 	T2, T2,
-% 	T3, T3,
-% 	T4, T4,
-% 	T5, T5).
-% :- mode fold5_PlayerSite(in(pred(in, in, in, out, in, out, in, out, in, out, in, out) is det), in, in, out, in, out, in, out, in, out, in, out) is det.
-
-% fold5_PlayerSite(Pred, Population, !Accumulator1, !Accumulator2, !Accumulator3, !Accumulator4, !Accumulator5) :-
-% 	list.foldl5(Fold, Population^players, !Accumulator1, !Accumulator2, !Accumulator3, !Accumulator4, !Accumulator5),
-% 	Fold =
-% 	(pred(P::in, Acc1::in, Cca1::out, Acc2::in, Cca2::out, Acc3::in, Cca3::out, Acc4::in, Cca4::out, Acc5::in, Cca5::out) is det :-
-% 		Pred(P, playerSite(Population, P), Acc1, Cca1, Acc2, Cca2, Acc3, Cca3, Acc4, Cca4, Acc5, Cca5)
-% 	).
-
-% /**
-%  * For each player in the population return a list with the neighbours.
-%  * These neighbours are the potential game partners or if reproduction is
-%  * sexual they can be used in a genetic crossover operator.
-
-%  * TODO move to module ebea.population.neighbours
-%  */
-% :- pred neighbours(population(C, P), player(C, P), list(player(C, P))).
-% :- mode neighbours(in, out, out) is nondet.
-
-% neighbours(pop(Structure, Players, _), Player, Neighbours) :-
-% 	ebea.population.site.neighbours(Structure, Players, Player, Neighbours).
-
-% /**
-%  * neighbours(Population, PlayerNeighbours)
-  
-%  * For each player in the population return a list with the neighbours.
-%  * This predicate is similar to {@code neighbours/3} but is amenable to
-%  * predicates from module {@code solutions}.
-
-%  * TODO move to module ebea.population.neighbours
-%  */
-% :- pred neighbours(population(C, P), {player(C, P), list(player(C, P))}).
-% :- mode neighbours(in, out) is nondet.
-
-% neighbours(Population, {Player, Neighbours}) :-
-% 	neighbours(Population, Player, Neighbours).
-
-
-
-
 /**
  * fold3_real_PlayerNeighbour(Pred, Population, Player, !Accumulator1, !Accumulator2, !Accumulator3)
   
@@ -798,7 +635,6 @@ fold4_real_PlayerNeighbour(Pred, Population, Player, !Accumulator1, !Accumulator
 :- mode mapfold_real_PlayerNeighbour(in(pred(in, in, out, in, out) is det), in, in, out, in, out) is det.
 
 mapfold_real_PlayerNeighbour(Pred, Population, Player, MappedPlayer, !Accumulator) :-
-%	ebea.population.site.neighbours(Population^sites, Population^players, Player) = Neighbours,
 	ebea.population.neighbours.init(Population^sites, Player) = Neighbours,
 	Pred(Player, Neighbours, MappedPlayer, !Accumulator).
 	
@@ -820,179 +656,6 @@ mapfold_real_PlayerNeighbour(Pred, Population, Player, MappedPlayer, !Accumulato
 mapfold_real_PlayerNeighbour_sv(Pred, Population, !Player, !Accumulator) :-
 	ebea.population.neighbours.init(Population^sites, !.Player) = Neighbours,
 	Pred(Neighbours, !Player, !Accumulator).
-	
-
-
-
-/*
-:- pred foldSite(pred(site(C, P), A, A), site(C, P), A, A).
-:- mode foldSite(in(pred(in, in, out) is det), in, in, out) is det.
-:- mode foldSite(in(pred(in, di, uo) is det), in, di, uo) is det.
-
-foldSite(Pred, Site, !AC) :-
-	list.foldl(Pred, Site^sitePlayers, !AC).
-*/
-
-% /**
-%  * death(Parameters, !Random, !Population, Deaths)
-  
-%  * Apply the death algorithm to all players in the population.  The
-%  * probability that a player dies is given by a sigmoid function that
-%  * depends on the population size and a "carrying capacity" parameter.
-%  * Points of this sigmoid function are calculated by {@code
-%  * carryingCapacity/2}.
-%  */
-
-% :- pred death(
-% 	ebea.population.parameters(P),
-% 	R, R,
-% 	population(C, T), population(C, T),
-% 	list(int), list(int), list(int))
-% 	<= (ePRNG(R), chromosome(C, T, P)).
-% :- mode death(in, in, out, in, out, out, out, out) is det.
-
-% death(
-% 	Parameters,
-% 	!Random,
-% 	wellMixed(PopulationIn, ID), wellMixed(PopulationOut, ID),
-% 	CemeteryCarryingCapacity, CemeteryOldAge, CemeteryStarvation)
-% :-
-% 	list.foldl5(
-% 		survives(Parameters, list.length(PopulationIn)),
-% 		PopulationIn,
-% 		[], PopulationOut,
-% 		!Random,
-% 		[], CemeteryCarryingCapacity,
-% 		[], CemeteryOldAge,
-% 		[], CemeteryStarvation).
-
-% death(
-% 	Parameters,
-% 	!Random,
-% 	network(SitesIn, ID), network(array.from_list(SitesOut), ID),
-% 	CemeteryCarryingCapacity, CemeteryOldAge, CemeteryStarvation)
-% :-
-% 	list.map_foldl4(
-% 		deathSite(Parameters),
-% 		array.to_list(SitesIn), SitesOut,
-% 		!Random,
-% 		[], CemeteryCarryingCapacity,
-% 		[], CemeteryOldAge,
-% 		[], CemeteryStarvation).
-
-% deathSite(Parameters, !Site, !Random, !CemeteryCarryingCapacity, !CemeteryOldAge, !CemeteryStarvation) :-
-% 	list.foldl5(
-% 		survives(Parameters, list.length(Site^sitePlayers)),
-% 		!.Site^sitePlayers,
-% 		[], !:Site^sitePlayers,
-% 		!Random,
-% 		!CemeteryCarryingCapacity,
-% 		!CemeteryOldAge,
-% 		!CemeteryStarvation).
-
-% /**
-%  * survives(Parameters, PopulationSize, Player, MPlayer, !Random, !Cemetery)
-
-%  * Calculate if a player can survive in a population with the given
-%  * conditions.  Parameter {@code MPlayer} is unified with {@code yes(P)} if
-%  * it survives, or with {@code no} otherwise.
-
-%  * <p> The probability that a player dies is given by a sigmoid function
-%  * that depends on the population size and a "carrying capacity" parameter.
-%  * Points of this sigmoid function are calculated by {@code
-%  * carryingCapacity/2}.
-%  */
-
-% :- pred survives(ebea.population.parameters(P), int, player(C, T),
-% 		list(player(C, T)), list(player(C, T)),
-% 		R, R,
-% 		list(int), list(int),
-% 		list(int), list(int),
-% 		list(int), list(int))
-% 	<= ePRNG(R).
-% :- mode survives(in, in, in, in, out, in, out, in, out, in, out, in, out) is det.
-
-% survives(Parameters, PopulationSize, Player, !Population, !Random,
-% 	!CemeteryCarryingCapacity, !CemeteryOldAge, !CemeteryStarvation)
-% :-
-% 	deathProbability(Parameters^carryingCapacity, PopulationSize) = Value,
-% 	rng.flipCoin(Value, DiesCC, !Random),
-% 	(if
-% 		DiesCC = yes
-% 	then
-% 		Dies = yes(carryingCapacity)
-% 	else
-% 		ebea.energy.survives(Parameters^pla^energyPar, Player, !Random, Dies)
-% 	),
-% 	(
-% 		Dies = no,
-% 		list.cons(Player, !Population)
-% 		;
-% 		Dies = yes(carryingCapacity),
-% 		list.cons(Player^id, !CemeteryCarryingCapacity)
-% 		;
-% 		Dies = yes(oldAge),
-% 		list.cons(Player^id, !CemeteryOldAge)
-% 		;
-% 		Dies = yes(starvation),
-% 		list.cons(Player^id, !CemeteryStarvation)
-% 	).
-
-% /**
-%  * Apply the birth algorithm of the EBEA.  Players can reproduce when their
-%  * energy reaches the reproduction threshold.  They produce an offspring,
-%  * and their energy goes back to zero.  The predicate returns the number of
-%  * births.
-%  */
-
-% :- pred birth(ebea.population.parameters(P), distribution, distribution, R, R, population(C, T), population(C, T), population(C, T), int)
-% 	<= (ePRNG(R), chromosome(C, T, P)).
-% :- mode birth(in, in, out, in, out, in, out, out, out) is det.
-
-% birth(Parameters, !Distribution, !Random, PopulationIn, PopulationOut, Nursery, Births) :-
-% 	list.map_foldl4(
-% 		reproduces(Parameters^pla),
-% 		PopulationIn^pop, PopulationOut^pop,
-% 		[], Nursery^pop,
-% 		PopulationIn^id, NextID,
-% 		!Distribution, !Random),
-% 	Nursery^id = NextID,
-% 	PopulationOut^id = NextID,
-% 	Births = list.length(Nursery^pop).
-
-% :- pred reproduces(ebea.player.parameters(P), player(C, T), player(C, T), list(player(C, T)), list(player(C, T)), int, int, distribution, distribution, R, R)
-% 	<= (ePRNG(R), chromosome(C, T, P)).
-% :- mode reproduces(in, in, out, in, out, in, out, in, out, in, out) is det.
-
-% reproduces(Parameters, Player, MapPlayer, Nursery, NextNursery, ID, NextID, !Distribution, !Random) :-
-% 	player.reproduce(Parameters, Player, MapPlayer, ID + 1, MOffspring, !Distribution, !Random),
-% 	(
-% 		MOffspring = no,
-% 		NextID = ID,
-% 		NextNursery = Nursery
-% 		;
-% 		MOffspring = yes(Offspring),
-% 		NextID = ID + 1,
-% 		NextNursery = [Offspring | Nursery]
-% 	)
-% 	.
-% 	% NextPhenotype1 = 'age :='(Player^p, Player^p^age + 1),
-% 	% (if
-% 	% 	ebea.player.canReproduce(Parameters^pla, Player, NextEnergy)
-% 	% then
-% 	% 	NextPhenotype2 = 'energy :='(NextPhenotype1, NextEnergy),
-% 	% 	NextPlayer = 'p :='(Player, NextPhenotype2),
-% 	% 	NextID = ID + 1,
-% 	% 	MapPlayer = NextPlayer,
-% 	% 	ebea.player.reproduce(Parameters^pla, Player, NextID, Offspring, !Distribution, !Random),
-% 	% 	NextNursery = [Offspring | Nursery]
-% 	% else
-% 	% 	NextPlayer = 'p :='(Player, NextPhenotype1),
-% 	% 	NextID = ID,
-% 	% 	MapPlayer = NextPlayer,
-% 	% 	NextNursery = Nursery
-% 	% ).
-
 
 /**
  * Given the parameters of the population dynamic and the population size
@@ -1004,79 +667,8 @@ foldSite(Pred, Site, !AC) :-
 :- pragma memo(deathProbability/2).
 
 deathProbability(CarryingCapacity, PopulationSize) = Result :-
-%	trace [io(!IO)] io.format("carrying capacity %f pop size %d  =  %f\n", [f(CarryingCapacity), i(PopulationSize), f(Result)], !IO),
 	Base = 6.0 * (CarryingCapacity - float(PopulationSize)) / CarryingCapacity,
 	Result = 1.0 / (1.0 + math.exp(Base)).
-
-
-
-% /**
-%  * playerPop(ID, Population) = Result.
-  
-%  * Auxiliary function that returns the player in list {@code Population}
-%  * with identification {@code ID}.  Throws an exception if there is no such
-%  * player.
-%  */
-
-% :- func playerPop(int, list(player(C, P))) = player(C, P).
-
-% playerPop(ID, Population) = Result :-
-% 	Population = [Head | Tail],
-% 	(if
-% 		Head^id = ID
-% 	then
-% 		Result = Head
-% 	else
-% 		Result = playerPop(ID, Tail)
-% 	)
-% 	;
-% 	Population = [],
-% 	throw("ebea.population.playerPop/2: population does not have player id").
-
-% :- func getPlayer(list(player(C, P)), int) = player(C, P).
-
-% getPlayer(Population, ID) = Result :-
-% 	Population = [Head | Tail],
-% 	(if
-% 		Head^id = ID
-% 	then
-% 		Result = Head
-% 	else
-% 		Result = getPlayer(Tail, ID)
-% 	)
-% 	;
-% 	Population = [],
-% 	throw(string.format("ebea.population.getPlayer/2: population does not have player id %d", [i(ID)]) `with_type` string).
-
-% /**
-%  * updatePop(ID, Player, Population) = Result
-  
-%  * Auxiliary function that updates the player in list {@code Population}
-%  * with identification {@code ID}.  The new value of the player is {@code
-%  * Player}.
-  
-%  */
-% :- func updatePop(int, player(C, P), list(player(C, P))) = list(player(C, P)).
-
-% updatePop(ID, Player, Population) = Result :-
-% 	Population = [],
-% 	Result = []
-% 	;
-% 	Population = [Head | Rest],
-% 	(if
-% 		Head^id = ID
-% 	then
-% 		Result = [Player | Rest]
-% 	else
-% 		Result = [Head | updatePop(ID, Player, Rest)]
-% 	).
-
-% :- func join(list(player(C, T)), list(player(C, T))) = list(player(C, T))
-% 	<= chromosome(C, T, P).
-
-% join([], A) = A.
-% join([P | R], L) = [P | join(R, L)].
-
 
 :- end_module ebea.population.
 

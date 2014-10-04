@@ -723,8 +723,6 @@ teachKnowHow(Parameters, Parent, !Offspring, !Random) :-
 		else
 			throw("teachKnowHow/6: Never reached")
 		)
-	%,
-	%	OffspringTrait^uncertainty = float.min(2.0, ParentTrait^uncertainty * Parameters^uncertaintyIncreaseFactor)
 	)
 	.
 
