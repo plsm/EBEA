@@ -422,7 +422,7 @@ runVS1(RunMode, Config, !IO) :-
 runVS2(RunMode, Config, RunIndex, !Random, !IO) :-
 	io.format(io.stderr_stream, "Run %d ", [i(RunIndex)], !IO),
 	io.flush_output(io.stderr_stream, !IO),
-	ebea.streams.openOutputStreams(Config^level, yes(string.format("_R%d", [i(RunIndex)])), IMStreams, !IO),
+	ebea.streams.openOutputStreams(".", Config^level, yes(string.format("_R%d", [i(RunIndex)])), IMStreams, !IO),
 	(
 		IMStreams = ok(Streams),
 		runVS3(RunMode, Config, Streams, !Random, !IO),

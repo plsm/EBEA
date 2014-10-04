@@ -124,8 +124,8 @@
  * entire EBEA run.
  */
 
-:- pred openOutputStreams(level, maybe(string), maybe_error(outStreams), io.state, io.state).
-:- mode openOutputStreams(in, in, out, di, uo) is det.
+:- pred openOutputStreams(string, level, maybe(string), maybe_error(outStreams), io.state, io.state).
+:- mode openOutputStreams(in, in, in, out, di, uo) is det.
 
 /**
  * Closes the streams used by an Energy Based Evolutionary Algorithm run.
@@ -391,7 +391,7 @@ parse(summary)     --> [2].
 parse(detailedBin) --> [3].
 
 
-openOutputStreams(Level, MSuffix, IMStreams, !IO) :-
+openOutputStreams(Directory, Level, MSuffix, IMStreams, !IO) :-
 	Level = detailedTxt,
 	io.open_output(filename("birth", MSuffix, csv), RStreamBirth, !IO),
 	(
@@ -434,20 +434,20 @@ openOutputStreams(Level, MSuffix, IMStreams, !IO) :-
 	)
 	;
 	Level = detailedBin,
-	io.open_binary_output(filename("birth", MSuffix, bin), RStreamBirth, !IO),
+	io.open_binary_output(filename(Directory, "birth", MSuffix, bin), RStreamBirth, !IO),
 	(
 		RStreamBirth = ok(SBirth),
-		io.open_binary_output(filename("death", MSuffix, bin), RStreamDeath, !IO),
+		io.open_binary_output(filename(Directory, "death", MSuffix, bin), RStreamDeath, !IO),
 		(
 			RStreamDeath = ok(SDeath),
-			io.open_binary_output(filename("phenotype", MSuffix, bin), RStreamPhenotype, !IO),
+			io.open_binary_output(filename(Directory, "phenotype", MSuffix, bin), RStreamPhenotype, !IO),
 			(
 				RStreamPhenotype = ok(SPhenotype),
-				FileNamePlayerProfile = filename("player-profile", MSuffix, bin),
+				FileNamePlayerProfile = filename(Directory, "player-profile", MSuffix, bin),
 				io.open_binary_output(FileNamePlayerProfile, RStreamPlayerProfile, !IO),
 				(	%
 					RStreamPlayerProfile = ok(SPlayerProfile),
-					FileNameSiteState = filename("site-state", MSuffix, bin),
+					FileNameSiteState = filename(Directory, "site-state", MSuffix, bin),
 					io.open_binary_output(FileNameSiteState, RStreamSiteState, !IO),
 					(	%
 						RStreamSiteState = ok(SStreamSiteState),
