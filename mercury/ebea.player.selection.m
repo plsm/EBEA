@@ -196,9 +196,6 @@
 :- func scaledPayoffToThreshold(G, energyScaling, float) = float
 	<= abstractGame(G).
 
-% :- pred parseChromosome(ebea.player.selection.chromosome.chromosome, list(int), list(int)).
-% :- mode parseChromosome(in, out, in) is det.
-% :- mode parseChromosome(out, in, out) is semidet.
 
 :- pred parseParameters(ebea.player.selection.parameters, list(int), list(int)).
 :- mode parseParameters(in, out, in) is det.
@@ -309,7 +306,6 @@ initTraits(Game, Player, Neighbours) = Result :-
 		Result = Player
 	;
 		Traits = partnerSelection(PCV, yes(_)),
-		% trace [io(!IO)] io.format("Selection traits initialised to %s\n", [s(string(WeightVector))], !IO),
 		PredElementGenerator =
 		(pred(E::out) is nondet :-
 			ebea.population.neighbours.member(E, Neighbours)
@@ -448,25 +444,31 @@ stepSelectPartnersPlayGame2(
 				PlayerPayoff = game.lowestPayoff(Game),
 				WeightFactor = 0.0
 			),
-			ebea.player.selection.pcv.probabilityFloat(PS, Traits^pcv, SelectedSlot, ProbabilitySelectedCombination),
-			list.foldl(
-				ebea.player.selection.wv.updateWeight(
-					ProbabilitySelectedCombination,
-					WeightFactor),
-				PartnersIDs,
-				OldWeightVector,
-				NextWeightVector),
-			ebea.player.selection.pcv.updateProbCombVectors(
-				Game, PlayerParameters^energyPar^energyScaling,
-				PS, PartnersIDs, SelectedSlot, PlayerPayoff,
-				ebea.player.selection.wv.drawAsList(NextWeightVector, NumberPartners),
-				!Random,
-				Traits^pcv, NextProbCombVector
-			),
-			ebea.population.update(
-				Player^id,
-				ebea.player.selection.wv.updatePlayerProbCombVectorsWeightVector(NextProbCombVector, NextWeightVector),
-				!NextRoundPopulation
+			(if
+				SelectedSlot = -1
+			then
+				true
+			else
+				ebea.player.selection.pcv.probabilityFloat(PS, Traits^pcv, SelectedSlot, ProbabilitySelectedCombination),
+				list.foldl(
+					ebea.player.selection.wv.updateWeight(
+						ProbabilitySelectedCombination,
+						WeightFactor),
+					PartnersIDs,
+					OldWeightVector,
+					NextWeightVector),
+				ebea.player.selection.pcv.updateProbCombVectors(
+					Game, PlayerParameters^energyPar^energyScaling,
+					PS, PartnersIDs, SelectedSlot, PlayerPayoff,
+					ebea.player.selection.wv.drawAsList(NextWeightVector, NumberPartners),
+					!Random,
+					Traits^pcv, NextProbCombVector
+				),
+				ebea.population.update(
+					Player^id,
+					ebea.player.selection.wv.updatePlayerProbCombVectorsWeightVector(NextProbCombVector, NextWeightVector),
+					!NextRoundPopulation
+				)
 			)
 		else
 			throw("ebea.player.selection.stepSelectPartnersPlayGame/10: Invalid combination of chromosome and phenotipic trait")
@@ -682,13 +684,6 @@ stepProcessBornPlayersCheckForDeadPlayers(Game, DeadPlayerIDs, NewBornIDs, Neigh
 				OldWeightVector, TmpWeightVector
 			),
 			ebea.player.selection.wv.removeElements(DeadPlayerIDs, TmpWeightVector, NewWeightVector),
-			% (if
-			% 	OldWeightVector \= NewWeightVector
-			% then
-			% 	trace [io(!IO)] io.format("\nweight vector changed to %s\n\n", [s(string(NewWeightVector))], !IO)
-			% else
-			% 	true
-			% ),
 			TmpTraits = 'mwv :='(Traits, yes(NewWeightVector))
 		),
 		NextTraits = 'pcv :='(TmpTraits, NextPCV),
@@ -991,23 +986,6 @@ fold(Chromosome, AC) = Result :-
 	Result = AC
 	.
 
-
-
-
-
-
-
-
-
-% :- pred initCombinationVector(int, list(player(C, T)), slot, slot, R, R)
-% 	<= ePRNG(R).
-% :- mode initCombinationVector(in, in, in, out, in, out) is det.
-
-% initCombinationVector(CombinationSize, Neighbours, Slot, MappedSlot, !Random) :-
-% 	ebea.player.randomIDs(CombinationSize, Combination, Neighbours, !Random),
-% 	MappedSlot = 'combination :='(Slot, Combination).
-
-
 /**
  * Print the traits of the selection gene group of an EBEA chromosome.
  */
@@ -1020,7 +998,6 @@ printTraits(Stream, Traits, !IO) :-
 	;
 	Traits = partnerSelection(PCV, _),
 	array.foldl2(printSlot(Stream), PCV, yes, _, !IO)
-%	io.print(Stream, PCV, !IO)
 	;
 	Traits = opinion(_, _),
 	io.print(Stream, Traits^opinionValue, !IO),
@@ -1085,42 +1062,6 @@ printSlot(Stream, Slot, Flag, no, !IO) :-
 		io.print(Stream, ID, IO1, IOuo)
 	),
 	list.foldl2(PrintIDs, Slot^combination, yes, _, !IO).
-
-
-
-
-
-
-
-
-
-
-
-
-% :- func default_poolSize = int.
-
-% default_poolSize = 0.
-
-% :- func default_bitsPerProbability = int.
-
-% default_bitsPerProbability = 1.
-
-% :- func default_probabilityUpdateFactor = float.
-
-% default_probabilityUpdateFactor = 0.0.
-
-% :- func default_payoffThreshold_PS = float.
-
-% default_payoffThreshold_PS = 0.0.
-
-
-% :- func default_payoffThreshold_O = float.
-
-% default_payoffThreshold_O = 0.0.
-
-% :- func default_initialUncertainty = float.
-
-% default_initialUncertainty = 1.0.
 
 
 
