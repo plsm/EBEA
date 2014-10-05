@@ -303,7 +303,19 @@ drawElement(WeightVector, SumWeightDrawn, Element, HisWeight, !Random) :-
 	),
 	(	%
 		MResult = no,
-		throw("ebea.player.selection.wv.drawElement/4: there is a bug")
+		rng.nextInt(0, WeightVector^size - 1, Gosh, !Random),
+		map.foldl2(
+			pickElementByIndex,
+			WeightVector^elements,
+			Gosh,  _,
+			no,     MGoshResult
+		),
+		(	%
+			MGoshResult = no,
+			throw("ebea.player.selection.wv.drawElement/4: there is a bug")
+		;
+			MGoshResult = yes({Element, HisWeight})
+		)
 	;
 		MResult = yes({Element, HisWeight})
 	).
