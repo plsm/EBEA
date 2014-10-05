@@ -35,6 +35,8 @@
 :- func init(pred(T), weight) = weightVector(T).
 :- mode init(in(pred(out) is nondet), in) = out is det.
 
+:- func length(weightVector) = int.
+
 %% ************************************************************************
 %% drawAsList(WeightVector, HowMany, Result, !Random)
 %%
@@ -147,6 +149,8 @@ init(ElementGenerator, InitialWeight) = WeightVector :-
 	WeightVector^sum = float(Size) * InitialWeight,
 	WeightVector^size = Size
 	.
+
+length(WeightVector) = WeightVector^size.
 
 drawAsList(WeightVector, HowMany, List, !Random) :-
 	drawAsList(WeightVector, no, HowMany, [], List, !Random).
