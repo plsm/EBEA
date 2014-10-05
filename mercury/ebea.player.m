@@ -61,6 +61,21 @@
 		traits      :: ebea.player.traits(T)
 	).
 
+:- inst player == bound(
+	player(ground, ground,
+		bound(chromosome(ground, ground, ebea.player.selection.chromosome.random)),
+		bound(traits(ground, ground, ebea.player.selection.random))) % ;
+	% player(ground, ground,
+	% 	bound(chromosome(ground, ground, ebea.player.selection.chromosome.normalPartnerSelection)),
+	% 	bound(traits(ground, ground, ebea.player.selection.normalPartnerSelection))) ;
+	% player(ground, ground,
+	% 	bound(chromosome(ground, ground, ebea.player.selection.chromosome.weightedPartnerSelection)),
+	% 	bound(traits(ground, ground, ebea.player.selection.weightedPartnerSelection))) ;
+	% player(ground, ground,
+	% 	bound(chromosome(ground, ground, ebea.player.selection.chromosome.opinion_old)),
+	% 	bound(traits(ground, ground, ebea.player.selection.opinion)))
+).
+
 /**
  * Accumulator used to reduce the genomes of a collection of players.
  */

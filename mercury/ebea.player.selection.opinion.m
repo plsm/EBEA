@@ -19,7 +19,7 @@
 
 :- interface.
 
-:- inst opinion == bound(opinion(ground, ground)).
+%:- inst opinion == bound(opinion(ground, ground)).
 
 /**
  * Succeeds if the partner profile is composed of opinion players and the

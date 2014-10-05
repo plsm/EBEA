@@ -43,6 +43,17 @@
 		initialStdDevUncertainty  :: float
 	) .
 
+:- inst random == bound(random).
+
+:- inst normalPartnerSelection == bound(normalPartnerSelection(ground)).
+
+:- inst weightedPartnerSelection == bound(weightedPartnerSelection(ground)).
+
+:- inst opinion_old == bound(
+	opinion_old(ground, ground) ;
+	opinion_old(ground, ground, ground, ground)
+	).
+
 :- instance parseable(ebea.player.selection.chromosome.chromosome).
 
 :- instance printable(ebea.player.selection.chromosome.chromosome).

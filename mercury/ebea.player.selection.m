@@ -60,6 +60,14 @@
 		uncertainty  :: float
 	).
 
+:- inst random == bound(random).
+
+:- inst normalPartnerSelection == bound(partnerSelection(ground, bound(no))).
+
+:- inst weightedPartnerSelection == bound(partnerSelection(ground, bound(yes(ground)))).
+
+:- inst opinion == bound(opinion(ground, ground)).
+
 /**
  * The accumulator used by type class functions {@code fold/0} and {@code fold/2}.
  */
