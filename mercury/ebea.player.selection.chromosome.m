@@ -290,7 +290,7 @@ mutateGenePartnerSelection(Parameters, Index, !Distribution, !Random, !Chromosom
 	then
 		rng.distribution.unitGaussian(Perturb0, !Distribution, !Random),
 		Perturb = Perturb0 * Parameters^bitsPerProbabilityStdDev,
-		NextBitsPerProbability = int.max(0, !.Chromosome^bitsPerProbability + float.round_to_int(Perturb)),
+		NextBitsPerProbability = int.max(0, int.min(!.Chromosome^bitsPerProbability + float.round_to_int(Perturb), 30)),
 		!:Chromosome = 'bitsPerProbability :='(!.Chromosome, NextBitsPerProbability)
 	else if
 		Index = 2
