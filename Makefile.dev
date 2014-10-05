@@ -102,3 +102,5 @@ manifest.mf:
 build-debug:
 	cd ./mercury/ ; $(MMC) $(MFLAGS_COMMON) $(MFLAGS_JAVA_GRADE) --java-classpath   /home/pedro/local/lib/mercury/lib/java/ui_console.jar  --mercury-library  ui_console --grade java EBEAtk_debug
 
+build-sim:
+	cd ./mercury/ ; $(MMC) $(MFLAGS_COMMON) $(MFLAGS_JAVA_GRADE) --java-classpath   /home/pedro/local/lib/mercury/lib/java/ui_console.jar  --mercury-library  ui_console --grade java simulations
