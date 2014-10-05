@@ -153,7 +153,7 @@ init(ElementGenerator, InitialWeight) = WeightVector :-
 length(WeightVector) = WeightVector^size.
 
 drawAsList(WeightVector, HowMany, List, !Random) :-
-	drawAsList(WeightVector, no, HowMany, [], List, !Random).
+	drawAsList(WeightVector, no, HowMany, 0.0, [], List, !Random).
 
 addElements(Elements, InitialWeight, !WeightVector) :-
 	Elements = []
@@ -243,6 +243,7 @@ buildElements(InitialWeight, AnElement, !Elements, !Size) :-
 	weightVector(T) :: in,
 	bool            :: in,
 	int             :: in,
+	weight          :: in,
 	list(T)         :: in,
 	list(T)         :: out,
 	R :: in,  R :: out
@@ -250,35 +251,39 @@ buildElements(InitialWeight, AnElement, !Elements, !Size) :-
 	<= ePRNG(R)
 .
 
-drawAsList(WeightVector, WithRepetition, HowMany, !List, !Random) :-
+drawAsList(WeightVector, WithRepetition, HowMany, SumWeightDrawn, !List, !Random) :-
 	(if
 		HowMany = 0
 	then
 		true
 	else
-		drawElement(WeightVector, Element, !Random),
+		drawElement(WeightVector, SumWeightDrawn, Element, HisWeight, !Random),
 		(if
 			WithRepetition = no,
 			list.member(Element, !.List)
 		then
-			drawAsList(WeightVector, WithRepetition, HowMany, !List, !Random)
+%			trace [io(!IO)] (io.format("Repeated %s\n", [s(string(WeightVector))], !IO)),
+			drawAsList(WeightVector, WithRepetition, HowMany, SumWeightDrawn, !List, !Random)
 		else
 			list.cons(Element, !List),
-			drawAsList(WeightVector, WithRepetition, HowMany - 1, !List, !Random)
+			drawAsList(WeightVector, WithRepetition, HowMany - 1, SumWeightDrawn + HisWeight, !List, !Random)
 		)
 	).
 
 :- pred drawElement(
 	weightVector(T) :: in,
-	T               :: out,
+	weight :: in,
+	T      :: out,
+	weight :: out,
 	R :: in,  R :: out
 ) is det
 	<= ePRNG(R)
 .
 
-drawElement(WeightVector, Result, !Random) :-
+drawElement(WeightVector, SumWeightDrawn, Element, HisWeight, !Random) :-
 	(if
-		WeightVector^sum > 0.0
+		WeightVector^sum > 0.0,
+		SumWeightDrawn < WeightVector^sum
 	then
 		rng.nextFloat(Value, !Random),
 		map.foldl2(
@@ -300,14 +305,14 @@ drawElement(WeightVector, Result, !Random) :-
 		MResult = no,
 		throw("ebea.player.selection.wv.drawElement/4: there is a bug")
 	;
-		MResult = yes(Result)
+		MResult = yes({Element, HisWeight})
 	).
 
 :- pred pickElementByWeight(
 	T      :: in,
 	weight :: in,
 	weight   :: in,  weight :: out,
-	maybe(T) :: in,  maybe(T) :: out
+	maybe({T, weight}) :: in,  maybe({T, weight}) :: out
 ) is det.
 
 pickElementByWeight(AnElement, HisWeight, !RndWeight, !MResult) :-
@@ -317,7 +322,7 @@ pickElementByWeight(AnElement, HisWeight, !RndWeight, !MResult) :-
 	(if
 		!.RndWeight < HisWeight
 	then
-		!:MResult = yes(AnElement)
+		!:MResult = yes({AnElement, HisWeight})
 	else
 		!:RndWeight = !.RndWeight - HisWeight
 	).
@@ -326,17 +331,17 @@ pickElementByWeight(AnElement, HisWeight, !RndWeight, !MResult) :-
 	T      :: in,
 	weight :: in,
 	int      :: in,  int :: out,
-	maybe(T) :: in,  maybe(T) :: out
+	maybe({T, weight}) :: in,  maybe({T, weight}) :: out
 ) is det.
 
-pickElementByIndex(AnElement, _, !Index, !MResult) :-
+pickElementByIndex(AnElement, HisWeight, !Index, !MResult) :-
 	!.MResult = yes(_)
 	;
 	!.MResult = no,
 	(if
 		!.Index = 0
 	then
-		!:MResult = yes(AnElement)
+		!:MResult = yes({AnElement, HisWeight})
 	else
 		!:Index = !.Index - 1
 	).

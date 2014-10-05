@@ -430,12 +430,12 @@ stepSelectPartnersPlayGame2(
 			Traits = partnerSelection(_, yes(OldWeightVector))
 		then
 			/* create the strategy profile */
-			trace [io(!IO)] (io.print("\rx ", !IO), io.flush_output(io.stdout_stream, !IO)),
+%			trace [io(!IO)] (io.print("\rx ", !IO), io.flush_output(io.stdout_stream, !IO)),
 			ebea.player.selection.pcv.select(NumberPartners, Neighbours, Traits^pcv, !Random, SelectedSlot, PartnersIDs),
-			trace [io(!IO)] (io.print("\rxx ", !IO), io.flush_output(io.stdout_stream, !IO)),
+%			trace [io(!IO)] (io.print("\rxx ", !IO), io.flush_output(io.stdout_stream, !IO)),
 			list.map(ebea.population.players.player(!.NextRoundPopulation^players), PartnersIDs) = RestProfile,
 			/* play the game */
-			trace [io(!IO)] (io.print("\rX  ", !IO), io.flush_output(io.stdout_stream, !IO)),
+%			trace [io(!IO)] (io.print("\rX  ", !IO), io.flush_output(io.stdout_stream, !IO)),
 			ebea.player.energy.stepPlayGame2(PlayerParameters^energyPar, Game, Player, RestProfile, MPayoffs, !NextRoundPopulation, !PlayerProfile, !Random),
 			/* update the selection traits */
 			(
@@ -452,9 +452,9 @@ stepSelectPartnersPlayGame2(
 			then
 				true
 			else
-				trace [io(!IO)] (io.print("\rXx ", !IO), io.flush_output(io.stdout_stream, !IO)),
+%				trace [io(!IO)] (io.print("\rXx ", !IO), io.flush_output(io.stdout_stream, !IO)),
 				ebea.player.selection.pcv.probabilityFloat(PS, Traits^pcv, SelectedSlot, ProbabilitySelectedCombination),
-				trace [io(!IO)] (io.print("\rXX ", !IO), io.flush_output(io.stdout_stream, !IO)),
+%				trace [io(!IO)] (io.print("\rXX ", !IO), io.flush_output(io.stdout_stream, !IO)),
 				list.foldl(
 					ebea.player.selection.wv.updateWeight(
 						ProbabilitySelectedCombination,
@@ -462,23 +462,21 @@ stepSelectPartnersPlayGame2(
 					PartnersIDs,
 					OldWeightVector,
 					NextWeightVector),
-				(if
-					ebea.player.selection.wv.length(NextWeightVector) < NumberPartners
-				then
-					trace [io(!IO)] (io.print("\ry r", !IO), io.flush_output(io.stdout_stream, !IO)),
-					PredSelectElements = ebea.population.neighbours.randomElements(NumberPartners, Neighbours)
-				else
-					trace [io(!IO)] (io.print("\ry w", !IO), io.flush_output(io.stdout_stream, !IO)),
-					PredSelectElements = ebea.player.selection.wv.drawAsList(NextWeightVector, NumberPartners)
-				),
+				% (if
+				% 	ebea.player.selection.wv.length(NextWeightVector) < NumberPartners
+				% then
+				% 	trace [io(!IO)] (io.print("\n Less partners\n", !IO), io.flush_output(io.stdout_stream, !IO))
+				% else
+				% 	trace [io(!IO)] (io.print("\ny w\n", !IO), io.flush_output(io.stdout_stream, !IO))
+				% ),
 				ebea.player.selection.pcv.updateProbCombVectors(
 					Game, PlayerParameters^energyPar^energyScaling,
 					PS, PartnersIDs, SelectedSlot, PlayerPayoff,
-					PredSelectElements,
+					ebea.player.selection.wv.drawAsList(NextWeightVector, NumberPartners),
 					!Random,
 					Traits^pcv, NextProbCombVector
 				),
-					trace [io(!IO)] (io.print("\rY ", !IO), io.flush_output(io.stdout_stream, !IO)),
+%					trace [io(!IO)] (io.print("\rY ", !IO), io.flush_output(io.stdout_stream, !IO)),
 				ebea.population.update(
 					Player^id,
 					ebea.player.selection.wv.updatePlayerProbCombVectorsWeightVector(NextProbCombVector, NextWeightVector),
