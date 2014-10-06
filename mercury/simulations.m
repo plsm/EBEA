@@ -15,7 +15,7 @@
 
 :- implementation.
 
-:- import_module ebea, ebea.streams.
+:- import_module ebea, ebea.streams, ebea.population, ebea.population.configuration, ebea.population.site, ebea.population.site.parameters.
 :- import_module data, data.config, data.config.io, data.config.pretty, data.seed, data.prng.
 :- import_module gl, gl.pgp, gl.pgp.game.
 :- import_module dir, list, maybe, solutions, string.
@@ -76,16 +76,22 @@ config(Config, Result) :-
 	list.member(Game^players, [3, 4, 5, 6, 7, 8]),
 	Game^good = 1.0,
 	list.member(Game^provisionCost, [0.1, 0.3, 0.5, 0.7, 0.9]),
-	Cfg0 = 'pgp :='(
-			Config,
-			'game :='(
-				Config^pgp,
-				Game)),
+	GameConfig0 = 'game :='(Config^pgp, Game),
+	GameConfig1 = 'initialPopulation :='(
+		GameConfig0,
+		'sites :='(
+			GameConfig0^initialPopulation,
+			list.map(changeRandomPartnerSelection, GameConfig0^initialPopulation^sites))),
+	Cfg0 = 'pgp :='(Config, GameConfig0),
 	Cfg1 = 'level :='(Cfg0, ebea.streams.summary),
 	Cfg2 = 'random :='(Cfg1, lcg(clock)),
 	Directory = string.format("D%i-%f", [i(Game^players), f(Game^provisionCost)]),
 	Result = result(Directory, Cfg2)
 	.
+
+:- func changeRandomPartnerSelection(ebea.population.site.parameters.parameters(CS)) = ebea.population.site.parameters.parameters(CS).
+
+changeRandomPartnerSelection(V) = V.
 
 :- pred run(simulations.result, io.state, io.state).
 :- mode run(in, di, uo) is det.
