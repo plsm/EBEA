@@ -78,17 +78,23 @@ config(Config, Result) :-
 	Game^good = 1.0,
 	list.member(Game^provisionCost, [0.1, 0.3, 0.5, 0.7, 0.9]),
 	GameConfig0 = 'game :='(Config^pgp, Game),
+	(	%
+		Scenario = "RPS",
+		SelectionChromosome = weightedPartnerSelection(partnerSelection(4, 7, 0.5, 0.5))
+	;
+		Scenario = "NPS",
+		SelectionChromosome = normalPartnerSelection(partnerSelection(4, 7, 0.5, 0.5))
+	),
 	GameConfig1 = 'initialPopulation :='(
 		GameConfig0,
 		'sites :='(
 			GameConfig0^initialPopulation,
-			list.map(changePartnerSelection_site(normalPartnerSelection(partnerSelection(4, 7, 0.5, 0.5))), GameConfig0^initialPopulation^sites))),
-%			list.map(changePartnerSelection_site(weightedPartnerSelection(partnerSelection(4, 7, 0.5, 0.5))), GameConfig0^initialPopulation^sites))),
+			list.map(changePartnerSelection_site(SelectionChromosome), GameConfig0^initialPopulation^sites))),
 	Cfg0 = 'pgp :='(Config, GameConfig1),
 	Cfg1 = 'level :='(Cfg0, ebea.streams.summary),
 	Cfg2 = 'random :='(Cfg1, mt(clock)),
-	Cfg3 = 'numberIterations :='(Cfg2, 10000),
-	Directory = string.format("D%i-%f", [i(Game^players), f(Game^provisionCost)]),
+	Cfg3 = 'numberIterations :='(Cfg2, 100000),
+	Directory = string.format("D%i_%f_%s", [i(Game^players), f(Game^provisionCost), s(Scenario)]),
 	Result = result(Directory, Cfg3)
 	;
 	Config^selectedGame = '2x2',
