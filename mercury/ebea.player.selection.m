@@ -357,10 +357,10 @@ born(Chromosome, Result, !Random) :-
 	 )
 	;
 	Chromosome = opinion_old(_, _),
-	rng.nextFloat(OV, !Random),
+	rng.'nextFloat[0,1]'(OV, !Random),
 	Result^opinionValue = 2.0 * OV - 1.0,
 	Result^uncertainty = float.max(0.0, Chromosome^initialUncertainty + 0.5 * UV - 0.25),
-	rng.nextFloat(UV, !Random)
+	rng.'nextFloat[0,1]'(UV, !Random)
 	;
 	Chromosome = opinion_old(_, _, _, _),
 	rng.distribution.unitGaussian(InitialOpinion0, rng.distribution.init, Dst, !Random),
