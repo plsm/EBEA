@@ -111,7 +111,8 @@
 :- mode parse(out, in, out) is semidet.
 
 
-:- pred fold(pred(ebea.population.players.key, float, A, A), weightVector, A, A).
+%:- pred fold(pred(ebea.population.players.key, float, A, A), weightVector, A, A).
+:- pred fold(pred(T, float, A, A), weightVector(T), A, A).
 :- mode fold(in(pred(in, in, in, out) is det), in, in, out) is det.
 :- mode fold(in(pred(in, in, di, uo) is det), in, di, uo) is det.
 
@@ -233,8 +234,12 @@ parse(wv(Elements, Sum, Size)) -->
 
 fold(Pred, wv(Elements, _, _), !AC) :-
 	map.foldl(testaFerro(Pred), Elements, !AC).
-
+/*
 :- pred testaFerro(pred(ebea.population.players.key, float, A, A),  ebea.population.players.key, weightInternal, A, A).
+:- mode testaFerro(in(pred(in, in, in, out) is det), in, in, in, out) is det.
+:- mode testaFerro(in(pred(in, in, di, uo)  is det), in, in, di, uo) is det.
+*/
+:- pred testaFerro(pred(T, float, A, A),  T, weightInternal, A, A).
 :- mode testaFerro(in(pred(in, in, in, out) is det), in, in, in, out) is det.
 :- mode testaFerro(in(pred(in, in, di, uo)  is det), in, in, di, uo) is det.
 
