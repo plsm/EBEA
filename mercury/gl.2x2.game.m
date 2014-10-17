@@ -1,5 +1,11 @@
 /**
- * 
+ * This module provides the definition of 2-player 2-action game.  This
+ * definition contains the parameters used to compute the payoff function.  The
+ * payoff of this game is normalised such that the cooperate action earns both
+ * players one unit, while the defect action earns zero.  The payoff has two
+ * parameters named temptation, <i>T</i>, and sucker, <i>S</i>.  When a player
+ * defects while the other cooperates, the defector gets <i>T</i> units while
+ * the cooperator gets <i>S</i>.
 
  * @author Pedro Mariano
  * @version 1.0 2013/12/ 5
@@ -15,6 +21,9 @@
   
  * Parameter S ranges from -1 to 1, while parameter T ranges from 0 to 2.
  * Parameter S is the sucker's payoff, while T is the temptation payoff.
+
+ * @cons game(Temptation, Sucker) Single constructor with temptation and
+ * sucker's payoffs.
  */
 
 :- type game --->
@@ -23,9 +32,15 @@
 		sucker     :: float
 	).
 
+/**
+ * 2-player 2 action games are parseble from and to a parser state.
+ */
+
 :- instance parseable(game).
 
 /**
+ * default = Game
+
  * Return a default game.  This can be used to construct a default batch
  * run, a default value for a user interface
  */
@@ -40,6 +55,9 @@
  * [0,2]} or parameter {@code Sucker} is outside interval {@code [-1,1]}.
  */
 :- func initGame(float, float) = game.
+
+/**
+ */
 
 :- func lowestPayoff(game) = float.
 

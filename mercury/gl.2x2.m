@@ -1,7 +1,8 @@
 /**
- * 2-player game with two actions.  Provides probabilistic and
- * deterministic strategies.  Mutation of one type of strategy does not
- * create the other type.
+ * Base module of 2-player symmetric games with two actions.  This class of
+ * games comprises four well known games: Harmony, Prisoners' Dillema, Stag
+ * Hunt, and Snowdrift.  Provides probabilistic and deterministic strategies.
+ * Mutation of one type of strategy does not create the other type.
 
  * @author Pedro Mariano
  * @version 1.0 2012/07/13
