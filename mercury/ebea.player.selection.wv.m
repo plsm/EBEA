@@ -110,11 +110,6 @@
 :- mode parse(in, out, in) is det.
 :- mode parse(out, in, out) is semidet.
 
-
-% :- pred fold(pred(ebea.population.players.key, float, A, A), weightVector, A, A).
-% :- mode fold(in(pred(in, in, in, out) is det), in, in, out) is det.
-% :- mode fold(in(pred(in, in, di, uo) is det), in, di, uo) is det.
-
 :- pred fold(pred(T, float, A, A), weightVector(T), A, A).
 :- mode fold(in(pred(in, in, in, out) is det), in, in, out) is det.
 :- mode fold(in(pred(in, in, di, uo) is det), in, di, uo) is det.
@@ -128,45 +123,49 @@
 
 :- type weightVector(T) --->
 	wv(
-		elements :: map(T, weight),
-		sum      :: weight,
+		elements :: map(T, weightInternal),
+		sum      :: weightInternal,
 		size     :: int
 	).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Definition of private types
 
+:- type weightInternal == int.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of exported predicates and functions
 
-init = wv(map.init, 0.0, 0).
+init = wv(map.init, 0, 0).
 
 init(ElementGenerator, InitialWeight) = WeightVector :-
+	InitialWeightInternal = float.round_to_int(InitialWeight * 1000.0),
 	promise_equivalent_solutions [Elements, Size]
 	solutions.unsorted_aggregate2(
 		ElementGenerator,
-		buildElements(InitialWeight),
+		buildElements(InitialWeightInternal),
 		map.init,  Elements,
 		0,         Size
 	),
 	WeightVector^elements = Elements,
-	WeightVector^sum = float(Size) * InitialWeight,
+	WeightVector^sum = Size * InitialWeightInternal,
 	WeightVector^size = Size
 	.
 
 length(WeightVector) = WeightVector^size.
 
 drawAsList(WeightVector, HowMany, List, !Random) :-
-	drawAsList(WeightVector, no, HowMany, 0.0, [], List, !Random).
+	drawAsList(WeightVector, no, HowMany, 0, [], List, !Random).
 
 addElements(Elements, InitialWeight, !WeightVector) :-
 	Elements = []
 	;
 	Elements = [AnElement | RestElements],
-	map.det_insert(AnElement, InitialWeight, !.WeightVector^elements, NewElements),
+	InitialWeightInternal = float.round_to_int(InitialWeight * 1000.0),
+	map.det_insert(AnElement, InitialWeightInternal, !.WeightVector^elements, NewElements),
 	!:WeightVector = wv(
 		NewElements,
-		!.WeightVector^sum + InitialWeight,
+		!.WeightVector^sum + InitialWeightInternal,
 		!.WeightVector^size + 1
 	),
 	addElements(RestElements, InitialWeight, !WeightVector)
@@ -195,15 +194,17 @@ updateWeight(ProbabilitySelectedCombination, ScaledPayoff, ForElement, !WeightVe
 	(if
 		map.search(!.WeightVector^elements, ForElement, AnWeight)
 	then
-	OldWeight = map.lookup(!.WeightVector^elements, ForElement),
-	NewWeight =
-		OldWeight * (1.0 - ProbabilitySelectedCombination)
-		+ ScaledPayoff * ProbabilitySelectedCombination,
-	map.det_update(ForElement, NewWeight, !.WeightVector^elements, NewElements),
-	!:WeightVector = wv(
-		NewElements,
-		!.WeightVector^sum - OldWeight + NewWeight,
-		!.WeightVector^size
+		OldWeight = map.lookup(!.WeightVector^elements, ForElement),
+		ProbabilitySelectedCombinationInternal = float.round_to_int(1000.0 * ProbabilitySelectedCombination),
+		ScaledPayoffInternal = float.round_to_int(1000.0 * ScaledPayoff),
+		NewWeight =
+			(OldWeight * (1000 - ProbabilitySelectedCombinationInternal)
+			+ ScaledPayoffInternal * ProbabilitySelectedCombinationInternal) / 1000,
+		map.det_update(ForElement, NewWeight, !.WeightVector^elements, NewElements),
+		!:WeightVector = wv(
+			NewElements,
+			!.WeightVector^sum - OldWeight + NewWeight,
+			!.WeightVector^size
 	)
 	else
 	trace [io(!IO)] io.format("DEBUG weight vector %s\n", [s(string(!.WeightVector))], !IO),
@@ -226,16 +227,30 @@ updatePlayerProbCombVectorsWeightVector(PCV, WV, Player) = Result :-
 
 parse(wv(Elements, Sum, Size)) -->
 	parseElements(Elements),
-	parseable.float32(Sum),
+	parseable.int32(Sum),
 	parseable.int32(Size).
 
 fold(Pred, wv(Elements, _, _), !AC) :-
-	map.foldl(Pred, Elements, !AC).
+	map.foldl(testaFerro(Pred), Elements, !AC).
+/*
+:- pred testaFerro(pred(ebea.population.players.key, float, A, A),  ebea.population.players.key, weightInternal, A, A).
+:- mode testaFerro(in(pred(in, in, in, out) is det), in, in, in, out) is det.
+:- mode testaFerro(in(pred(in, in, di, uo)  is det), in, in, di, uo) is det.
+*/
+:- pred testaFerro(pred(T, float, A, A),  T, weightInternal, A, A).
+:- mode testaFerro(in(pred(in, in, in, out) is det), in, in, in, out) is det.
+:- mode testaFerro(in(pred(in, in, di, uo)  is det), in, in, di, uo) is det.
+
+testaFerro(Pred, K, V, !AC) :-
+	RV = float(V) / 1000.0,
+	Pred(K, RV, !AC)
+	.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of private predicates and functions
 
-:- pred buildElements(weight, T, map(T, weight), map(T, weight), int, int).
+:- pred buildElements(weightInternal, T, map(T, weightInternal), map(T, weightInternal), int, int).
 :- mode buildElements(in, in, in, out, in, out) is det.
 
 buildElements(InitialWeight, AnElement, !Elements, !Size) :-
@@ -247,7 +262,7 @@ buildElements(InitialWeight, AnElement, !Elements, !Size) :-
 	weightVector(T) :: in,
 	bool            :: in,
 	int             :: in,
-	weight          :: in,
+	weightInternal  :: in,
 	list(T)         :: in,
 	list(T)         :: out,
 	R :: in,  R :: out
@@ -276,9 +291,9 @@ drawAsList(WeightVector, WithRepetition, HowMany, SumWeightDrawn, !List, !Random
 
 :- pred drawElement(
 	weightVector(T) :: in,
-	weight :: in,
+	weightInternal  :: in,
 	T      :: out,
-	weight :: out,
+	weightInternal  :: out,
 	R :: in,  R :: out
 ) is det
 	<= ePRNG(R)
@@ -286,14 +301,14 @@ drawAsList(WeightVector, WithRepetition, HowMany, SumWeightDrawn, !List, !Random
 
 drawElement(WeightVector, SumWeightDrawn, Element, HisWeight, !Random) :-
 	(if
-		WeightVector^sum > 0.0,
+		WeightVector^sum > 0,
 		SumWeightDrawn < WeightVector^sum
 	then
-		rng.nextFloat(Value, !Random),
+		rng.nextInt(0, WeightVector^sum, Value, !Random),
 		map.foldl2(
 			pickElementByWeight,
 			WeightVector^elements,
-			Value * WeightVector^sum,  _,
+			Value,  _,
 			no,                        MResult
 		)
 	else
@@ -326,9 +341,9 @@ drawElement(WeightVector, SumWeightDrawn, Element, HisWeight, !Random) :-
 
 :- pred pickElementByWeight(
 	T      :: in,
-	weight :: in,
-	weight   :: in,  weight :: out,
-	maybe({T, weight}) :: in,  maybe({T, weight}) :: out
+	weightInternal :: in,
+	weightInternal   :: in,  weightInternal :: out,
+	maybe({T, weightInternal}) :: in,  maybe({T, weightInternal}) :: out
 ) is det.
 
 pickElementByWeight(AnElement, HisWeight, !RndWeight, !MResult) :-
@@ -345,9 +360,9 @@ pickElementByWeight(AnElement, HisWeight, !RndWeight, !MResult) :-
 
 :- pred pickElementByIndex(
 	T      :: in,
-	weight :: in,
+	weightInternal :: in,
 	int      :: in,  int :: out,
-	maybe({T, weight}) :: in,  maybe({T, weight}) :: out
+	maybe({T, weightInternal}) :: in,  maybe({T, weightInternal}) :: out
 ) is det.
 
 pickElementByIndex(AnElement, HisWeight, !Index, !MResult) :-
@@ -362,7 +377,7 @@ pickElementByIndex(AnElement, HisWeight, !Index, !MResult) :-
 		!:Index = !.Index - 1
 	).
 
-:- pred parseElements(map(ebea.population.players.key, float), list(int), list(int)).
+:- pred parseElements(map(ebea.population.players.key, weightInternal), list(int), list(int)).
 :- mode parseElements(in, out, in) is det.
 :- mode parseElements(out, in, out) is semidet.
 

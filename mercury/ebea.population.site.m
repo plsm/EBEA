@@ -323,8 +323,14 @@ stepDeath(Parameters, Population, Player, Filter, !Random,
 	!CemeteryCarryingCapacity, !CemeteryOldAge, !CemeteryStarvation)
 :-
 	Site = playerSite(Population, Player),
-	deathProbability(Site^currentState^carryingCapacity, numberPlayers(Site)) = Value,
-	rng.flipCoin(Value, DiesCC, !Random),
+	(if
+		numberPlayers(Site) < 8
+	then
+		DiesCC = no
+	else
+		deathProbability(Site^currentState^carryingCapacity, numberPlayers(Site)) = Value,
+		rng.flipCoin(Value, DiesCC, !Random)
+	),
 	(if
 		DiesCC = yes
 	then

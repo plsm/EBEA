@@ -113,3 +113,7 @@ build-debug:
 		--mercury-library  ui_console   \
 		--grade java   \
 		debug-wv
+
+
+%: %.m
+	$(MMC) $(MFLAGS_COMMON) $(MFLAGS_OTHER_GRADES) $@

@@ -131,9 +131,9 @@ debug(!Random, !IO) :-
 	then
 		PredInit =
 		(pred(_::in, Trait::out, RndDI::in, RndUO::out) is det :-
-			rng.nextFloat(OV, RndDI, R),
+			rng.'nextFloat[0,1]'(OV, RndDI, R),
 			Trait^opinionValue = 2.0 * OV - 1.0,
-			rng.nextFloat(U, R, RndUO),
+			rng.'nextFloat[0,1]'(U, R, RndUO),
 			Trait^uncertainty = U
 		),
 		PredPrint =
