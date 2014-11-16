@@ -111,7 +111,11 @@
 :- mode parse(out, in, out) is semidet.
 
 
-:- pred fold(pred(ebea.population.players.key, float, A, A), weightVector, A, A).
+% :- pred fold(pred(ebea.population.players.key, float, A, A), weightVector, A, A).
+% :- mode fold(in(pred(in, in, in, out) is det), in, in, out) is det.
+% :- mode fold(in(pred(in, in, di, uo) is det), in, di, uo) is det.
+
+:- pred fold(pred(T, float, A, A), weightVector(T), A, A).
 :- mode fold(in(pred(in, in, in, out) is det), in, in, out) is det.
 :- mode fold(in(pred(in, in, di, uo) is det), in, di, uo) is det.
 
