@@ -32,6 +32,10 @@
 	weightedPartnerSelection(
 		ebea.player.selection.pcv.chromosome
 	) ;
+	opinion(
+		uncertaintyIncreaseFactor :: float,
+		mu                        :: float
+	) ;
 	opinion_old(
 		payoffThreshold_O  :: float ,
 		initialUncertainty :: float
