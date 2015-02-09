@@ -13,10 +13,20 @@
 :- import_module chromosome, foldable, parseable, rng.
 :- import_module userInterface.
 
+/**
+ * Genes that control the ageing process of a player and death by old age.
+ */
+
 :- type chromosome.
 
+/**
+ * The phenotypic trait is the player's age.
+ */
 :- type trait == int.
 
+/**
+ * Parameters that control the death by old age process.
+ */
 :- type parameters --->
 	noDeath ;
 	deathByOldAge(
@@ -24,22 +34,78 @@
 		deathSuaveness :: float
 	).
 
+/**
+ * Accumulator of age genes.
+ */
 :- type ac.
 
+/**
+ * defaultParameters = Result
+
+ * Return a default set of parameters that control ageing process.
+ */
 :- func defaultParameters = ebea.player.age.parameters.
 
+
+/**
+ * initParameters(Parameters)
+
+ * Unify {@code Parameters} with a default set of parameters that control ageing
+ * process.
+ */
 :- pred initParameters(ebea.player.age.parameters).
 :- mode initParameters(out) is det.
 
+/**
+ * initParameters = Result
+
+ * Return a default set of parameters that control ageing process.
+ */
 :- func initParameters = ebea.player.age.parameters.
 
+/**
+ * initParameters(OldAge, DeathSuaveness, Parameters)
+
+ * Unify {@code Parameters} with the given values of {@code OldAge} and {@code
+ * DeathSuaveness}.  With these parameters, in each iteration of EBEA all
+ * players go through a death by old age process.  If the parameters are
+ * invalid, the predicate fails.
+
+
+ * @param OldAge
+
+ * @param DeathSuaveness
+ */
 :- pred initParameters(int, float, ebea.player.age.parameters).
 :- mode initParameters(in, in, out) is semidet.
 
+/**
+ * initParameters(OldAge, DeathSuaveness) = Result
+
+ * Return ageing process parameters initialised with the given values of {@code
+ * OldAge} and {@code DeathSuaveness}.  With these parameters, in each iteration
+ * of EBEA all players go through a death by old age process.  If the parameters
+ * are invalid, the function throws an exception.
+
+ * @param OldAge
+
+ * @param DeathSuaveness
+ */
 :- func initParameters(int, float) = ebea.player.age.parameters.
 
+/**
+ * dialogParameters = Result
+
+ * Returns a dialog to edit age parameters.
+ */
 :- func dialogParameters = list(dialogItem(ebea.player.age.parameters)).
 
+/**
+ * defaultChromosome = Result
+
+ * Returns the value {@code plain}.  Currently there are no genes that control
+ * the ageing process.
+ */
 :- func defaultChromosome = ebea.player.age.chromosome.
 
 /**
@@ -53,6 +119,7 @@
  * Parameter is unified with {@code yes(oldAge)} if the given player dies
  * of old age.
 
+ * <p>Parameter {@code Parameters} controls if there is a death by old age event.
   
  */
 :- pred stepSurvive(
@@ -62,15 +129,24 @@
 	<= ePRNG(R).
 :- mode stepSurvive(in, in, in, out, out) is det.
 
+
+/**
+ * Parse a chromosome to and from a list of bytes.
+ */
 :- pred parseChromosome(ebea.player.age.chromosome, list(int), list(int)).
 :- mode parseChromosome(in, out, in) is det.
 :- mode parseChromosome(out, in, out) is det.
 
-
+/**
+ * Parse the parameters that control ageing process to and from a list of bytes.
+ */
 :- pred parseParameters(ebea.player.age.parameters, list(int), list(int)).
 :- mode parseParameters(in, out, in) is det.
 :- mode parseParameters(out, in, out) is semidet.
 
+/**
+ * Parse an age phenotypic trait to and from a list of bytes.
+ */
 :- pred parseTrait(ebea.player.age.trait, list(int), list(int)).
 :- mode parseTrait(in, out, in) is det.
 :- mode parseTrait(out, in, out) is semidet.
