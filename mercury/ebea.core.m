@@ -3,14 +3,6 @@
  * Energy Based Evolutionary Algorithm (EBEA).  The main predicate of this
  * module performs an iteration of the EBEA.
 
- * <p> File {@code phenotype.csv} contains one phenotype per line.  The
- * data per phenotype is
-
- * <ul><li>Round</li>
-
- * <li>Player identification</li>
-
- * <li>Player phenotype</li></ul>
   
  * @author Pedro Mariano
  * @version 1.0 2012/09/20

@@ -2,6 +2,16 @@
  * Provides a type that represent the streams where data of Energy Based
  * Evolutionary Algorithm runs are saved.
 
+ * <p> File {@code phenotype.csv} contains one phenotype per line.  The
+ * data per phenotype is
+
+ * <ul><li>Round</li>
+
+ * <li>Player identification</li>
+
+ * <li>Player phenotype</li></ul>
+
+  
  * @author Pedro Mariano
  * @version 1.0 2013/05/21
  */

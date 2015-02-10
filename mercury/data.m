@@ -1,5 +1,11 @@
 /**
- * 
+ * Base module that contains the data and predicates necessary to run a
+ * simulation of EBEA.  Module {@code data.config} and its submodules
+ * contain configuration parameters, predicates to edit this parameters,
+ * and predicates to read and save the parameter to a file.  Module {@code
+ * data.prng} contains the pseudo-random number generators used in the
+ * configuration parameters.  Module {@code data.seed} contains the seed
+ * used by the pseudo-random number generators.
 
  * @author Pedro Mariano
  * @version 1.0 2013/12/07
