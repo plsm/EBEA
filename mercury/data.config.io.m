@@ -54,11 +54,11 @@
 
 :- implementation.
 
-:- include_module filterV1000, filterV1001, filterV1002, filterV1003, filterV1004.
+:- include_module filterV1000, filterV1001, filterV1002, filterV1003, filterV1004, filterV1005.
 
 :- import_module data.config.io.filterV1000, data.config.io.filterV1001,
 data.config.io.filterV1002, data.config.io.filterV1003,
-data.config.io.filterV1004.
+data.config.io.filterV1004, data.config.io.filterV1005.
 
 :- import_module ebea.player.chromosome, ebea.population.site, ebea.population.site.parameters.
 :- import_module parseable.
@@ -75,7 +75,8 @@ data.config.io.filterV1004.
 	configFileV1001(data.config.io.filterV1001.configFile) ;
 	configFileV1002(data.config.io.filterV1002.configFile) ;
 	configFileV1003(data.config.io.filterV1003.configFile) ;
-	configFileV1004(data.config.io.filterV1004.configFile)
+	configFileV1004(data.config.io.filterV1004.configFile) ;
+	configFileV1005(data.config.io.filterV1005.configFile)
 	.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -195,6 +196,7 @@ parse(configFileV1001(C)) -->	[1],	data.config.io.filterV1001.parse(C).
 parse(configFileV1002(C)) -->	[2],	data.config.io.filterV1002.parse(C).
 parse(configFileV1003(C)) -->	[3],	data.config.io.filterV1003.parse(C).
 parse(configFileV1004(C)) -->	[0xEB, 0xEA,  4],	data.config.io.filterV1004.parse(C).
+parse(configFileV1005(C)) -->	[0xEB, 0xEA,  5],	data.config.io.filterV1005.parse(C).
 
 /**
  * Convert the configuration parameters as stored in a text stream to the
@@ -208,6 +210,7 @@ map(configFileV1001(C)) = data.config.io.filterV1001.map(C).
 map(configFileV1002(C)) = data.config.io.filterV1002.map(C).
 map(configFileV1003(C)) = data.config.io.filterV1003.map(C).
 map(configFileV1004(C)) = data.config.io.filterV1004.map(C).
+map(configFileV1005(C)) = data.config.io.filterV1005.map(C).
 
 /**
  * Convert the config parameters from the internal representation to the
@@ -218,7 +221,7 @@ map(configFileV1004(C)) = data.config.io.filterV1004.map(C).
 :- func pam(data.config.config) = data.config.io.configFile.
 
 pam(config(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19)) =
-	configFileV1004(configFile(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19)).
+	configFileV1005(configFile(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19)).
 
 :- end_module data.config.io.
 

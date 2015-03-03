@@ -15,17 +15,19 @@
 
 :- type ebea_player_selection_parameters.
 
+:- type ebea_player_selection_parametersV1002 == data.config.io.filterV1002.ebea_player_selection_parameters.
+
 :- pred parse(configFileV1002, list(int), list(int)).
 :- mode parse(in,  out, in)  is det.
 :- mode parse(out, in,  out) is semidet.
 
-:- pred parse_ebea_player_selection_parameters(ebea_player_selection_parameters, list(int), list(int)).
+:- pred parse_ebea_player_selection_parameters(ebea_player_selection_parametersV1002, list(int), list(int)).
 :- mode parse_ebea_player_selection_parameters(in, out, in) is det.
 :- mode parse_ebea_player_selection_parameters(out, in, out) is semidet.
 
 :- func map(configFileV1002) = config.
 
-:- func map_ebea_player_selection_parameters(ebea_player_selection_parameters) = ebea.player.selection.parameters.
+:- func map_ebea_player_selection_parameters(ebea_player_selection_parametersV1002) = ebea.player.selection.parameters.
 
 :- implementation.
 
@@ -34,25 +36,25 @@
 
 :- type configFile --->
 	configFile(
-		data.prng.supplyParameter,        %  1 random
-		int,                              %  2 numberRuns
-		int,                              %  3 numberIterations
-		ebea.streams.level,               %  4 level
-		ebea.population.dynamic,          %  5 dynamic
-		probability,                      %  6 mutationProbability
-		probability,                      %  7 migrationProbability
-		ebea.player.age.parameters,       %  8 ageParameters
-		ebea.player.energy.parameters,    %  9 energyParameters
-		ebea_player_selection_parameters, % 10 selectionParameters
-		data.games,                       % 11 selectedGame
-		gameConfigV1003_2x2,              % 12 cfg_2x2
-		gameConfigV1003_battlesexes,      % 13 battlesexes
-		gameConfigV1003_centipede,        % 14 centipede
-		gameConfigV1003_givetake,         % 15 givetake
-		gameConfigV1003_investment,       % 16 investment
-		gameConfigV1003_pgp,              % 17 pgp
-		'gameConfigV1003_pgp+pa',         % 18 pgp+pa
-		gameConfigV1003_ultimatum         % 19 ultimatum
+		data.prng.supplyParameter,             %  1 random
+		int,                                   %  2 numberRuns
+		int,                                   %  3 numberIterations
+		ebea.streams.level,                    %  4 level
+		ebea.population.dynamic,               %  5 dynamic
+		probability,                           %  6 mutationProbability
+		probability,                           %  7 migrationProbability
+		ebea.player.age.parameters,            %  8 ageParameters
+		ebea.player.energy.parameters,         %  9 energyParameters
+		ebea_player_selection_parametersV1002, % 10 selectionParameters
+		data.games,                            % 11 selectedGame
+		gameConfigV1003_2x2,                   % 12 cfg_2x2
+		gameConfigV1003_battlesexes,           % 13 battlesexes
+		gameConfigV1003_centipede,             % 14 centipede
+		gameConfigV1003_givetake,              % 15 givetake
+		gameConfigV1003_investment,            % 16 investment
+		gameConfigV1003_pgp,                   % 17 pgp
+		'gameConfigV1003_pgp+pa',              % 18 pgp+pa
+		gameConfigV1003_ultimatum              % 19 ultimatum
 	).
 
 :- type ebea_player_selection_parameters --->
@@ -157,7 +159,9 @@ map_ebea_player_selection_parameters(
 		PayoffThresholdStdDev,
 		UncertaintyIncreaseFactor,
 		MU,
-		0
+		0,
+		0.0,
+		0.0
 	).
 
 

@@ -59,25 +59,25 @@
 
 :-type configFile --->
 	configFile(
-		data.prng.supplyParameter,        %  1 random
-		int,                              %  2 numberRuns
-		int,                              %  3 numberIterations
-		ebea.streams.level,               %  4 level
-		ebea.population.dynamic,          %  5 dynamic
-		probability,                      %  6 mutationProbability
-		probability,                      %  7 migrationProbability
-		ebea.player.age.parameters,       %  8 ageParameters
-		ebea.player.energy.parameters,    %  9 energyParameters
-		ebea.player.selection.parameters, % 10 selectionParameters
-		data.games,                       % 11 selectedGame
-		gameConfigV1003_2x2,              % 12 cfg_2x2
-		gameConfigV1003_battlesexes,      % 13 battlesexes
-		gameConfigV1003_centipede,        % 14 centipede
-		gameConfigV1003_givetake,         % 15 givetake
-		gameConfigV1003_investment,       % 16 investment
-		gameConfigV1003_pgp,              % 17 pgp
-		'gameConfigV1003_pgp+pa',         % 18 pgp+pa
-		gameConfigV1003_ultimatum         % 19 ultimatum
+		data.prng.supplyParameter,             %  1 random
+		int,                                   %  2 numberRuns
+		int,                                   %  3 numberIterations
+		ebea.streams.level,                    %  4 level
+		ebea.population.dynamic,               %  5 dynamic
+		probability,                           %  6 mutationProbability
+		probability,                           %  7 migrationProbability
+		ebea.player.age.parameters,            %  8 ageParameters
+		ebea.player.energy.parameters,         %  9 energyParameters
+		ebea_player_selection_parametersV1004, % 10 selectionParameters
+		data.games,                            % 11 selectedGame
+		gameConfigV1003_2x2,                   % 12 cfg_2x2
+		gameConfigV1003_battlesexes,           % 13 battlesexes
+		gameConfigV1003_centipede,             % 14 centipede
+		gameConfigV1003_givetake,              % 15 givetake
+		gameConfigV1003_investment,            % 16 investment
+		gameConfigV1003_pgp,                   % 17 pgp
+		'gameConfigV1003_pgp+pa',              % 18 pgp+pa
+		gameConfigV1003_ultimatum              % 19 ultimatum
 	).
 
 :- type gameConfig(G, CS, P) --->
@@ -140,7 +140,7 @@ parse(C) -->
 	probability.parse(MigrationProbability),
 	ebea.player.age.parseParameters(AgeParameters),
 	ebea.player.energy.parseParameters(EnergyParameters),
-	ebea.player.selection.parseParameters(SelectionParameters),
+	data.config.io.filterV1004.parse_ebea_player_selection_parameters(SelectionParameters),
 	data.parseGames(SelectedGame),
 	data.config.io.filterV1003.parseGameConfig(Cfg_2x2),
 	data.config.io.filterV1003.parseGameConfig(BattleSexes),
@@ -161,7 +161,9 @@ parseGameConfig(Config) -->
 
 map(configFile(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19)) =
 	config(
-		A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11,
+		A1, A2, A3, A4, A5, A6, A7, A8, A9,
+		data.config.io.filterV1004.map_ebea_player_selection_parameters(A10),
+		A11,
 		mapGameConfig(A12),
 		mapGameConfig(A13),
 		mapGameConfig(A14),

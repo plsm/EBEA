@@ -39,23 +39,23 @@
 
 :- type configFile --->
 	configFile(
-		data.prng.supplyParameter,         %  1 random
-		int,                               %  2 numberRuns
-		int,                               %  3 numberIterations
-		ebea.streams.level,                %  4 level
-		ebea.population.dynamic,           %  5 dynamic
-		probability,                       %  6 mutationProbability
-		probability,                       %  7 migrationProbability
-		ebea.player.age.parameters,        %  8 ageParameters
-		ebea.player.energy.parameters,     %  9 energyParameters
-		ebea_player_selection_parameters,  % 10 selectionParameters
-		gamesV1001,                        % 11 selectedGame
-		gameConfigV1003_2x2,               % 12 cfg_2x2
-		gameConfigV1003_battlesexes,       % 13 battlesexes
-		gameConfigV1003_centipede,         % 14 centipede
-		gameConfigV1003_pgp,               % 15 pgp
-		'gameConfigV1003_pgp+pa',          % 16 'pgp+pa'
-		gameConfigV1003_ultimatum          % 17 ultimatum
+		data.prng.supplyParameter,              %  1 random
+		int,                                    %  2 numberRuns
+		int,                                    %  3 numberIterations
+		ebea.streams.level,                     %  4 level
+		ebea.population.dynamic,                %  5 dynamic
+		probability,                            %  6 mutationProbability
+		probability,                            %  7 migrationProbability
+		ebea.player.age.parameters,             %  8 ageParameters
+		ebea.player.energy.parameters,          %  9 energyParameters
+		ebea_player_selection_parametersV1002,  % 10 selectionParameters
+		gamesV1001,                             % 11 selectedGame
+		gameConfigV1003_2x2,                    % 12 cfg_2x2
+		gameConfigV1003_battlesexes,            % 13 battlesexes
+		gameConfigV1003_centipede,              % 14 centipede
+		gameConfigV1003_pgp,                    % 15 pgp
+		'gameConfigV1003_pgp+pa',               % 16 'pgp+pa'
+		gameConfigV1003_ultimatum               % 17 ultimatum
 	).
 
 :- type games --->

@@ -57,11 +57,11 @@
 /**
  * After the players have played the game, they update the opinions they have.
  */
-:- pred updateOpinions(G, ebea.player.parameters(P), list(player(C, T)), array(float), population(C, T), population(C, T))
+:- pred updateOpinions(G, ebea.player.parameters(P), float, list(player(C, T)), array(float), population(C, T), population(C, T))
 	<= abstractGame(G).
-:- mode updateOpinions(in, in, in, in, in, out) is det.
+:- mode updateOpinions(in, in, in, in, in, in, out) is det.
 
-:- func increaseUncertainty(ebea.player.selection.parameters, player(C, T)) = player(C, T).
+:- func increaseUncertainty(float, player(C, T)) = player(C, T).
 
 :- pred debug(R, R, io.state, io.state) <= ePRNG(R).
 :- mode debug(in, out, di, uo) is det.
@@ -101,20 +101,20 @@ selectPartners(TraitPlayer, NumberPartners, Players, Neighbours, SelectedPartner
 	SelectedPartners = list.map(ebea.population.players.player(Players), SelectedPartnerIDs)
 	.
 
-updateOpinions(Game, Parameters, Players, Payoffs, !NextRoundPopulation) :-
+updateOpinions(Game, Parameters, Mu, Players, Payoffs, !NextRoundPopulation) :-
 	Players = [FocalPlayer | SelectedPartners],
-	list.foldl2(updateOpinion(Game, Parameters, Payoffs, FocalPlayer), SelectedPartners, 1, _, !NextRoundPopulation)
+	list.foldl2(updateOpinion(Game, Parameters, Mu, Payoffs, FocalPlayer), SelectedPartners, 1, _, !NextRoundPopulation)
 	;
 	Players = [],
-	throw("updateOpinions/6: never reached otherwise there is an invalid game")
+	throw("updateOpinions/7: never reached otherwise there is an invalid game")
 	.
 
-increaseUncertainty(Parameters, Player) = Result :-
+increaseUncertainty(UncertaintyIncreaseFactor, Player) = Result :-
 	Opinion = Player^traits^selectionTrait,
 	(if
 		Opinion = opinion(_, _)
 	then
-		NewUncertainty = float.min(2.0, Opinion^uncertainty * Parameters^uncertaintyIncreaseFactor),
+		NewUncertainty = float.min(2.0, Opinion^uncertainty * UncertaintyIncreaseFactor),
 		NextOpinion = 'uncertainty :='(Opinion, NewUncertainty),
 		PlayerTraits = 'selectionTrait :='(Player^traits, NextOpinion),
 		Result = 'traits :='(Player, PlayerTraits)
@@ -173,7 +173,7 @@ debugStep([S | Rest], [SM | RestM]) :-
 		S = opinion(_, _)
 	then
 		Parameters = 'mu :='(ebea.player.selection.defaultParameters, 0.1),
-		updateTrait(yes, Parameters, opinion(0.0, 0.8), S) = SM
+		updateTrait(yes, Parameters^mu, opinion(0.0, 0.8), S) = SM
 	else
 		throw("Exception")
 	).
@@ -243,11 +243,11 @@ weight(TraitPlayer, TraitPartner) = Result :-
 
   
  */
-:- pred updateOpinion(G, ebea.player.parameters(P), array(float), player(C, T), player(C, T), int, int, population(C, T), population(C, T))
+:- pred updateOpinion(G, ebea.player.parameters(P), float, array(float), player(C, T), player(C, T), int, int, population(C, T), population(C, T))
 	<= abstractGame(G).
-:- mode updateOpinion(in, in, in, in, in, in, out, in, out) is det.
+:- mode updateOpinion(in, in, in, in, in, in, in, out, in, out) is det.
 
-updateOpinion(Game, Parameters, Payoffs, FocalPlayer, SelectedPartner, Index, Index + 1, !Population) :-
+updateOpinion(Game, Parameters, Mu, Payoffs, FocalPlayer, SelectedPartner, Index, Index + 1, !Population) :-
 	SelectionTrait_FP = FocalPlayer^traits^selectionTrait,
 	SelectionTrait_SP = SelectedPartner^traits^selectionTrait,
 	(if
@@ -259,19 +259,19 @@ updateOpinion(Game, Parameters, Payoffs, FocalPlayer, SelectedPartner, Index, In
 		(if
 			scaledPayoffToThreshold(Game, Parameters^energyPar^energyScaling, array.lookup(Payoffs, 0)) >= PayoffThreshold
 		then
-			NextOpinion_FP = updateTrait(yes, Parameters^selectionPar, SelectionTrait_SP, SelectionTrait_FP),
+			NextOpinion_FP = updateTrait(yes, Mu, SelectionTrait_SP, SelectionTrait_FP),
 			ebea.population.update(FocalPlayer^id, updatePlayerOpinion(NextOpinion_FP), !Population)
 		else
-			NextOpinion_FP = updateTrait(no, Parameters^selectionPar, SelectionTrait_SP, SelectionTrait_FP),
+			NextOpinion_FP = updateTrait(no, Mu, SelectionTrait_SP, SelectionTrait_FP),
 			ebea.population.update(FocalPlayer^id, updatePlayerOpinion(NextOpinion_FP), !Population)
 		),
 		(if
 			scaledPayoffToThreshold(Game, Parameters^energyPar^energyScaling, array.lookup(Payoffs, Index)) >= PayoffThreshold
 		then
-			NextOpinion_SP = updateTrait(yes, Parameters^selectionPar, SelectionTrait_FP, SelectionTrait_SP),
+			NextOpinion_SP = updateTrait(yes, Parameters^selectionPar^mu, SelectionTrait_FP, SelectionTrait_SP),
 			ebea.population.update(SelectedPartner^id, updatePlayerOpinion(NextOpinion_SP), !Population)
 		else
-			NextOpinion_SP = updateTrait(no, Parameters^selectionPar, SelectionTrait_FP, SelectionTrait_SP),
+			NextOpinion_SP = updateTrait(no, Parameters^selectionPar^mu, SelectionTrait_FP, SelectionTrait_SP),
 			ebea.population.update(SelectedPartner^id, updatePlayerOpinion(NextOpinion_SP), !Population)
 		)
 	else
@@ -326,21 +326,21 @@ relativeAgreement(Trait1, Trait2) =
  * Updates the opinion of player two after interacting with player one.
  */
 
-:- func updateTrait(bool, ebea.player.selection.parameters, ebea.player.selection.traits, ebea.player.selection.traits) = ebea.player.selection.traits.
+:- func updateTrait(bool, float, ebea.player.selection.traits, ebea.player.selection.traits) = ebea.player.selection.traits.
 :- mode updateTrait(in, in, in(opinion), in(opinion)) = out(opinion) is det.
 
-updateTrait(yes, Parameters, Trait1, Trait2) = Result :-
+updateTrait(yes, Mu, Trait1, Trait2) = Result :-
 	(if
 		overlap(Trait1, Trait2) > Trait1^uncertainty
 	then
 		Result^opinionValue =
 			Trait2^opinionValue
-			+ Parameters^mu
+			+ Mu
 				* relativeAgreement(Trait1, Trait2)
 				* (Trait1^opinionValue - Trait2^opinionValue),
 		Result^uncertainty =
 			Trait2^uncertainty
-			+ Parameters^mu
+			+ Mu
 				* relativeAgreement(Trait1, Trait2)
 				* (Trait1^uncertainty - Trait2^uncertainty)
 	else
@@ -348,7 +348,7 @@ updateTrait(yes, Parameters, Trait1, Trait2) = Result :-
 	)
 	.
 	
-updateTrait(no, Parameters, Trait1, Trait2) = Result :-
+updateTrait(no, Mu, Trait1, Trait2) = Result :-
 	(if
 		overlap(Trait1, Trait2) > Trait1^uncertainty
 	then
@@ -356,7 +356,7 @@ updateTrait(no, Parameters, Trait1, Trait2) = Result :-
 			float.max(-1.0,
 				float.min(1.0,
 					Trait2^opinionValue
-					- Parameters^mu
+					- Mu
 						* relativeAgreement(Trait1, Trait2)
 						* (Trait1^opinionValue - Trait2^opinionValue)
 				)

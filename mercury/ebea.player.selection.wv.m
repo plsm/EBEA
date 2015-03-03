@@ -192,7 +192,7 @@ removeElements(Elements, !WeightVector) :-
 
 updateWeight(ProbabilitySelectedCombination, ScaledPayoff, ForElement, !WeightVector) :-
 	(if
-		map.search(!.WeightVector^elements, ForElement, AnWeight)
+		map.search(!.WeightVector^elements, ForElement, _AnWeight)
 	then
 		OldWeight = map.lookup(!.WeightVector^elements, ForElement),
 		ProbabilitySelectedCombinationInternal = float.round_to_int(1000.0 * ProbabilitySelectedCombination),
@@ -213,7 +213,7 @@ updateWeight(ProbabilitySelectedCombination, ScaledPayoff, ForElement, !WeightVe
 	
 
 updatePlayerProbCombVectorsWeightVector(PCV, WV, Player) = Result :-
-	Player^traits^selectionTrait = SelectionPhe,
+	Player^traits^selectionTrait = _SelectionPhe,
 	Traits = partnerSelection(PCV, yes(WV)),
 	PlayerTraits = 'selectionTrait :='(Player^traits, Traits),
 	Result = 'traits :='(Player, PlayerTraits)

@@ -8,6 +8,31 @@
 
 :- interface.
 
+:- type configFile.
+
+:- type ebea_player_selection_parameters.
+
+:- type configFileV1004 == data.config.io.filterV1004.configFile.
+
+:- type ebea_player_selection_parametersV1004 == data.config.io.filterV1004.ebea_player_selection_parameters.
+
+:- pred parse(configFileV1004, list(int), list(int)).
+:- mode parse(in, out, in) is det.
+:- mode parse(out, in, out) is semidet.
+
+:- func map(configFileV1004) = config.
+
+:- pred parse_ebea_player_selection_parameters(ebea_player_selection_parametersV1004, list(int), list(int)).
+:- mode parse_ebea_player_selection_parameters(in, out, in) is det.
+:- mode parse_ebea_player_selection_parameters(out, in, out) is semidet.
+
+:- func map_ebea_player_selection_parameters(ebea_player_selection_parametersV1004) = ebea.player.selection.parameters.
+
+:- implementation.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Definition of exported types
+
 :- type configFile --->
 	configFile(
 		data.prng.supplyParameter,        %  1 random
@@ -19,7 +44,7 @@
 		probability,                      %  7 migrationProbability
 		ebea.player.age.parameters,       %  8 ageParameters
 		ebea.player.energy.parameters,    %  9 energyParameters
-		ebea.player.selection.parameters, % 10 selectionParameters
+		ebea_player_selection_parametersV1004, % 10 selectionParameters
 		data.games,                       % 11 selectedGame
 		data.config.config_2x2,           % 12 cfg_2x2
 		data.config.config_battlesexes,   % 13 battlesexes
@@ -31,18 +56,17 @@
 		data.config.config_ultimatum      % 19 ultimatum
 	).
 
-:- type configFileV1004 == data.config.io.filterV1004.configFile.
-
-:- pred parse(configFileV1004, list(int), list(int)).
-:- mode parse(in, out, in) is det.
-:- mode parse(out, in, out) is semidet.
-
-:- func map(configFileV1004) = config.
-
-:- implementation.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Definition of exported types
+:- type ebea_player_selection_parameters --->
+	sp_V1004(
+		poolSizeStdDev                 :: float,
+		bitsPerProbabilityStdDev       :: float,
+		probabilityUpdateFactorStdDev  :: float,
+		payoffThresholdStdDev          :: float,
+		
+		uncertaintyIncreaseFactor      :: float,
+		mu                             :: float,
+		poolSizePercentageTransmission :: int
+	).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Definition of private types
@@ -100,7 +124,7 @@ parse(C) -->
 	probability.parse(MigrationProbability),
 	ebea.player.age.parseParameters(AgeParameters),
 	ebea.player.energy.parseParameters(EnergyParameters),
-	ebea.player.selection.parseParameters(SelectionParameters),
+	parse_ebea_player_selection_parameters(SelectionParameters),
 	data.parseGames(SelectedGame),
 	parse_GameConfig(Cfg_2x2),
 	parse_GameConfig(BattleSexes),
@@ -113,7 +137,21 @@ parse(C) -->
 	.
 
 map(configFile(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19)) =
-	config(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19).
+	config(A1, A2, A3, A4, A5, A6, A7, A8, A9,
+		map_ebea_player_selection_parameters(A10),
+		A11, A12, A13, A14, A15, A16, A17, A18, A19).
+
+parse_ebea_player_selection_parameters(P) -->
+	parseable.float32(P^poolSizeStdDev),
+	parseable.float32(P^bitsPerProbabilityStdDev),
+	parseable.float32(P^probabilityUpdateFactorStdDev),
+	parseable.float32(P^payoffThresholdStdDev),
+	parseable.float32(P^uncertaintyIncreaseFactor),
+	parseable.float32(P^mu),
+	parseable.int8(P^poolSizePercentageTransmission)
+	.
+
+map_ebea_player_selection_parameters(sp_V1004(A1, A2, A3, A4, A5, A6, A7)) = sp(A1, A2, A3, A4, A5, A6, A7, 0.0, 0.0).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of private predicates and functions

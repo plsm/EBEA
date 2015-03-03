@@ -25,23 +25,23 @@
 
 :- type configFile --->
 	configFile(
-		data.prng.supplyParameter,        %  1 random
-		int,                              %  2 numberRuns
-		int,                              %  3 numberIterations
-		ebea.streams.level,               %  4 level
-		float,                            %  5 carryingCapacity
-		ebea.population.dynamic,          %  6 dynamic
-		float,                            %  7 mutationProbability
-		ebea.player.age.parameters,       %  8 ageParameters
-		ebea.player.energy.parameters,    %  9 energyParameters
-		ebea_player_selection_parameters, % 10 selectionParameters
-		gamesV1001,	      	             % 11 selectedGame
-		gameConfig_2x2,                   % 12 cfg_2x2
-		gameConfig_battlesexes,           % 13 battlesexes
-		gameConfig_centipede,             % 14 centipede
-		gameConfig_pgp,                   % 15 pgp
-		'gameConfig_pgp+pa',              % 16 pgp+pa
-		gameConfig_ultimatum              % 19 ultimatum
+		data.prng.supplyParameter,             %  1 random
+		int,                                   %  2 numberRuns
+		int,                                   %  3 numberIterations
+		ebea.streams.level,                    %  4 level
+		float,                                 %  5 carryingCapacity
+		ebea.population.dynamic,               %  6 dynamic
+		float,                                 %  7 mutationProbability
+		ebea.player.age.parameters,            %  8 ageParameters
+		ebea.player.energy.parameters,         %  9 energyParameters
+		ebea_player_selection_parametersV1002, % 10 selectionParameters
+		gamesV1001,	      	               % 11 selectedGame
+		gameConfig_2x2,                        % 12 cfg_2x2
+		gameConfig_battlesexes,                % 13 battlesexes
+		gameConfig_centipede,                  % 14 centipede
+		gameConfig_pgp,                        % 15 pgp
+		'gameConfig_pgp+pa',                   % 16 pgp+pa
+		gameConfig_ultimatum                   % 19 ultimatum
 	).
 
 :- type gameConfig(G, CS, P) --->
