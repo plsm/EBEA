@@ -263,7 +263,8 @@ index([H | T], RestNeighbours, Index) = Result :-
 
 weightedRandomElementsLoop(WeightFunc, HowMany, Neighbours, RemainingWeight, !Result, !Random) :-
 	RemainingWeight > 0,
-	nextInt(0, RemainingWeight, Rnd, !Random),
+%	trace[io(!IO)] (io.format("#%d remaining weight %d\n", [i(HowMany), i(RemainingWeight)], !IO)),
+	nextInt(0, RemainingWeight - 1, Rnd, !Random),
 	pick(WeightFunc, Neighbours, Rnd, !.Result) = PickedID,
 	list.cons(PickedID, !Result),
 	(if
@@ -281,47 +282,6 @@ weightedRandomElementsLoop(WeightFunc, HowMany, Neighbours, RemainingWeight, !Re
 		)
 	).
 
-/**
- * This predicate calculates a weighted random sample without repetition of neighbours.
- */
-:- pred weightedRandomElementsLoop_v1(
-	weightFunc :: in,
-	int        :: in,
-	neighbours :: in,
-	int        :: in,
-	int        :: in,
-	list(ebea.population.players.key) :: in, list(ebea.population.players.key) :: out,
-	R :: in,  R :: out
-)
-	is semidet
-	<= ePRNG(R).
-
-weightedRandomElementsLoop_v1(WeightFunc, HowMany, Neighbours, RemainingWeight, TotalWeight, !Result, !Random) :-
-	RemainingWeight > 0,
-	nextInt(0, TotalWeight, Rnd, !Random),
-	pick(WeightFunc, Neighbours, Rnd) = PickedID,
-	(if
-		list.member(PickedID, !.Result)
-	then
-		weightedRandomElementsLoop_v1(WeightFunc, HowMany, Neighbours, RemainingWeight, TotalWeight, !Result, !Random)
-	else
-		list.cons(PickedID, !Result),
-		(if
-			HowMany = 1
-		then
-			true
-		else
-			weightedRandomElementsLoop_v1(
-				WeightFunc,
-				HowMany - 1,
-				Neighbours,
-				RemainingWeight - WeightFunc(PickedID),
-				TotalWeight,
-				!Result,
-				!Random
-			)
-		)
-	).
 
 /**
  * This function together with {@code pickAux/7} retrieve the player's id
@@ -330,7 +290,7 @@ weightedRandomElementsLoop_v1(WeightFunc, HowMany, Neighbours, RemainingWeight, 
 
 :- func pick(weightFunc, neighbours, int, list(ebea.population.players.key)) = ebea.population.players.key.
 
-pick(_, [], _, _) = throw("pick/4: invalid weight").
+pick(_, [], _, _) = throw("ebea.population.neighbours.pick/4: invalid weight").
 
 pick(WeightFunc, [H | T], RndWeight, PickedIDs) = pickAux(WeightFunc, H, T, RndWeight, PickedIDs).
 
@@ -353,32 +313,6 @@ pickAux(WeightFunc, [H | T], RestNeighbours, RndWeight, PickedIDs) = Result :-
 		else
 			Result = pickAux(WeightFunc, T, RestNeighbours, RndWeight - HWeight, PickedIDs)
 		)
-	).
-
-/**
- * This function together with {@code pickAux/7} retrieve the player's id
- * that was selected.
- */
-
-:- func pick(weightFunc, neighbours, int) = ebea.population.players.key.
-
-pick(_, [], _) = throw("pick/4: invalid weight").
-
-pick(WeightFunc, [H | T], RndWeight) = pickAux(WeightFunc, H, T, RndWeight).
-
-
-:- func pickAux(weightFunc, list(ebea.population.players.key), neighbours, int) = ebea.population.players.key.
-
-pickAux(WeightFunc, [], RestNeighbours, RndWeight) = pick(WeightFunc, RestNeighbours, RndWeight).
-
-pickAux(WeightFunc, [H | T], RestNeighbours, RndWeight) = Result :-
-	HWeight = WeightFunc(H),
-	(if
-		RndWeight < HWeight
-	then
-		Result = H
-	else
-		Result = pickAux(WeightFunc, T, RestNeighbours, RndWeight - HWeight)
 	).
 
 :- end_module ebea.population.neighbours.

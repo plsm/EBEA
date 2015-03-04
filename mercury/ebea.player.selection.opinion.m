@@ -248,6 +248,28 @@ weight(TraitPlayer, TraitPartner) = Result :-
 :- mode updateOpinion(in, in, in, in, in, in, in, out, in, out) is det.
 
 updateOpinion(Game, Parameters, Mu, Payoffs, FocalPlayer, SelectedPartner, Index, Index + 1, !Population) :-
+	updatePlayerOpinion(Game, Parameters, FocalPlayer, SelectedPartner, array.lookup(Payoffs, 0), !Population),
+	updatePlayerOpinion(Game, Parameters, SelectedPartner, FocalPlayer, array.lookup(Payoffs, Index), !Population)
+	.
+/*
+	FocalPlayer = player(_, _, _, Traits_FP),
+	Traits_FP = traits(_, _, SelectionTrait_FP),
+	SelectedPartner = player(_, _, _, TraitsSP),
+	TraitsSP = traits(_, _, SelectionTrait_SP),
+	%SelectionTrait_FP = ^traits^selectionTrait,
+	%SelectionTrait_SP = SelectedPartner^traits^selectionTrait,
+	(if
+		SelectionTrait_FP = opinion(_, _),
+		SelectionTrait_SP = opinion(_, _),
+		SelectionTrait_FP \= SelectionTrait_SP
+	then
+		updatePlayerOpinion(Game, Parameters, FocalPlayer, SelectedPartner, array.lookup(Payoffs, 0), !Population),
+		updatePlayerOpinion(Game, Parameters, SelectedPartner, FocalPlayer, array.lookup(Payoffs, Index), !Population)
+	else
+		true
+	).
+*/
+/*
 	SelectionTrait_FP = FocalPlayer^traits^selectionTrait,
 	SelectionTrait_SP = SelectedPartner^traits^selectionTrait,
 	(if
@@ -274,6 +296,44 @@ updateOpinion(Game, Parameters, Mu, Payoffs, FocalPlayer, SelectedPartner, Index
 			NextOpinion_SP = updateTrait(no, Parameters^selectionPar^mu, SelectionTrait_FP, SelectionTrait_SP),
 			ebea.population.update(SelectedPartner^id, updatePlayerOpinion(NextOpinion_SP), !Population)
 		)
+	else
+		true
+	).
+*/
+
+:- inst opinionPlayer == bound(player(ground, ground, ground, bound(traits(ground, ground, bound(opinion(ground, ground)))))).
+
+:- pred updatePlayerOpinion(G, ebea.player.parameters(P), player(C, T), player(C, T), float, population(C, T), population(C, T))
+	<= abstractGame(G).
+:- mode updatePlayerOpinion(in, in, in(opinionPlayer), in(opinionPlayer), in, in, out) is det.
+:- mode updatePlayerOpinion(in, in, in, in, in, in, out) is det.
+
+updatePlayerOpinion(Game, Parameters, ThisPlayer, OtherPlayer, Payoff, !Population) :-
+	SelectionTrait_TP = ThisPlayer^traits^selectionTrait,
+	SelectionTrait_OP = OtherPlayer^traits^selectionTrait,
+	(if
+		SelectionTrait_TP = opinion(_, _),
+		SelectionTrait_OP = opinion(_, _),
+		SelectionTrait_TP \= SelectionTrait_OP
+	then
+		Chromosome = ThisPlayer^chromosome^selectionGenes,
+		(if
+			Chromosome = opinion(_, _, _)
+		then
+			PayoffThreshold = Chromosome^payoffThreshold,
+			Mu = Chromosome^mu
+		else
+			PayoffThreshold = paretoPayoff(Game),
+			Mu = Parameters^selectionPar^mu
+		),
+		(if
+			scaledPayoffToThreshold(Game, Parameters^energyPar^energyScaling, Payoff) >= PayoffThreshold
+		then
+			NextOpinion = updateTrait(yes, Mu, SelectionTrait_TP, SelectionTrait_OP)
+		else
+			NextOpinion = updateTrait(no, Mu, SelectionTrait_TP, SelectionTrait_OP)
+		),
+		ebea.population.update(ThisPlayer^id, updatePlayerOpinion(NextOpinion), !Population)
 	else
 		true
 	).
@@ -323,7 +383,12 @@ relativeAgreement(Trait1, Trait2) =
 	overlap(Trait1, Trait2) / Trait1^uncertainty - 1.0.
 
 /**
+ * updateTrait(ApproximateFlag, Mu, Trait1, Trait2) = Result
+  
  * Updates the opinion of player two after interacting with player one.
+
+ * @param ApproximateFlag Indicates if the two opinions and the two
+ * uncertainties should converge or diverge.
  */
 
 :- func updateTrait(bool, float, ebea.player.selection.traits, ebea.player.selection.traits) = ebea.player.selection.traits.

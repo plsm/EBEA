@@ -218,10 +218,16 @@ dialog =
 			]),
 		 ci(label("opinion"),
 			[
+			 di(label("uncertainty increase factor"),  updateFieldFloat( get_uncertaintyIncreaseFactor,  checkFloat( "uncertainty increase factor",  bounded(1.0, yes),  unbound,            set_uncertaintyIncreaseFactor))),
+			 di(label("mu"),                           updateFieldFloat( get_mu,                         checkFloat( "mu",                           bounded(0.0, yes),  unbound,            set_mu))),
+			 di(label("payoff threshold"),             updateFieldFloat( get_payoffThreshold,            checkFloat( "payoff threshold",             bounded(0.0, yes),  bounded(1.0, yes),  set_payoffThreshold)))
+			]),
+		 ci(label("opinion old"),
+			[
 			 di(label("payoff threshold (as fraction of game payoff)"),  updateFieldFloat( get_payoffThreshold_O,       checkFloat( "payoff threshold",     bounded(0.0, yes),  bounded(1.0, yes), set_payoffThreshold_O))),
 			 di(label("initial uncertainty"),                            updateFieldFloat( get_initialUncertainty,      checkFloat( "initial uncertainty",  bounded(-1.0, yes), bounded(1.0, yes), set_initialUncertainty)))
 			]),
-		 ci(label("opinion"),
+		 ci(label("opinion old"),
 			 [
 			  di(label("initialAverageOpinion"),      updateFieldFloat(    get_initialAverageOpinion,      checkFloat( "initialAverageOpinion",      unbound, unbound, set_initialAverageOpinion))),
 			  di(label("initialStdDevOpinion"),       updateFieldFloat(    get_initialStdDevOpinion,       checkFloat( "initialStdDevOpinion",       unbound, unbound, set_initialStdDevOpinion))),
