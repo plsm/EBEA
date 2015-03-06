@@ -20,8 +20,12 @@
 
 :- import_module ui_swing, userInterface.
 :- import_module data, data.config, data.config.io, data.config.pretty.
-:- import_module tools, tools.export_playerProfiles_graphviz, tools.'PCVNetwork', tools.populationDynamics.
+:- import_module tools.
+:- import_module tools.export_playerProfiles_graphviz.
+:- import_module tools.'PCVNetwork'.
+:- import_module tools.populationDynamics.
 :- import_module tools.siteDynamics.
+:- import_module tools.processPhenotype.
 :- import_module int, dir, list, maybe, string, time.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -34,6 +38,7 @@
 		parameters_PCV           :: tools.'PCVNetwork'.parameters,
 		parameters_PD            :: tools.populationDynamics.parameters,
 		parameters_SD            :: tools.siteDynamics.parameters,
+		parameters_PP            :: tools.processPhenotype.parameters,
 		filename                 :: maybe(string),
 		fileChooser              :: fileChooser
 	).
@@ -68,8 +73,12 @@ menu = m(
 		])),
 	 mi(label("Tools"), submenu(
 		[mi(label("Player profiles movie"),   submenu(
-			[mi(label("Run"),			actionDataIO(playerProfilesMovie)),
+			[mi(label("Run"),       actionDataIO(playerProfilesMovie)),
 			 mi(label("Config"),    edit('new dialog'(parameters_playerProfile, set('parameters_playerProfile :='), tools.export_playerProfiles_graphviz.dialog_parameters)))
+			])),
+		 mi(label("Process players' phenotype"),   submenu(
+			[mi(label("Run"),       actionDataIO(processPhenotype)),
+			 mi(label("Config"),    edit('new dialog'(parameters_PP, set('parameters_PP :='), tools.processPhenotype.dialog_parameters)))
 			])),
 		 mi(label("Probability combination vectors movie"),   submenu(
 			[mi(label("Run"),			actionDataIO('PCVMovie')),
@@ -109,6 +118,7 @@ initData(FileChooser) = data(
 	tools.'PCVNetwork'.default_parameters,
 	tools.populationDynamics.default_parameters,
 	tools.siteDynamics.default_parameters,
+	tools.processPhenotype.default_parameters,
 	no,
 	FileChooser).
 
@@ -126,6 +136,9 @@ initData(FileChooser) = data(
 
 :- func parameters_SD(data) = tools.siteDynamics.parameters.
 :- func 'parameters_SD :='(data, tools.siteDynamics.parameters) = data.
+
+:- func parameters_PP(data) = tools.processPhenotype.parameters.
+:- func 'parameters_PP :='(data, tools.processPhenotype.parameters) = data.
 
 
 
@@ -235,6 +248,23 @@ playerProfilesMovie(Data, !IO) :-
 	% 	[i(TM^tm_year + 1900), i(TM^tm_mon + 1), i(TM^tm_mday),
 	% 	 i(TM^tm_hour), i(TM^tm_sec)]),
 	createPlayerProfilesNetworks(Data^config, Data^parameters_playerProfile, "./", Feedback, !IO),
+	io.print(Feedback, !IO),
+	io.nl(!IO)
+	.
+
+/**
+ * Menu option.
+ */
+:- pred processPhenotype(data, io.state, io.state).
+:- mode processPhenotype(in, di, uo) is det.
+
+processPhenotype(Data, !IO) :-
+	tools.processPhenotype.run(
+		Data^config,
+		Data^parameters_PP,
+		"./",
+		Feedback,
+		!IO),
 	io.print(Feedback, !IO),
 	io.nl(!IO)
 	.

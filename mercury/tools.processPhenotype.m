@@ -304,6 +304,8 @@ opinionChromosomes(L) :-
 	list.member(Site, L^sites),
 	list.member(InitialPlayer, Site^chromosomes),
 	(	%
+		InitialPlayer^chromosome^selectionGenes = opinion(_, _, _)
+	;
 		InitialPlayer^chromosome^selectionGenes = opinion_old(_, _)
 	;
 		InitialPlayer^chromosome^selectionGenes = opinion_old(_, _, _, _)

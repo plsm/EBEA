@@ -81,7 +81,9 @@ stddev probability update factor: %f
 stddev payoff threshold:          %f
 uncertainty increase factor: %f
 mu:                          %f
-pool size parent-offspring transmission: %d%%\n",
+pool size parent-offspring transmission: %d%%
+stddev mu:                          %f
+stddev uncertainty increase factor: %f\n",
 		[f(SP^poolSizeStdDev),
 		 f(SP^bitsPerProbabilityStdDev),
 		 f(SP^probabilityUpdateFactorStdDev),
@@ -90,7 +92,11 @@ pool size parent-offspring transmission: %d%%\n",
 		 f(SP^uncertaintyIncreaseFactor),
 		 f(SP^mu),
 
-		 i(SP^poolSizePercentageTransmission)],
+		 i(SP^poolSizePercentageTransmission),
+
+		 f(SP^muStdDev),
+		 f(SP^uncertaintyIncreaseFactorStdDev)
+		],
 		!IO),
 	io.format(Stream, "-- game --\nselected: %s\n", [s(string(Config^selectedGame))], !IO),
 	(

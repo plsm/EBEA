@@ -237,14 +237,16 @@
 
 :- type ac --->
 	ac(
-		qty_NPS                    :: int,
-		qty_WPS                    :: int,
-		sumPoolSize                :: int,
-		sumBitsPerProbability      :: int,
-		sumProbabilityUpdateFactor :: float,
-		sumPayoffThreshold_PS      :: float,
-		qty_O                      :: int,
-		sumPayoffThreshold_O       :: float
+		qty_NPS                      :: int,
+		qty_WPS                      :: int,
+		sumPoolSize                  :: int,
+		sumBitsPerProbability        :: int,
+		sumProbabilityUpdateFactor   :: float,
+		sumPayoffThreshold_PS        :: float,
+		qty_O                        :: int,
+		sumUncertaintyIncreaseFactor :: float,
+		sumMu                        :: float,
+		sumPayoffThreshold_O         :: float
 	).
 
 :- instance chromosome(ebea.player.selection.chromosome.chromosome, ebea.player.selection.traits, ebea.player.selection.parameters)
@@ -729,7 +731,7 @@ stepSelectPartnersPlayGame(
 				/* update the selection traits */
 				(
 					MPayoffs = yes(Payoffs),
-					ebea.player.selection.opinion.updateOpinions(Game, PlayerParameters, Chromosome^mu, [Player | RestProfile], Payoffs, !NextRoundPopulation)
+					ebea.player.selection.opinion.updateOpinions(Game, PlayerParameters, [Player | RestProfile], Payoffs, !NextRoundPopulation)
 					;
 					MPayoffs = no
 				)
@@ -766,7 +768,7 @@ stepSelectPartnersPlayGame(
 				/* update the selection traits */
 				(
 					MPayoffs = yes(Payoffs),
-					ebea.player.selection.opinion.updateOpinions(Game, PlayerParameters, PlayerParameters^selectionPar^mu, [Player | RestProfile], Payoffs, !NextRoundPopulation)
+					ebea.player.selection.opinion.updateOpinions(Game, PlayerParameters, [Player | RestProfile], Payoffs, !NextRoundPopulation)
 					;
 					MPayoffs = no
 				)
@@ -785,7 +787,7 @@ stepSelectPartnersPlayGame(
 
 :- func fold = ebea.player.selection.ac.
 
-fold = ac(0, 0, 0, 0, 0.0, 0.0, 0, 0.0).
+fold = ac(0, 0, 0, 0, 0.0, 0.0, 0, 0.0, 0.0, 0.0).
 
 
 :- func fold(ebea.player.selection.chromosome.chromosome, ebea.player.selection.ac) = ebea.player.selection.ac.
@@ -795,34 +797,27 @@ fold(Chromosome, AC) = Result :-
 	Result = AC
 	;
 	Chromosome = normalPartnerSelection(PS),
-	Result^qty_NPS = AC^qty_NPS + 1,
-	Result^qty_WPS = AC^qty_WPS,
-	Result^sumPoolSize = AC^sumPoolSize + PS^poolSize,
-	Result^sumBitsPerProbability = AC^sumBitsPerProbability + PS^bitsPerProbability,
-	Result^sumProbabilityUpdateFactor = AC^sumProbabilityUpdateFactor + PS^probabilityUpdateFactor,
-	Result^sumPayoffThreshold_PS = AC^sumPayoffThreshold_PS + PS^payoffThreshold,
-	Result^qty_O = AC^qty_O,
-	Result^sumPayoffThreshold_O = AC^sumPayoffThreshold_O
+	V1 = 'qty_NPS :='( AC,  AC^qty_NPS + 1),
+	V2 = 'sumPoolSize :='(                V1,  V1^sumPoolSize                + PS^poolSize),
+	V3 = 'sumBitsPerProbability :='(      V2,  V2^sumBitsPerProbability      + PS^bitsPerProbability),
+	V4 = 'sumProbabilityUpdateFactor :='( V3,  V3^sumProbabilityUpdateFactor + PS^probabilityUpdateFactor),
+	V5 = 'sumPayoffThreshold_PS :='(      V4,  V4^sumPayoffThreshold_PS      + PS^payoffThreshold),
+	Result = V5
 	;
 	Chromosome = weightedPartnerSelection(PS),
-	Result^qty_NPS = AC^qty_NPS,
-	Result^qty_WPS = AC^qty_WPS + 1,
-	Result^sumPoolSize = AC^sumPoolSize + PS^poolSize,
-	Result^sumBitsPerProbability = AC^sumBitsPerProbability + PS^bitsPerProbability,
-	Result^sumProbabilityUpdateFactor = AC^sumProbabilityUpdateFactor + PS^probabilityUpdateFactor,
-	Result^sumPayoffThreshold_PS = AC^sumPayoffThreshold_PS + PS^payoffThreshold,
-	Result^qty_O = AC^qty_O,
-	Result^sumPayoffThreshold_O = AC^sumPayoffThreshold_O
+	V1 = (AC^qty_WPS := AC^qty_WPS + 1),
+	V2 = 'sumPoolSize :='(                V1,  V1^sumPoolSize                + PS^poolSize),
+	V3 = 'sumBitsPerProbability :='(      V2,  V2^sumBitsPerProbability      + PS^bitsPerProbability),
+	V4 = 'sumProbabilityUpdateFactor :='( V3,  V3^sumProbabilityUpdateFactor + PS^probabilityUpdateFactor),
+	V5 = 'sumPayoffThreshold_PS :='(      V4,  V4^sumPayoffThreshold_PS      + PS^payoffThreshold),
+	Result = V5
 	;
 	Chromosome = opinion(_, _, _),
-	Result =
-	'sumPayoffThreshold_O :='(
-	'qty_O :='(
-		AC,
-		AC^qty_O + 1
-	),
-		AC^sumPayoffThreshold_O + Chromosome^payoffThreshold
-	)
+	V1 = 'qty_O :='( AC,  AC^qty_O + 1),
+	V2 = 'sumUncertaintyIncreaseFactor :='( V1,  V1^sumUncertaintyIncreaseFactor + Chromosome^uncertaintyIncreaseFactor),
+	V3 = 'sumMu :='(                        V2,  V2^sumMu                        + Chromosome^mu),
+	V4 = 'sumPayoffThreshold_O :='(         V3,  V3^sumPayoffThreshold_O         + Chromosome^payoffThreshold),
+	Result = V4
 	;
 	Chromosome = opinion_old(_, _),
 	Result =
@@ -880,9 +875,13 @@ printAccumulator(Stream, AC, !IO) :-
 	(if
 		AC^qty_O = 0
 	then
-		io.print(Stream, "1/0", !IO)
+		io.print(Stream, "1/0 1/0 1/0", !IO)
 	else
 		FQty_O = float(AC^qty_O),
+		io.print(Stream, AC^sumUncertaintyIncreaseFactor / FQty_O, !IO),
+		io.print(Stream, ' ', !IO),
+		io.print(Stream, AC^sumMu / FQty_O, !IO),
+		io.print(Stream, ' ', !IO),
 		io.print(Stream, AC^sumPayoffThreshold_O / FQty_O, !IO)
 	).
 

@@ -57,9 +57,9 @@
 /**
  * After the players have played the game, they update the opinions they have.
  */
-:- pred updateOpinions(G, ebea.player.parameters(P), float, list(player(C, T)), array(float), population(C, T), population(C, T))
+:- pred updateOpinions(G, ebea.player.parameters(P), list(player(C, T)), array(float), population(C, T), population(C, T))
 	<= abstractGame(G).
-:- mode updateOpinions(in, in, in, in, in, in, out) is det.
+:- mode updateOpinions(in, in, in, in, in, out) is det.
 
 :- func increaseUncertainty(float, player(C, T)) = player(C, T).
 
@@ -101,12 +101,12 @@ selectPartners(TraitPlayer, NumberPartners, Players, Neighbours, SelectedPartner
 	SelectedPartners = list.map(ebea.population.players.player(Players), SelectedPartnerIDs)
 	.
 
-updateOpinions(Game, Parameters, Mu, Players, Payoffs, !NextRoundPopulation) :-
+updateOpinions(Game, Parameters, Players, Payoffs, !NextRoundPopulation) :-
 	Players = [FocalPlayer | SelectedPartners],
-	list.foldl2(updateOpinion(Game, Parameters, Mu, Payoffs, FocalPlayer), SelectedPartners, 1, _, !NextRoundPopulation)
+	list.foldl2(updateOpinion(Game, Parameters, Payoffs, FocalPlayer), SelectedPartners, 1, _, !NextRoundPopulation)
 	;
 	Players = [],
-	throw("updateOpinions/7: never reached otherwise there is an invalid game")
+	throw("updateOpinions/6: never reached otherwise there is an invalid game")
 	.
 
 increaseUncertainty(UncertaintyIncreaseFactor, Player) = Result :-
@@ -225,12 +225,15 @@ weight(TraitPlayer, TraitPartner) = Result :-
 	.
 
 /**
- * updateOpinion(Game, EnergyScaling, Payoffs, FocalPlayer, SelectedPartner, !Index, !Population)
+ * updateOpinion(Game, Parameters, Payoffs, FocalPlayer, SelectedPartner, !Index, !Population)
 
  * Update the opinion of the given player which obtained the {@code !Index}
  * payoff.  The focal player may have selected partners that do not have an
  * opinion.  In this case the population remains unchanged.  Otherwise we
  * update the opinion.
+
+ * <p> Parameter <i>mu</i> controls the speed of convergence or divergence
+ * depending on whether the payoff is above or below a specific threshold.
 
  * <p> This predicate is used as a closure to reduce the list of selected
  * partners.
@@ -243,11 +246,11 @@ weight(TraitPlayer, TraitPartner) = Result :-
 
   
  */
-:- pred updateOpinion(G, ebea.player.parameters(P), float, array(float), player(C, T), player(C, T), int, int, population(C, T), population(C, T))
+:- pred updateOpinion(G, ebea.player.parameters(P), array(float), player(C, T), player(C, T), int, int, population(C, T), population(C, T))
 	<= abstractGame(G).
-:- mode updateOpinion(in, in, in, in, in, in, in, out, in, out) is det.
+:- mode updateOpinion(in, in, in, in, in, in, out, in, out) is det.
 
-updateOpinion(Game, Parameters, Mu, Payoffs, FocalPlayer, SelectedPartner, Index, Index + 1, !Population) :-
+updateOpinion(Game, Parameters, Payoffs, FocalPlayer, SelectedPartner, Index, Index + 1, !Population) :-
 	updatePlayerOpinion(Game, Parameters, FocalPlayer, SelectedPartner, array.lookup(Payoffs, 0), !Population),
 	updatePlayerOpinion(Game, Parameters, SelectedPartner, FocalPlayer, array.lookup(Payoffs, Index), !Population)
 	.
@@ -329,9 +332,9 @@ updatePlayerOpinion(Game, Parameters, ThisPlayer, OtherPlayer, Payoff, !Populati
 		(if
 			scaledPayoffToThreshold(Game, Parameters^energyPar^energyScaling, Payoff) >= PayoffThreshold
 		then
-			NextOpinion = updateTrait(yes, Mu, SelectionTrait_TP, SelectionTrait_OP)
+			NextOpinion = updateTrait(yes, Mu, SelectionTrait_OP, SelectionTrait_TP)
 		else
-			NextOpinion = updateTrait(no, Mu, SelectionTrait_TP, SelectionTrait_OP)
+			NextOpinion = updateTrait(no, Mu, SelectionTrait_OP, SelectionTrait_TP)
 		),
 		ebea.population.update(ThisPlayer^id, updatePlayerOpinion(NextOpinion), !Population)
 	else
@@ -385,10 +388,15 @@ relativeAgreement(Trait1, Trait2) =
 /**
  * updateTrait(ApproximateFlag, Mu, Trait1, Trait2) = Result
   
- * Updates the opinion of player two after interacting with player one.
+ * Updates the opinion of player two after interacting with player one.  Players
+ * are only represented by their opinion selection traits.
 
  * @param ApproximateFlag Indicates if the two opinions and the two
  * uncertainties should converge or diverge.
+
+
+ * @param Mu controls the speed of convergence or divergence depending
+ * on parameter {@code ApproximateFlag}.
  */
 
 :- func updateTrait(bool, float, ebea.player.selection.traits, ebea.player.selection.traits) = ebea.player.selection.traits.

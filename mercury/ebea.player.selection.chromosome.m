@@ -373,7 +373,7 @@ mutateGeneOpinion(Parameters, Index, !Distribution, !Random, !Chromosome) :-
 	then
 		rng.distribution.unitGaussian(Perturb0, !Distribution, !Random),
 		Perturb = Perturb0 * Parameters^uncertaintyIncreaseFactorStdDev,
-		NextValue = float.max(0.0, float.min(!.Chromosome^uncertaintyIncreaseFactor + Perturb, 1.0)),
+		NextValue = float.max(1.0, !.Chromosome^uncertaintyIncreaseFactor + Perturb),
 		!:Chromosome = 'uncertaintyIncreaseFactor :='(!.Chromosome, NextValue)
 	else if
 		Index = 1
