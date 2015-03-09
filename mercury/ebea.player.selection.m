@@ -473,24 +473,45 @@ teachKnowHow(Parameters, Parent, !Offspring, !Random) :-
 		then
 			ebea.player.selection.pcv.copyPercentageCombinations(Parameters, Parent, !Offspring, !Random)
 		else
-			throw("teachKnowHow/6: Never reached")
+			throw("teachKnowHow/6: Never reached, parent generated an offspring with different selection genes")
 		)
 		;
 		ParentTrait = opinion(_, _),
 		(if
 			!.Offspring^traits^selectionTrait = opinion(_OpinionValue, _Uncertainty)
 		then
+			!.Offspring^chromosome^selectionGenes = SelectionGenes,
+			(	% switch
+				(
+					SelectionGenes = random
+				;
+					SelectionGenes = normalPartnerSelection(_)
+				;
+					SelectionGenes = weightedPartnerSelection(_)
+				),
+				throw("teachKnowHow/6: invalid combination of chromosome and phenotipic traits")
+			;
+				SelectionGenes = opinion(_, _, _),
+				UncertaintyIncreaseFactor = SelectionGenes^uncertaintyIncreaseFactor
+			;
+				(
+					SelectionGenes = opinion_old(_, _)
+				;
+					SelectionGenes = opinion_old(_, _, _, _)
+				),
+				UncertaintyIncreaseFactor = Parameters^uncertaintyIncreaseFactor
+			),
+			OffspringTrait^opinionValue = ParentTrait^opinionValue,
+			OffspringTrait^uncertainty = float.min(2.0, ParentTrait^uncertainty * UncertaintyIncreaseFactor),
 			!:Offspring = 'traits :='(
 				!.Offspring,
 				'selectionTrait :='(
 					!.Offspring^traits,
 					OffspringTrait
 				)
-			),
-			OffspringTrait^opinionValue = ParentTrait^opinionValue,
-			OffspringTrait^uncertainty = float.min(2.0, ParentTrait^uncertainty * Parameters^uncertaintyIncreaseFactor)
+			)
 		else
-			throw("teachKnowHow/6: Never reached")
+			throw("teachKnowHow/6: Never reached, parent generated an offspring with different selection genes")
 		)
 	)
 	.
