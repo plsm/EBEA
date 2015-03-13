@@ -22,6 +22,23 @@
 
  * TODO2 : remove payoff threshold from opinion. Increases search space
  * unnecessarily.
+
+ * @cons opinion(OffspringOpinionChangeAverage, OffspringOpinionChangeStdDev,
+  OffspringUncertaintyChangeAverage, OffspringUncertaintyChangeStdDev, 
+  UncertaintyIncreaseFactorNoPlay, Mu, PayoffThreshold)
+
+ * this constructor represents selection based on opinion.  All players have an
+ * opinion and an uncertainty.  A partner is selected if its opinion is within
+ * the player's uncertainty.  If the opinion of the selected partner falls
+ * outside the player's uncertainty, the player's uncertainty increments by
+ * factor {@code UncertaintyIncreaseFactorNoPlay}.  Opinion and uncertainty
+ * update use fields {@code Mu} and {@code PayoffThreshold}.  The opinions
+ * converge if the payoff is greater than {@code PayoffThreshold}.  Otherwise
+ * they diverge.  Convergence or divergence speed depend on field {@code Mu}.
+ * When a player gives birth to an offspring, the offspring's opinion and
+ * uncertainty is equal to the parent's opinion and uncertainty subject to a
+ * perturbation.  The perturbation is Gaussian noise represented by fields
+ * {@code Offspring_XXX_ChangeAverage} and {@code Offspring_XXX_ChangeStdDev}.
   
  */
 :- type chromosome --->
@@ -33,9 +50,15 @@
 		ebea.player.selection.pcv.chromosome
 	) ;
 	opinion(
-		uncertaintyIncreaseFactor :: float,
-		mu                        :: float,
-		payoffThreshold           :: float 
+		% offspringOpinionChangeAverage     :: float,
+		% offspringOpinionChangeStdDev      :: float,
+		% offspringUncertaintyChangeAverage :: float,
+		% offspringUncertaintyChangeStdDev  :: float,
+		offspringOpinionChange            :: float,
+		offspringUncertaintyChange        :: float,
+		uncertaintyIncreaseFactorNoPlay   :: float,
+		mu                                :: float,
+		payoffThreshold                   :: float 
 	) ;
 	opinion_old(
 		payoffThreshold_O  :: float ,
@@ -152,8 +175,8 @@ numberGenes(Chromosome) = Result :-
 	Chromosome = weightedPartnerSelection(_),
 	Result = 4
 	;
-	Chromosome = opinion(_, _, _),
-	Result = 3
+	Chromosome = opinion(_, _, _, _, _, _, _),
+	Result = 7
 	;
 	Chromosome = opinion_old(_, _),
 	Result = 1
@@ -174,7 +197,7 @@ mutateGene(Parameters, Index, !Distribution, !Random, Chromosome, Result) :-
 	mutateGenePartnerSelection(Parameters, Index, !Distribution, !Random, PS, NewPS),
 	Result = weightedPartnerSelection(NewPS)
 	;
-	Chromosome = opinion(_, _, _),
+	Chromosome = opinion(_, _, _, _, _, _, _),
 	mutateGeneOpinion(Parameters, Index, !Distribution, !Random, Chromosome, Result)
 	;
 	Chromosome = opinion_old(_, _),
@@ -373,7 +396,7 @@ mutateGeneOpinion(Parameters, Index, !Distribution, !Random, !Chromosome) :-
 	then
 		rng.distribution.unitGaussian(Perturb0, !Distribution, !Random),
 		Perturb = Perturb0 * Parameters^uncertaintyIncreaseFactorStdDev,
-		NextValue = float.max(1.0, !.Chromosome^uncertaintyIncreaseFactor + Perturb),
+		NextValue = float.max(1.0, !.Chromosome^uncertaintyIncreaseFactorNoPlay + Perturb),
 		!:Chromosome = 'uncertaintyIncreaseFactor :='(!.Chromosome, NextValue)
 	else if
 		Index = 1
@@ -389,6 +412,20 @@ mutateGeneOpinion(Parameters, Index, !Distribution, !Random, !Chromosome) :-
 		Perturb = Perturb0 * Parameters^payoffThresholdStdDev,
 		NextValue = float.max(0.0, float.min(!.Chromosome^payoffThreshold + Perturb, 1.0)),
 		!:Chromosome = 'payoffThreshold :='(!.Chromosome, NextValue)
+	else if
+		Index = 3
+	then
+		rng.distribution.unitGaussian(Perturb0, !Distribution, !Random),
+		Perturb = Perturb0 * Parameters^offspringOpinionChange_StdDev,
+		NextValue = float.max(-2, float.min(!.Chromosome^offspringOpinionChange + Perturb, 2)),
+		!:Chromosome = 'offspringOpinionChange :='(!.Chromosome, NextValue)
+	else if
+		Index = 4
+	then
+		rng.distribution.unitGaussian(Perturb0, !Distribution, !Random),
+		Perturb = Perturb0 * Parameters^offspringUncertaintyChange_StdDev,
+		NextValue = float.max(-2, float.min(!.Chromosome^offspringUncertaintyChange + Perturb, 2)),
+		!:Chromosome = 'offspringUncertaintyChange :='(!.Chromosome, NextValue)
 	else
 		throw("ebea.player.selection.chromosome.mutateGeneOpinion/8: invalid gene index for opinion chromosome")
 	).
@@ -426,7 +463,7 @@ printPartnerSelection(Stream, PS, !IO) :-
 getCurrentChoice(random)                      = yes(0).
 getCurrentChoice(normalPartnerSelection(_))   = yes(1).
 getCurrentChoice(weightedPartnerSelection(_)) = yes(2).
-getCurrentChoice(opinion(_, _, _))            = yes(3).
+getCurrentChoice(opinion(_, _, _, _, _))      = yes(3).
 getCurrentChoice(opinion_old(_, _))           = yes(4).
 getCurrentChoice(opinion_old(_, _, _, _))     = yes(5).
 
@@ -439,7 +476,7 @@ setChoice(Chromosome, Index) = ok(Result) :-
 		Chromosome = random,                       Result = Chromosome  ;
 		Chromosome = normalPartnerSelection(_),    Result = random  ;
 		Chromosome = weightedPartnerSelection(_),  Result = random  ;
-		Chromosome = opinion(_, _, _),             Result = random  ;
+		Chromosome = opinion(_, _, _, _, _),       Result = random  ;
 		Chromosome = opinion_old(_, _),            Result = random  ;
 		Chromosome = opinion_old(_, _, _, _),      Result = random
 	else if
@@ -448,7 +485,7 @@ setChoice(Chromosome, Index) = ok(Result) :-
 		Chromosome = random,                       Result = normalPartnerSelection(pcv_default_partnerSelection)  ;
 		Chromosome = normalPartnerSelection(_),    Result = Chromosome  ;
 		Chromosome = weightedPartnerSelection(_),  Result = normalPartnerSelection(pcv_default_partnerSelection)  ;
-		Chromosome = opinion(_, _, _),             Result = normalPartnerSelection(pcv_default_partnerSelection)  ;
+		Chromosome = opinion(_, _, _, _, _),       Result = normalPartnerSelection(pcv_default_partnerSelection)  ;
 		Chromosome = opinion_old(_, _),            Result = normalPartnerSelection(pcv_default_partnerSelection)  ;
 		Chromosome = opinion_old(_, _, _, _),      Result = normalPartnerSelection(pcv_default_partnerSelection)
 	else if
@@ -457,25 +494,25 @@ setChoice(Chromosome, Index) = ok(Result) :-
 		Chromosome = random,                       Result = weightedPartnerSelection(pcv_default_partnerSelection)  ;
 		Chromosome = normalPartnerSelection(_),    Result = weightedPartnerSelection(pcv_default_partnerSelection)  ;
 		Chromosome = weightedPartnerSelection(_),  Result = Chromosome  ;
-		Chromosome = opinion(_, _, _),             Result = weightedPartnerSelection(pcv_default_partnerSelection)  ;
+		Chromosome = opinion(_, _, _, _, _),       Result = weightedPartnerSelection(pcv_default_partnerSelection)  ;
 		Chromosome = opinion_old(_, _),            Result = weightedPartnerSelection(pcv_default_partnerSelection)  ;
 		Chromosome = opinion_old(_, _, _, _),      Result = weightedPartnerSelection(pcv_default_partnerSelection)
 	else if
 		Index = 3
 	then
-		Chromosome = random,                       Result = opinion(ebea.player.selection.chromosome.default_uncertaintyIncreaseFactor, ebea.player.selection.chromosome.default_mu, default_payoffThreshold) ;
-		Chromosome = normalPartnerSelection(_),    Result = opinion(ebea.player.selection.chromosome.default_uncertaintyIncreaseFactor, ebea.player.selection.chromosome.default_mu, default_payoffThreshold) ;
-		Chromosome = weightedPartnerSelection(_),  Result = opinion(ebea.player.selection.chromosome.default_uncertaintyIncreaseFactor, ebea.player.selection.chromosome.default_mu, default_payoffThreshold) ;
-		Chromosome = opinion(_, _, _),             Result = Chromosome  ;
-		Chromosome = opinion_old(_, _),            Result = opinion(ebea.player.selection.chromosome.default_uncertaintyIncreaseFactor, ebea.player.selection.chromosome.default_mu, default_payoffThreshold) ;
-		Chromosome = opinion_old(_, _, _, _),      Result = opinion(ebea.player.selection.chromosome.default_uncertaintyIncreaseFactor, ebea.player.selection.chromosome.default_mu, default_payoffThreshold)
+		Chromosome = random,                       Result = opinion(default_offspringOpinionChange, default_offspringUncertaintyChange, ebea.player.selection.chromosome.default_uncertaintyIncreaseFactor, ebea.player.selection.chromosome.default_mu, default_payoffThreshold) ;
+		Chromosome = normalPartnerSelection(_),    Result = opinion(default_offspringOpinionChange, default_offspringUncertaintyChange, ebea.player.selection.chromosome.default_uncertaintyIncreaseFactor, ebea.player.selection.chromosome.default_mu, default_payoffThreshold) ;
+		Chromosome = weightedPartnerSelection(_),  Result = opinion(default_offspringOpinionChange, default_offspringUncertaintyChange, ebea.player.selection.chromosome.default_uncertaintyIncreaseFactor, ebea.player.selection.chromosome.default_mu, default_payoffThreshold) ;
+		Chromosome = opinion(_, _, _, _, _),       Result = Chromosome  ;
+		Chromosome = opinion_old(_, _),            Result = opinion(default_offspringOpinionChange, default_offspringUncertaintyChange, ebea.player.selection.chromosome.default_uncertaintyIncreaseFactor, ebea.player.selection.chromosome.default_mu, default_payoffThreshold) ;
+		Chromosome = opinion_old(_, _, _, _),      Result = opinion(default_offspringOpinionChange, default_offspringUncertaintyChange, ebea.player.selection.chromosome.default_uncertaintyIncreaseFactor, ebea.player.selection.chromosome.default_mu, default_payoffThreshold)
 	else if
 		Index = 4
 	then
 		Chromosome = random,                       Result = opinion_old(default_payoffThreshold_O, default_initialUncertainty)  ;
 		Chromosome = normalPartnerSelection(_),    Result = opinion_old(default_payoffThreshold_O, default_initialUncertainty)  ;
 		Chromosome = weightedPartnerSelection(_),  Result = opinion_old(default_payoffThreshold_O, default_initialUncertainty)  ;
-		Chromosome = opinion(_, _, _),             Result = opinion_old(default_payoffThreshold_O, default_initialUncertainty)  ;
+		Chromosome = opinion(_, _, _, _, _),       Result = opinion_old(default_payoffThreshold_O, default_initialUncertainty)  ;
 		Chromosome = opinion_old(_, _),            Result = Chromosome  ;
 		Chromosome = opinion_old(_, _, _, _),      Result = opinion_old(default_payoffThreshold_O, default_initialUncertainty)
 	else if
@@ -484,7 +521,7 @@ setChoice(Chromosome, Index) = ok(Result) :-
 		Chromosome = random,                       Result = opinion_old(default_initialAverageOpinion, default_initialStdDevOpinion, default_initialAverageUncertainty, default_initialStdDevUncertainty)  ;
 		Chromosome = normalPartnerSelection(_),    Result = opinion_old(default_initialAverageOpinion, default_initialStdDevOpinion, default_initialAverageUncertainty, default_initialStdDevUncertainty)  ;
 		Chromosome = weightedPartnerSelection(_),  Result = opinion_old(default_initialAverageOpinion, default_initialStdDevOpinion, default_initialAverageUncertainty, default_initialStdDevUncertainty)  ;
-		Chromosome = opinion(_, _, _),             Result = opinion_old(default_initialAverageOpinion, default_initialStdDevOpinion, default_initialAverageUncertainty, default_initialStdDevUncertainty)  ;
+		Chromosome = opinion(_, _, _, _, _),       Result = opinion_old(default_initialAverageOpinion, default_initialStdDevOpinion, default_initialAverageUncertainty, default_initialStdDevUncertainty)  ;
 		Chromosome = opinion_old(_, _),            Result = opinion_old(default_initialAverageOpinion, default_initialStdDevOpinion, default_initialAverageUncertainty, default_initialStdDevUncertainty)  ;
 		Chromosome = opinion_old(_, _, _, _),      Result = Chromosome
 	else
@@ -616,7 +653,7 @@ get_normalPartnerSelectionField(GetFunc, P) = R :-
 		P = random,                        I = pcv_default_partnerSelection  ;
 		P = normalPartnerSelection(PS),    I = PS  ;
 		P = weightedPartnerSelection(PS),  I = PS  ;
-		P = opinion(_, _, _),              I = pcv_default_partnerSelection  ;
+		P = opinion(_, _, _, _, _),        I = pcv_default_partnerSelection  ;
 		P = opinion_old(_, _),             I = pcv_default_partnerSelection  ;
 		P = opinion_old(_, _, _, _),       I = pcv_default_partnerSelection
 	),
@@ -635,7 +672,7 @@ set_normalPartnerSelectionField(SetFunc, P, V) = R :-
 		P = random,                        I = pcv_default_partnerSelection  ;
 		P = normalPartnerSelection(PS),    I = PS  ;
 		P = weightedPartnerSelection(PS),  I = PS  ;
-		P = opinion(_, _, _),              I = pcv_default_partnerSelection  ;
+		P = opinion(_, _, _, _, _),        I = pcv_default_partnerSelection  ;
 		P = opinion_old(_, _),             I = pcv_default_partnerSelection  ;
 		P = opinion_old(_, _, _, _),       I = pcv_default_partnerSelection
 	),
@@ -656,7 +693,7 @@ get_weightedPartnerSelectionField(GetFunc, P) = R :-
 		P = random,                        I = pcv_default_partnerSelection  ;
 		P = normalPartnerSelection(PS),    I = PS  ;
 		P = weightedPartnerSelection(PS),  I = PS  ;
-		P = opinion(_, _, _),              I = pcv_default_partnerSelection  ;
+		P = opinion(_, _, _, _, _),        I = pcv_default_partnerSelection  ;
 		P = opinion_old(_, _),             I = pcv_default_partnerSelection  ;
 		P = opinion_old(_, _, _, _),       I = pcv_default_partnerSelection
 	),
@@ -678,7 +715,7 @@ set_weightedPartnerSelectionField(SetFunc, P, V) = R :-
 		P = random,                        I = pcv_default_partnerSelection  ;
 		P = normalPartnerSelection(PS),    I = PS  ;
 		P = weightedPartnerSelection(PS),  I = PS  ;
-		P = opinion(_, _, _),              I = pcv_default_partnerSelection  ;
+		P = opinion(_, _, _, _, _),        I = pcv_default_partnerSelection  ;
 		P = opinion_old(_, _),             I = pcv_default_partnerSelection  ;
 		P = opinion_old(_, _, _, _),       I = pcv_default_partnerSelection
 	),
@@ -699,7 +736,7 @@ get_uncertaintyIncreaseFactor(P) = R :-
 	P = weightedPartnerSelection(_),
 	R = ebea.player.selection.chromosome.default_uncertaintyIncreaseFactor
 	;
-	P = opinion(_, _, _),
+	P = opinion(_, _, _, _, _),
 	R = P^uncertaintyIncreaseFactor
 	;
 	P = opinion_old(_, _),
@@ -721,7 +758,7 @@ set_uncertaintyIncreaseFactor(P, V) = R :-
 	P = weightedPartnerSelection(_),
 	R = opinion(V, ebea.player.selection.chromosome.default_mu, default_payoffThreshold)
 	;
-	P = opinion(_, _, _),
+	P = opinion(_, _, _, _, _),
 	R = 'uncertaintyIncreaseFactor :='(P, V)
 	;
 	P = opinion_old(_, _),
@@ -744,7 +781,7 @@ get_mu(P) = R :-
 	P = weightedPartnerSelection(_),
 	R = ebea.player.selection.chromosome.default_mu
 	;
-	P = opinion(_, _, _),
+	P = opinion(_, _, _, _, _),
 	R = P^mu
 	;
 	P = opinion_old(_, _),
@@ -766,7 +803,7 @@ set_mu(P, V) = R :-
 	P = weightedPartnerSelection(_),
 	R = opinion(ebea.player.selection.chromosome.default_uncertaintyIncreaseFactor, V, default_payoffThreshold)
 	;
-	P = opinion(_, _, _),
+	P = opinion(_, _, _, _, _),
 	R = 'mu :='(P, V)
 	;
 	P = opinion_old(_, _),
@@ -789,7 +826,7 @@ get_payoffThreshold(P) = R :-
 	P = weightedPartnerSelection(_),
 	R = default_payoffThreshold
 	;
-	P = opinion(_, _, _),
+	P = opinion(_, _, _, _, _),
 	R = P^payoffThreshold
 	;
 	P = opinion_old(_, _),
@@ -811,7 +848,7 @@ set_payoffThreshold(P, V) = R :-
 	P = weightedPartnerSelection(_),
 	R = opinion(ebea.player.selection.chromosome.default_uncertaintyIncreaseFactor, ebea.player.selection.chromosome.default_mu, V)
 	;
-	P = opinion(_, _, _),
+	P = opinion(_, _, _, _, _),
 	R = 'payoffThreshold :='(P, V)
 	;
 	P = opinion_old(_, _),
@@ -836,7 +873,7 @@ get_payoffThreshold_O(P) = R :-
 	P = weightedPartnerSelection(_),
 	R = default_payoffThreshold_O
 	;
-	P = opinion(_, _, _),
+	P = opinion(_, _, _, _, _),
 	R = default_payoffThreshold_O
 	;
 	P = opinion_old(_, _),
@@ -858,7 +895,7 @@ set_payoffThreshold_O(P, V) = R :-
 	P = weightedPartnerSelection(_),
 	R = opinion_old(V, default_initialUncertainty)
 	;
-	P = opinion(_, _, _),
+	P = opinion(_, _, _, _, _),
 	R = opinion_old(V, default_initialUncertainty)
 	;
 	P = opinion_old(_, _),
@@ -881,7 +918,7 @@ get_initialUncertainty(P) = R :-
 	P = weightedPartnerSelection(_),
 	R = default_initialUncertainty
 	;
-	P = opinion(_, _, _),
+	P = opinion(_, _, _, _, _),
 	R = default_initialUncertainty
 	;
 	P = opinion_old(_, _),
@@ -903,7 +940,7 @@ set_initialUncertainty(P, V) = R :-
 	P = weightedPartnerSelection(__),
 	R = opinion_old(default_payoffThreshold_O, V)
 	;
-	P = opinion(_, _, _),
+	P = opinion(_, _, _, _, _),
 	R = opinion_old(default_payoffThreshold_O, V)
 	;
 	P = opinion_old(_, _),
@@ -926,7 +963,7 @@ get_initialAverageOpinion(P) = R :-
 	P = weightedPartnerSelection(_),
 	R = default_initialAverageOpinion
 	;
-	P = opinion(_, _, _),
+	P = opinion(_, _, _, _, _),
 	R = default_initialAverageOpinion
 	;
 	P = opinion_old(_, _),
@@ -948,7 +985,7 @@ set_initialAverageOpinion(P, V) = R :-
 	P = weightedPartnerSelection(_),
 	R = opinion_old(V, default_initialStdDevOpinion, default_initialAverageUncertainty, default_initialStdDevUncertainty)
 	;
-	P = opinion(_, _, _),
+	P = opinion(_, _, _, _, _),
 	R = opinion_old(V, default_initialStdDevOpinion, default_initialAverageUncertainty, default_initialStdDevUncertainty)
 	;
 	P = opinion_old(_, _),
@@ -971,7 +1008,7 @@ get_initialStdDevOpinion(P) = R :-
 	P = weightedPartnerSelection(_),
 	R = default_initialStdDevOpinion
 	;
-	P = opinion(_, _, _),
+	P = opinion(_, _, _, _, _),
 	R = default_initialStdDevOpinion
 	;
 	P = opinion_old(_, _),
@@ -993,7 +1030,7 @@ set_initialStdDevOpinion(P, V) = R :-
 	P = weightedPartnerSelection(_),
 	R = opinion_old(default_initialAverageOpinion, V, default_initialAverageUncertainty, default_initialStdDevUncertainty)
 	;
-	P = opinion(_, _, _),
+	P = opinion(_, _, _, _, _),
 	R = opinion_old(default_initialAverageOpinion, V, default_initialAverageUncertainty, default_initialStdDevUncertainty)
 	;
 	P = opinion_old(_, _),
@@ -1016,7 +1053,7 @@ get_initialAverageUncertainty(P) = R :-
 	P = weightedPartnerSelection(_),
 	R = default_initialAverageUncertainty
 	;
-	P = opinion(_, _, _),
+	P = opinion(_, _, _, _, _),
 	R = default_initialAverageUncertainty
 	;
 	P = opinion_old(_, _),
@@ -1038,7 +1075,7 @@ set_initialAverageUncertainty(P, V) = R :-
 	P = weightedPartnerSelection(_),
 	R = opinion_old(default_initialAverageOpinion, default_initialStdDevOpinion, V, default_initialStdDevUncertainty)
 	;
-	P = opinion(_, _, _),
+	P = opinion(_, _, _, _, _),
 	R = opinion_old(default_initialAverageOpinion, default_initialStdDevOpinion, V, default_initialStdDevUncertainty)
 	;
 	P = opinion_old(_, _),
@@ -1061,7 +1098,7 @@ get_initialStdDevUncertainty(P) = R :-
 	P = weightedPartnerSelection(_),
 	R = default_initialStdDevUncertainty
 	;
-	P = opinion(_, _, _),
+	P = opinion(_, _, _, _, _),
 	R = default_initialStdDevUncertainty
 	;
 	P = opinion_old(_, _),
@@ -1083,7 +1120,7 @@ set_initialStdDevUncertainty(P, V) = R :-
 	P = weightedPartnerSelection(_),
 	R = opinion_old(default_initialAverageOpinion, default_initialStdDevOpinion, default_initialAverageUncertainty, V)
 	;
-	P = opinion(_, _, _),
+	P = opinion(_, _, _, _, _),
 	R = opinion_old(default_initialAverageOpinion, default_initialStdDevOpinion, default_initialAverageUncertainty, V)
 	;
 	P = opinion_old(_, _),

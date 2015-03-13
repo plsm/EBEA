@@ -30,17 +30,19 @@
  */
 :- type parameters --->
 	sp(
-		poolSizeStdDev                  :: float,
-		bitsPerProbabilityStdDev        :: float,
-		probabilityUpdateFactorStdDev   :: float,
-		payoffThresholdStdDev           :: float,
+		poolSizeStdDev                    :: float,
+		bitsPerProbabilityStdDev          :: float,
+		probabilityUpdateFactorStdDev     :: float,
+		payoffThresholdStdDev             :: float,
 
-		uncertaintyIncreaseFactor       :: float,
-		mu                              :: float,
-		poolSizePercentageTransmission  :: int,
+		uncertaintyIncreaseFactor         :: float,
+		mu                                :: float,
+		poolSizePercentageTransmission    :: int,
 
-		muStdDev                        :: float,
-		uncertaintyIncreaseFactorStdDev :: float
+		offspringOpinionChange_StdDev     :: float,
+		offspringUncertaintyChange_StdDev :: float,
+		muStdDev                          :: float,
+		uncertaintyIncreaseFactorStdDev   :: float
 	).
 
 :- func defaultParameters = ebea.player.selection.parameters.
@@ -244,7 +246,9 @@
 		sumProbabilityUpdateFactor   :: float,
 		sumPayoffThreshold_PS        :: float,
 		qty_O                        :: int,
-		sumUncertaintyIncreaseFactor :: float,
+		sumUncertaintyIncreaseNoPlay  :: float,
+		sumOffspringOpinionChange     :: float,
+		sumOffspringUncertaintyChange :: float,
 		sumMu                        :: float,
 		sumPayoffThreshold_O         :: float
 	).
@@ -366,7 +370,7 @@ born(Chromosome, Result, !Random) :-
 		Result = partnerSelection(PCV, yes(ebea.player.selection.wv.init))
 	 )
 	;
-	Chromosome = opinion(_, _, _),
+	Chromosome = opinion(_, _, _, _, _),
 	rng.'nextFloat[0,1]'(OV, !Random),
 	Result^opinionValue = 2.0 * OV - 1.0,
 	rng.'nextFloat[0,1]'(UV, !Random),
@@ -480,7 +484,7 @@ teachKnowHow(Parameters, Parent, !Offspring, !Random) :-
 		(if
 			!.Offspring^traits^selectionTrait = opinion(_OpinionValue, _Uncertainty)
 		then
-			!.Offspring^chromosome^selectionGenes = SelectionGenes,
+			Parent^chromosome^selectionGenes = SelectionGenes,
 			(	% switch
 				(
 					SelectionGenes = random
@@ -491,23 +495,21 @@ teachKnowHow(Parameters, Parent, !Offspring, !Random) :-
 				),
 				throw("teachKnowHow/6: invalid combination of chromosome and phenotipic traits")
 			;
-				SelectionGenes = opinion(_, _, _),
-				UncertaintyIncreaseFactor = SelectionGenes^uncertaintyIncreaseFactor
+				SelectionGenes = opinion(_, _, _, _, _),
+				OffspringTrait^opinionValue = float.max(-1.0, float.min(ParentTrait^opinionValue + SelectionGenes^offspringOpinionChange, 1.0)),
+				OffspringTrait^uncertainty = float.max(0.0, float.min(ParentTrait^uncertainty + SelectionGenes^offspringUncertaintyChange, 2.0)),
+				!:Offspring = 'traits :='(
+					!.Offspring,
+					'selectionTrait :='(
+						!.Offspring^traits,
+						OffspringTrait
+					)
+				)
 			;
 				(
 					SelectionGenes = opinion_old(_, _)
 				;
 					SelectionGenes = opinion_old(_, _, _, _)
-				),
-				UncertaintyIncreaseFactor = Parameters^uncertaintyIncreaseFactor
-			),
-			OffspringTrait^opinionValue = ParentTrait^opinionValue,
-			OffspringTrait^uncertainty = float.min(2.0, ParentTrait^uncertainty * UncertaintyIncreaseFactor),
-			!:Offspring = 'traits :='(
-				!.Offspring,
-				'selectionTrait :='(
-					!.Offspring^traits,
-					OffspringTrait
 				)
 			)
 		else
@@ -733,7 +735,7 @@ stepSelectPartnersPlayGame(
 			throw("ebea.player.selection.stepSelectPartnersPlayGame/10: Invalid combination of chromosome and phenotipic trait")
 		)
 	;
-		Chromosome = opinion(_, _, _),
+		Chromosome = opinion(_, _, _, _, _),
 		(if
 			Traits = opinion(_, _)
 		then
@@ -760,7 +762,7 @@ stepSelectPartnersPlayGame(
 				/* update the selection traits */
 				ebea.population.update(
 					Player^id,
-					ebea.player.selection.opinion.increaseUncertainty(Chromosome^uncertaintyIncreaseFactor),
+					ebea.player.selection.opinion.increaseUncertainty(Chromosome^uncertaintyIncreaseFactorNoPlay),
 					!NextRoundPopulation)
 			)
 		else
@@ -808,7 +810,7 @@ stepSelectPartnersPlayGame(
 
 :- func fold = ebea.player.selection.ac.
 
-fold = ac(0, 0, 0, 0, 0.0, 0.0, 0, 0.0, 0.0, 0.0).
+fold = ac(0, 0, 0, 0, 0.0, 0.0, 0, 0.0, 0.0, 0.0, 0.0, 0.0).
 
 
 :- func fold(ebea.player.selection.chromosome.chromosome, ebea.player.selection.ac) = ebea.player.selection.ac.
@@ -833,12 +835,14 @@ fold(Chromosome, AC) = Result :-
 	V5 = 'sumPayoffThreshold_PS :='(      V4,  V4^sumPayoffThreshold_PS      + PS^payoffThreshold),
 	Result = V5
 	;
-	Chromosome = opinion(_, _, _),
+	Chromosome = opinion(_, _, _, _, _),
 	V1 = 'qty_O :='( AC,  AC^qty_O + 1),
-	V2 = 'sumUncertaintyIncreaseFactor :='( V1,  V1^sumUncertaintyIncreaseFactor + Chromosome^uncertaintyIncreaseFactor),
-	V3 = 'sumMu :='(                        V2,  V2^sumMu                        + Chromosome^mu),
-	V4 = 'sumPayoffThreshold_O :='(         V3,  V3^sumPayoffThreshold_O         + Chromosome^payoffThreshold),
-	Result = V4
+	V2 = 'sumUncertaintyIncreaseNoPlay :='(  V1,  V1^sumUncertaintyIncreaseNoPlay  + Chromosome^uncertaintyIncreaseFactorNoPlay),
+	V3 = 'sumMu :='(                         V2,  V2^sumMu                         + Chromosome^mu),
+	V4 = 'sumPayoffThreshold_O :='(          V3,  V3^sumPayoffThreshold_O          + Chromosome^payoffThreshold),
+	V5 = 'sumOffspringOpinionChange :='(     V4,  V4^sumOffspringOpinionChange     + Chromosome^offspringOpinionChange),
+	V6 = 'sumOffspringUncertaintyChange :='( V5,  V5^sumOffspringUncertaintyChange + Chromosome^offspringUncertaintyChange),
+	Result = V6
 	;
 	Chromosome = opinion_old(_, _),
 	Result =
@@ -899,7 +903,11 @@ printAccumulator(Stream, AC, !IO) :-
 		io.print(Stream, "1/0 1/0 1/0", !IO)
 	else
 		FQty_O = float(AC^qty_O),
-		io.print(Stream, AC^sumUncertaintyIncreaseFactor / FQty_O, !IO),
+		io.print(Stream, AC^sumOffspringOpinionChange / FQty_O, !IO),
+		io.print(Stream, ' ', !IO),
+		io.print(Stream, AC^sumOffspringUncertaintyChange / FQty_O, !IO),
+		io.print(Stream, ' ', !IO),
+		io.print(Stream, AC^sumUncertaintyIncreaseNoPlay / FQty_O, !IO),
 		io.print(Stream, ' ', !IO),
 		io.print(Stream, AC^sumMu / FQty_O, !IO),
 		io.print(Stream, ' ', !IO),
