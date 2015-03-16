@@ -197,8 +197,8 @@ print(Stream, person_pure(I, GF), !IO) :-
 
 :- func getCurrentChoice(strategy) = maybe(int).
 
-getCurrentChoice(male(_))            = yes(0).
-getCurrentChoice(female(_))          = yes(1).
+getCurrentChoice(female(_))          = yes(0).
+getCurrentChoice(male(_))            = yes(1).
 getCurrentChoice(person_mixed(_, _)) = yes(2).
 getCurrentChoice(person_pure(_, _))  = yes(3).
 

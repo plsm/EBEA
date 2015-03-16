@@ -159,7 +159,7 @@
 % Definition of private types
 
 :- inst opinion == bound(
-	opinion(ground, ground, ground)
+	opinion(ground, ground, ground, ground, ground)
 	).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -175,8 +175,8 @@ numberGenes(Chromosome) = Result :-
 	Chromosome = weightedPartnerSelection(_),
 	Result = 4
 	;
-	Chromosome = opinion(_, _, _, _, _, _, _),
-	Result = 7
+	Chromosome = opinion(_, _, _, _, _),
+	Result = 5
 	;
 	Chromosome = opinion_old(_, _),
 	Result = 1
@@ -197,7 +197,7 @@ mutateGene(Parameters, Index, !Distribution, !Random, Chromosome, Result) :-
 	mutateGenePartnerSelection(Parameters, Index, !Distribution, !Random, PS, NewPS),
 	Result = weightedPartnerSelection(NewPS)
 	;
-	Chromosome = opinion(_, _, _, _, _, _, _),
+	Chromosome = opinion(_, _, _, _, _),
 	mutateGeneOpinion(Parameters, Index, !Distribution, !Random, Chromosome, Result)
 	;
 	Chromosome = opinion_old(_, _),
@@ -241,9 +241,11 @@ dialog =
 			]),
 		 ci(label("opinion"),
 			[
-			 di(label("uncertainty increase factor"),  updateFieldFloat( get_uncertaintyIncreaseFactor,  checkFloat( "uncertainty increase factor",  bounded(1.0, yes),  unbound,            set_uncertaintyIncreaseFactor))),
-			 di(label("mu"),                           updateFieldFloat( get_mu,                         checkFloat( "mu",                           bounded(0.0, yes),  unbound,            set_mu))),
-			 di(label("payoff threshold"),             updateFieldFloat( get_payoffThreshold,            checkFloat( "payoff threshold",             bounded(0.0, yes),  bounded(1.0, yes),  set_payoffThreshold)))
+			 di(label("offspring opinion change"),      updateFieldFloat( get_offspringOpinionChange,           checkFloat( "offspring opinion change",      bounded(-2.0, yes),  bounded(2.0, yes),  set_offspringOpinionChange))),
+			 di(label("offspring uncertainty change"),  updateFieldFloat( get_offspringUncertaintyChange,       checkFloat( "offspring uncertainty change",  bounded(-2.0, yes),  bounded(2.0, yes),  set_offspringUncertaintyChange))),
+			 di(label("uncertainty increase no play"),  updateFieldFloat( get_uncertaintyIncreaseFactorNoPlay,  checkFloat( "uncertainty increase no play",  bounded(1.0, yes),   unbound,            set_uncertaintyIncreaseFactorNoPlay))),
+			 di(label("mu"),                            updateFieldFloat( get_mu,                               checkFloat( "mu",                            bounded(0.0, yes),   bounded(1.0, yes),  set_mu))),
+			 di(label("payoff threshold"),              updateFieldFloat( get_payoffThreshold,                  checkFloat( "payoff threshold",              bounded(0.0, yes),   bounded(1.0, yes),  set_payoffThreshold)))
 			]),
 		 ci(label("opinion old"),
 			[
@@ -293,9 +295,11 @@ parse(P) -->
 	.
 
 parse(P) -->
-	{P = opinion(_, _, _)},
+	{P = opinion(_, _, _, _, _)},
 	[5],
-	parseable.float32(P^uncertaintyIncreaseFactor),
+	parseable.float32(P^offspringOpinionChange),
+	parseable.float32(P^offspringUncertaintyChange),
+	parseable.float32(P^uncertaintyIncreaseFactorNoPlay),
 	parseable.float32(P^mu),
 	parseable.float32(P^payoffThreshold)
 	.
@@ -311,8 +315,12 @@ print(Stream, Chromosome, !IO) :-
 	Chromosome = weightedPartnerSelection(PS),
 	printPartnerSelection(Stream, PS, !IO)
 	;
-	Chromosome = opinion(_, _, _),
-	io.print(Stream, Chromosome^uncertaintyIncreaseFactor, !IO),
+	Chromosome = opinion(_, _, _, _, _),
+	io.print(Stream, Chromosome^offspringOpinionChange, !IO),
+	io.print(Stream, ' ', !IO),
+	io.print(Stream, Chromosome^offspringUncertaintyChange, !IO),
+	io.print(Stream, ' ', !IO),
+	io.print(Stream, Chromosome^uncertaintyIncreaseFactorNoPlay, !IO),
 	io.print(Stream, ' ', !IO),
 	io.print(Stream, Chromosome^mu, !IO),
 	io.print(Stream, ' ', !IO),
@@ -397,7 +405,7 @@ mutateGeneOpinion(Parameters, Index, !Distribution, !Random, !Chromosome) :-
 		rng.distribution.unitGaussian(Perturb0, !Distribution, !Random),
 		Perturb = Perturb0 * Parameters^uncertaintyIncreaseFactorStdDev,
 		NextValue = float.max(1.0, !.Chromosome^uncertaintyIncreaseFactorNoPlay + Perturb),
-		!:Chromosome = 'uncertaintyIncreaseFactor :='(!.Chromosome, NextValue)
+		!:Chromosome = 'uncertaintyIncreaseFactorNoPlay :='(!.Chromosome, NextValue)
 	else if
 		Index = 1
 	then
@@ -417,14 +425,14 @@ mutateGeneOpinion(Parameters, Index, !Distribution, !Random, !Chromosome) :-
 	then
 		rng.distribution.unitGaussian(Perturb0, !Distribution, !Random),
 		Perturb = Perturb0 * Parameters^offspringOpinionChange_StdDev,
-		NextValue = float.max(-2, float.min(!.Chromosome^offspringOpinionChange + Perturb, 2)),
+		NextValue = float.max(-2.0, float.min(!.Chromosome^offspringOpinionChange + Perturb, 2.0)),
 		!:Chromosome = 'offspringOpinionChange :='(!.Chromosome, NextValue)
 	else if
 		Index = 4
 	then
 		rng.distribution.unitGaussian(Perturb0, !Distribution, !Random),
 		Perturb = Perturb0 * Parameters^offspringUncertaintyChange_StdDev,
-		NextValue = float.max(-2, float.min(!.Chromosome^offspringUncertaintyChange + Perturb, 2)),
+		NextValue = float.max(-2.0, float.min(!.Chromosome^offspringUncertaintyChange + Perturb, 2.0)),
 		!:Chromosome = 'offspringUncertaintyChange :='(!.Chromosome, NextValue)
 	else
 		throw("ebea.player.selection.chromosome.mutateGeneOpinion/8: invalid gene index for opinion chromosome")
@@ -500,12 +508,12 @@ setChoice(Chromosome, Index) = ok(Result) :-
 	else if
 		Index = 3
 	then
-		Chromosome = random,                       Result = opinion(default_offspringOpinionChange, default_offspringUncertaintyChange, ebea.player.selection.chromosome.default_uncertaintyIncreaseFactor, ebea.player.selection.chromosome.default_mu, default_payoffThreshold) ;
-		Chromosome = normalPartnerSelection(_),    Result = opinion(default_offspringOpinionChange, default_offspringUncertaintyChange, ebea.player.selection.chromosome.default_uncertaintyIncreaseFactor, ebea.player.selection.chromosome.default_mu, default_payoffThreshold) ;
-		Chromosome = weightedPartnerSelection(_),  Result = opinion(default_offspringOpinionChange, default_offspringUncertaintyChange, ebea.player.selection.chromosome.default_uncertaintyIncreaseFactor, ebea.player.selection.chromosome.default_mu, default_payoffThreshold) ;
+		Chromosome = random,                       Result = opinion(default_offspringOpinionChange, default_offspringUncertaintyChange, ebea.player.selection.chromosome.default_uncertaintyIncreaseFactorNoPlay, ebea.player.selection.chromosome.default_mu, default_payoffThreshold) ;
+		Chromosome = normalPartnerSelection(_),    Result = opinion(default_offspringOpinionChange, default_offspringUncertaintyChange, ebea.player.selection.chromosome.default_uncertaintyIncreaseFactorNoPlay, ebea.player.selection.chromosome.default_mu, default_payoffThreshold) ;
+		Chromosome = weightedPartnerSelection(_),  Result = opinion(default_offspringOpinionChange, default_offspringUncertaintyChange, ebea.player.selection.chromosome.default_uncertaintyIncreaseFactorNoPlay, ebea.player.selection.chromosome.default_mu, default_payoffThreshold) ;
 		Chromosome = opinion(_, _, _, _, _),       Result = Chromosome  ;
-		Chromosome = opinion_old(_, _),            Result = opinion(default_offspringOpinionChange, default_offspringUncertaintyChange, ebea.player.selection.chromosome.default_uncertaintyIncreaseFactor, ebea.player.selection.chromosome.default_mu, default_payoffThreshold) ;
-		Chromosome = opinion_old(_, _, _, _),      Result = opinion(default_offspringOpinionChange, default_offspringUncertaintyChange, ebea.player.selection.chromosome.default_uncertaintyIncreaseFactor, ebea.player.selection.chromosome.default_mu, default_payoffThreshold)
+		Chromosome = opinion_old(_, _),            Result = opinion(default_offspringOpinionChange, default_offspringUncertaintyChange, ebea.player.selection.chromosome.default_uncertaintyIncreaseFactorNoPlay, ebea.player.selection.chromosome.default_mu, default_payoffThreshold) ;
+		Chromosome = opinion_old(_, _, _, _),      Result = opinion(default_offspringOpinionChange, default_offspringUncertaintyChange, ebea.player.selection.chromosome.default_uncertaintyIncreaseFactorNoPlay, ebea.player.selection.chromosome.default_mu, default_payoffThreshold)
 	else if
 		Index = 4
 	then
@@ -601,9 +609,17 @@ pcv_default_partnerSelection = partnerSelection(
 
 
 
-:- func default_uncertaintyIncreaseFactor = float.
+:- func default_offspringOpinionChange = float.
 
-default_uncertaintyIncreaseFactor = 0.0.
+default_offspringOpinionChange = 0.0.
+
+:- func default_offspringUncertaintyChange = float.
+
+default_offspringUncertaintyChange = 0.0.
+
+:- func default_uncertaintyIncreaseFactorNoPlay = float.
+
+default_uncertaintyIncreaseFactorNoPlay = 0.0.
 
 :- func default_mu = float.
 
@@ -622,6 +638,8 @@ default_payoffThreshold_O = 0.0.
 :- func default_initialUncertainty = float.
 
 default_initialUncertainty = 1.0.
+
+
 
 :- func default_initialAverageOpinion = float.
 
@@ -724,48 +742,141 @@ set_weightedPartnerSelectionField(SetFunc, P, V) = R :-
 
 
 
-:- func get_uncertaintyIncreaseFactor(ebea.player.selection.chromosome.chromosome) = float.
 
-get_uncertaintyIncreaseFactor(P) = R :-
+
+
+:- func get_offspringOpinionChange(ebea.player.selection.chromosome.chromosome) = float.
+
+get_offspringOpinionChange(P) = R :-
 	P = random,
-	R = ebea.player.selection.chromosome.default_uncertaintyIncreaseFactor
+	R = default_offspringOpinionChange
 	;
 	P = normalPartnerSelection(_),
-	R = ebea.player.selection.chromosome.default_uncertaintyIncreaseFactor
+	R = default_offspringOpinionChange
 	;
 	P = weightedPartnerSelection(_),
-	R = ebea.player.selection.chromosome.default_uncertaintyIncreaseFactor
+	R = default_offspringOpinionChange
 	;
 	P = opinion(_, _, _, _, _),
-	R = P^uncertaintyIncreaseFactor
+	R = P^offspringOpinionChange
 	;
 	P = opinion_old(_, _),
-	R = ebea.player.selection.chromosome.default_uncertaintyIncreaseFactor
+	R = default_offspringOpinionChange
 	;
 	P = opinion_old(_, _, _, _),
-	R = ebea.player.selection.chromosome.default_uncertaintyIncreaseFactor
+	R = default_offspringOpinionChange
 	.
 
-:- func set_uncertaintyIncreaseFactor(ebea.player.selection.chromosome.chromosome, float) = ebea.player.selection.chromosome.chromosome.
+:- func set_offspringOpinionChange(ebea.player.selection.chromosome.chromosome, float) = ebea.player.selection.chromosome.chromosome.
 
-set_uncertaintyIncreaseFactor(P, V) = R :-
+set_offspringOpinionChange(P, V) = R :-
 	P = random,
-	R = opinion(V, ebea.player.selection.chromosome.default_mu, default_payoffThreshold)
+	R = opinion(V, default_offspringUncertaintyChange, default_uncertaintyIncreaseFactorNoPlay, ebea.player.selection.chromosome.default_mu, default_payoffThreshold)
 	;
 	P = normalPartnerSelection(_),
-	R = opinion(V, ebea.player.selection.chromosome.default_mu, default_payoffThreshold)
+	R = opinion(V, default_offspringUncertaintyChange, default_uncertaintyIncreaseFactorNoPlay, ebea.player.selection.chromosome.default_mu, default_payoffThreshold)
 	;
 	P = weightedPartnerSelection(_),
-	R = opinion(V, ebea.player.selection.chromosome.default_mu, default_payoffThreshold)
+	R = opinion(V, default_offspringUncertaintyChange, default_uncertaintyIncreaseFactorNoPlay, ebea.player.selection.chromosome.default_mu, default_payoffThreshold)
 	;
 	P = opinion(_, _, _, _, _),
-	R = 'uncertaintyIncreaseFactor :='(P, V)
+	R = 'offspringOpinionChange :='(P, V)
 	;
 	P = opinion_old(_, _),
-	R = opinion(V, ebea.player.selection.chromosome.default_mu, default_payoffThreshold)
+	R = opinion(V, default_offspringUncertaintyChange, default_uncertaintyIncreaseFactorNoPlay, ebea.player.selection.chromosome.default_mu, default_payoffThreshold)
 	;
 	P = opinion_old(_, _, _, _),
-	R = opinion(V, ebea.player.selection.chromosome.default_mu, default_payoffThreshold)
+	R = opinion(V, default_offspringUncertaintyChange, default_uncertaintyIncreaseFactorNoPlay, ebea.player.selection.chromosome.default_mu, default_payoffThreshold)
+	.
+
+
+:- func get_offspringUncertaintyChange(ebea.player.selection.chromosome.chromosome) = float.
+
+get_offspringUncertaintyChange(P) = R :-
+	P = random,
+	R = default_offspringUncertaintyChange
+	;
+	P = normalPartnerSelection(_),
+	R = default_offspringUncertaintyChange
+	;
+	P = weightedPartnerSelection(_),
+	R = default_offspringUncertaintyChange
+	;
+	P = opinion(_, _, _, _, _),
+	R = P^offspringUncertaintyChange
+	;
+	P = opinion_old(_, _),
+	R = default_offspringUncertaintyChange
+	;
+	P = opinion_old(_, _, _, _),
+	R = default_offspringUncertaintyChange
+	.
+
+:- func set_offspringUncertaintyChange(ebea.player.selection.chromosome.chromosome, float) = ebea.player.selection.chromosome.chromosome.
+
+set_offspringUncertaintyChange(P, V) = R :-
+	P = random,
+	R = opinion(default_offspringOpinionChange, V, default_uncertaintyIncreaseFactorNoPlay, ebea.player.selection.chromosome.default_mu, default_payoffThreshold)
+	;
+	P = normalPartnerSelection(_),
+	R = opinion(default_offspringOpinionChange, V, default_uncertaintyIncreaseFactorNoPlay, ebea.player.selection.chromosome.default_mu, default_payoffThreshold)
+	;
+	P = weightedPartnerSelection(_),
+	R = opinion(default_offspringOpinionChange, V, default_uncertaintyIncreaseFactorNoPlay, ebea.player.selection.chromosome.default_mu, default_payoffThreshold)
+	;
+	P = opinion(_, _, _, _, _),
+	R = 'offspringUncertaintyChange :='(P, V)
+	;
+	P = opinion_old(_, _),
+	R = opinion(default_offspringOpinionChange, V, default_uncertaintyIncreaseFactorNoPlay, ebea.player.selection.chromosome.default_mu, default_payoffThreshold)
+	;
+	P = opinion_old(_, _, _, _),
+	R = opinion(default_offspringOpinionChange, V, default_uncertaintyIncreaseFactorNoPlay, ebea.player.selection.chromosome.default_mu, default_payoffThreshold)
+	.
+
+
+:- func get_uncertaintyIncreaseFactorNoPlay(ebea.player.selection.chromosome.chromosome) = float.
+
+get_uncertaintyIncreaseFactorNoPlay(P) = R :-
+	P = random,
+	R = default_uncertaintyIncreaseFactorNoPlay
+	;
+	P = normalPartnerSelection(_),
+	R = default_uncertaintyIncreaseFactorNoPlay
+	;
+	P = weightedPartnerSelection(_),
+	R = default_uncertaintyIncreaseFactorNoPlay
+	;
+	P = opinion(_, _, _, _, _),
+	R = P^uncertaintyIncreaseFactorNoPlay
+	;
+	P = opinion_old(_, _),
+	R = default_uncertaintyIncreaseFactorNoPlay
+	;
+	P = opinion_old(_, _, _, _),
+	R = default_uncertaintyIncreaseFactorNoPlay
+	.
+
+:- func set_uncertaintyIncreaseFactorNoPlay(ebea.player.selection.chromosome.chromosome, float) = ebea.player.selection.chromosome.chromosome.
+
+set_uncertaintyIncreaseFactorNoPlay(P, V) = R :-
+	P = random,
+	R = opinion(default_offspringOpinionChange, default_offspringUncertaintyChange, V, ebea.player.selection.chromosome.default_mu, default_payoffThreshold)
+	;
+	P = normalPartnerSelection(_),
+	R = opinion(default_offspringOpinionChange, default_offspringUncertaintyChange, V, ebea.player.selection.chromosome.default_mu, default_payoffThreshold)
+	;
+	P = weightedPartnerSelection(_),
+	R = opinion(default_offspringOpinionChange, default_offspringUncertaintyChange, V, ebea.player.selection.chromosome.default_mu, default_payoffThreshold)
+	;
+	P = opinion(_, _, _, _, _),
+	R = 'uncertaintyIncreaseFactorNoPlay :='(P, V)
+	;
+	P = opinion_old(_, _),
+	R = opinion(default_offspringOpinionChange, default_offspringUncertaintyChange, V, ebea.player.selection.chromosome.default_mu, default_payoffThreshold)
+	;
+	P = opinion_old(_, _, _, _),
+	R = opinion(default_offspringOpinionChange, default_offspringUncertaintyChange, V, ebea.player.selection.chromosome.default_mu, default_payoffThreshold)
 	.
 
 
@@ -795,22 +906,22 @@ get_mu(P) = R :-
 
 set_mu(P, V) = R :-
 	P = random,
-	R = opinion(ebea.player.selection.chromosome.default_uncertaintyIncreaseFactor, V, default_payoffThreshold)
+	R = opinion(default_offspringOpinionChange, default_offspringUncertaintyChange, default_uncertaintyIncreaseFactorNoPlay, V, default_payoffThreshold)
 	;
 	P = normalPartnerSelection(_),
-	R = opinion(ebea.player.selection.chromosome.default_uncertaintyIncreaseFactor, V, default_payoffThreshold)
+	R = opinion(default_offspringOpinionChange, default_offspringUncertaintyChange, default_uncertaintyIncreaseFactorNoPlay, V, default_payoffThreshold)
 	;
 	P = weightedPartnerSelection(_),
-	R = opinion(ebea.player.selection.chromosome.default_uncertaintyIncreaseFactor, V, default_payoffThreshold)
+	R = opinion(default_offspringOpinionChange, default_offspringUncertaintyChange, default_uncertaintyIncreaseFactorNoPlay, V, default_payoffThreshold)
 	;
 	P = opinion(_, _, _, _, _),
 	R = 'mu :='(P, V)
 	;
 	P = opinion_old(_, _),
-	R = opinion(ebea.player.selection.chromosome.default_uncertaintyIncreaseFactor, V, default_payoffThreshold)
+	R = opinion(default_offspringOpinionChange, default_offspringUncertaintyChange, default_uncertaintyIncreaseFactorNoPlay, V, default_payoffThreshold)
 	;
 	P = opinion_old(_, _, _, _),
-	R = opinion(ebea.player.selection.chromosome.default_uncertaintyIncreaseFactor, V, default_payoffThreshold)
+	R = opinion(default_offspringOpinionChange, default_offspringUncertaintyChange, default_uncertaintyIncreaseFactorNoPlay, V, default_payoffThreshold)
 	.
 
 
@@ -840,23 +951,28 @@ get_payoffThreshold(P) = R :-
 
 set_payoffThreshold(P, V) = R :-
 	P = random,
-	R = opinion(ebea.player.selection.chromosome.default_uncertaintyIncreaseFactor, ebea.player.selection.chromosome.default_mu, V)
+	R = opinion(default_offspringOpinionChange, default_offspringUncertaintyChange, default_uncertaintyIncreaseFactorNoPlay, ebea.player.selection.chromosome.default_mu, V)
 	;
 	P = normalPartnerSelection(_),
-	R = opinion(ebea.player.selection.chromosome.default_uncertaintyIncreaseFactor, ebea.player.selection.chromosome.default_mu, V)
+	R = opinion(default_offspringOpinionChange, default_offspringUncertaintyChange, default_uncertaintyIncreaseFactorNoPlay, ebea.player.selection.chromosome.default_mu, V)
 	;
 	P = weightedPartnerSelection(_),
-	R = opinion(ebea.player.selection.chromosome.default_uncertaintyIncreaseFactor, ebea.player.selection.chromosome.default_mu, V)
+	R = opinion(default_offspringOpinionChange, default_offspringUncertaintyChange, default_uncertaintyIncreaseFactorNoPlay, ebea.player.selection.chromosome.default_mu, V)
 	;
 	P = opinion(_, _, _, _, _),
 	R = 'payoffThreshold :='(P, V)
 	;
 	P = opinion_old(_, _),
-	R = opinion(ebea.player.selection.chromosome.default_uncertaintyIncreaseFactor, ebea.player.selection.chromosome.default_mu, V)
+	R = opinion(default_offspringOpinionChange, default_offspringUncertaintyChange, default_uncertaintyIncreaseFactorNoPlay, ebea.player.selection.chromosome.default_mu, V)
 	;
 	P = opinion_old(_, _, _, _),
-	R = opinion(ebea.player.selection.chromosome.default_uncertaintyIncreaseFactor, ebea.player.selection.chromosome.default_mu, V)
+	R = opinion(default_offspringOpinionChange, default_offspringUncertaintyChange, default_uncertaintyIncreaseFactorNoPlay, ebea.player.selection.chromosome.default_mu, V)
 	.
+
+
+
+
+
 
 
 

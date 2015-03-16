@@ -226,6 +226,18 @@
 
 :- instance printable(ebea.player.selection.ac).
 
+%% field access functions
+
+/**
+ */
+:- func offspringOpinionChange_StdDev(ebea.player.selection.parameters) = float.
+
+:- func 'offspringOpinionChange_StdDev :='(ebea.player.selection.parameters, float) = ebea.player.selection.parameters.
+
+:- func offspringUncertaintyChange_StdDev(ebea.player.selection.parameters) = float.
+
+:- func 'offspringUncertaintyChange_StdDev :='(ebea.player.selection.parameters, float) = ebea.player.selection.parameters.
+
 :- implementation.
 
 :- import_module ebea.player.selection.opinion, ebea.player.selection.pcv.
@@ -293,19 +305,20 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of exported predicates and functions
 
-defaultParameters = Result :-
-	Result^poolSizeStdDev = default_poolSizeStdDev,
-	Result^bitsPerProbabilityStdDev = default_bitsPerProbabilityStdDev,
-	Result^probabilityUpdateFactorStdDev = default_probabilityUpdateFactorStdDev,
-	Result^payoffThresholdStdDev = default_payoffThresholdStdDev,
-	Result^uncertaintyIncreaseFactor = default_uncertaintyIncreaseFactor,
-	Result^mu = default_mu,
-	Result^poolSizePercentageTransmission = 0,
-	Result^offspringOpinionChange_StdDev = default_offspringOpinionChange_StdDev,
-	Result^offspringUncertaintyChange_StdDev = default_offspringUncertaintyChange_StdDev,
-	Result^uncertaintyIncreaseFactorStdDev = default_uncertaintyIncreaseFactorStdDev,
-	Result^muStdDev = default_muStdDev
-	.
+defaultParameters =
+sp(
+	1.0,    %% poolSizeStdDev
+	1.0,    %% bitsPerProbabilityStdDev
+	0.1,    %% probabilityUpdateFactorStdDev
+	0.1,    %% payoffThresholdStdDev
+	1.0,    %% uncertaintyIncreaseFactor
+	0.5,    %% mu
+	0,      %% poolSizePercentageTransmission
+	0.1,    %% offspringOpinionChange_StdDev
+	0.1,    %% offspringUncertaintyChange_StdDev
+	0.1,    %% muStdDev
+	0.1     %% uncertaintyIncreaseFactorStdDev
+	).
 
 dialogParameters =
 	[
@@ -316,6 +329,10 @@ dialogParameters =
 	di(label("uncertainty increase factor"),             updateFieldFloat( get_uncertaintyIncreaseFactor,       checkFloat( "uncertainty increase factor",         bounded(1.0, yes),  unbound, set_uncertaintyIncreaseFactor))),
 	di(label("mu"),                                      updateFieldFloat( get_mu,                              checkFloat( "mu",                                  bounded(0.0, no),   unbound, set_mu))),
 	di(label("% combination slots passed to offspring"), updateFieldInt(   get_poolSizePercentageTransmission,  checkInt(   "percentage",                          bounded(0, yes),    bounded(100, yes), set_poolSizePercentageTransmission))),
+	 
+	di(label("std dev gaussian noise added to gene 'offspringOpinionChange'"),      updateFieldFloat( offspringOpinionChange_StdDev,      checkFloat(   "standard deviation",  bounded(0.0, yes),    unbound, 'offspringOpinionChange_StdDev :='))),
+	di(label("std dev gaussian noise added to gene 'offspringUncertaintyChange'"),  updateFieldFloat( offspringUncertaintyChange_StdDev,  checkFloat(   "standard deviation",  bounded(0.0, yes),    unbound, 'offspringUncertaintyChange_StdDev :='))),
+	 
 	di(label("uncertainty increase factor std dev"),     updateFieldFloat( get_uncertaintyIncreaseFactorStdDev, checkFloat( "uncertainty increase factor std dev", bounded(0.0, yes),  unbound, set_uncertaintyIncreaseFactorStdDev))),
 	di(label("mu std dev"),                              updateFieldFloat( get_muStdDev,                        checkFloat( "mu std dev",                          bounded(0.0, yes),  unbound, set_muStdDev)))
 	].
@@ -531,17 +548,30 @@ scaledPayoffToThreshold(_Game, scaled, Payoff) = (Payoff + 1.0) / 2.0.
 scaledPayoffToThreshold(_Game, scaledPositive, Payoff) = Payoff.
 
 parseParameters(P) -->
-	parseable.float32(P^poolSizeStdDev),
-	parseable.float32(P^bitsPerProbabilityStdDev),
-	parseable.float32(P^probabilityUpdateFactorStdDev),
-	parseable.float32(P^payoffThresholdStdDev),
-	parseable.float32(P^uncertaintyIncreaseFactor),
-	parseable.float32(P^mu),
-	parseable.int8(P^poolSizePercentageTransmission),
-	parseable.float32(P^offspringOpinionChange_StdDev),
-	parseable.float32(P^offspringUncertaintyChange_StdDev),
-	parseable.float32(P^uncertaintyIncreaseFactorStdDev),
-	parseable.float32(P^muStdDev)
+	{P = sp(
+	PoolSizeStdDev,
+	BitsPerProbabilityStdDev,
+	ProbabilityUpdateFactorStdDev,
+	PayoffThresholdStdDev,
+	UncertaintyIncreaseFactor,
+	Mu,
+	PoolSizePercentageTransmission,
+	OffspringOpinionChange_StdDev,
+	OffspringUncertaintyChange_StdDev,
+	UncertaintyIncreaseFactorStdDev,
+	MuStdDev
+	)},
+	parseable.float32(PoolSizeStdDev),
+	parseable.float32(BitsPerProbabilityStdDev),
+	parseable.float32(ProbabilityUpdateFactorStdDev),
+	parseable.float32(PayoffThresholdStdDev),
+	parseable.float32(UncertaintyIncreaseFactor),
+	parseable.float32(Mu),
+	parseable.int8(PoolSizePercentageTransmission),
+	parseable.float32(OffspringOpinionChange_StdDev),
+	parseable.float32(OffspringUncertaintyChange_StdDev),
+	parseable.float32(UncertaintyIncreaseFactorStdDev),
+	parseable.float32(MuStdDev)
 	.
 
 parseTraits(T) -->

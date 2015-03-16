@@ -321,7 +321,7 @@ updatePlayerOpinion(Game, Parameters, ThisPlayer, OtherPlayer, Payoff, !Populati
 	then
 		Chromosome = ThisPlayer^chromosome^selectionGenes,
 		(if
-			Chromosome = opinion(_, _, _)
+			Chromosome = opinion(_, _, _, _, _)
 		then
 			PayoffThreshold = Chromosome^payoffThreshold,
 			Mu = Chromosome^mu

@@ -82,8 +82,10 @@ stddev payoff threshold:          %f
 uncertainty increase factor: %f
 mu:                          %f
 pool size parent-offspring transmission: %d%%
-stddev mu:                          %f
-stddev uncertainty increase factor: %f\n",
+stddev offspring opinion change:     %f
+stddev offspring uncertainty change: %f
+stddev mu:                           %f
+stddev uncertainty increase factor:  %f\n",
 		[f(SP^poolSizeStdDev),
 		 f(SP^bitsPerProbabilityStdDev),
 		 f(SP^probabilityUpdateFactorStdDev),
@@ -94,6 +96,8 @@ stddev uncertainty increase factor: %f\n",
 
 		 i(SP^poolSizePercentageTransmission),
 
+		 f(SP^offspringOpinionChange_StdDev),
+		 f(SP^offspringUncertaintyChange_StdDev),
 		 f(SP^muStdDev),
 		 f(SP^uncertaintyIncreaseFactorStdDev)
 		],
