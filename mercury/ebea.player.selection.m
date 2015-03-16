@@ -301,6 +301,8 @@ defaultParameters = Result :-
 	Result^uncertaintyIncreaseFactor = default_uncertaintyIncreaseFactor,
 	Result^mu = default_mu,
 	Result^poolSizePercentageTransmission = 0,
+	Result^offspringOpinionChange_StdDev = default_offspringOpinionChange_StdDev,
+	Result^offspringUncertaintyChange_StdDev = default_offspringUncertaintyChange_StdDev,
 	Result^uncertaintyIncreaseFactorStdDev = default_uncertaintyIncreaseFactorStdDev,
 	Result^muStdDev = default_muStdDev
 	.
@@ -536,6 +538,8 @@ parseParameters(P) -->
 	parseable.float32(P^uncertaintyIncreaseFactor),
 	parseable.float32(P^mu),
 	parseable.int8(P^poolSizePercentageTransmission),
+	parseable.float32(P^offspringOpinionChange_StdDev),
+	parseable.float32(P^offspringUncertaintyChange_StdDev),
 	parseable.float32(P^uncertaintyIncreaseFactorStdDev),
 	parseable.float32(P^muStdDev)
 	.
@@ -1061,6 +1065,14 @@ default_uncertaintyIncreaseFactor = 1.0.
 :- func default_mu = float.
 
 default_mu = 0.5.
+
+:- func default_offspringOpinionChange_StdDev = float.
+
+default_offspringOpinionChange_StdDev = 0.1.
+
+:- func default_offspringUncertaintyChange_StdDev = float.
+
+default_offspringUncertaintyChange_StdDev = 0.1.
 
 :- func default_uncertaintyIncreaseFactorStdDev = float.
 

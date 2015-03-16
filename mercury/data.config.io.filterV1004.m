@@ -151,7 +151,14 @@ parse_ebea_player_selection_parameters(P) -->
 	parseable.int8(P^poolSizePercentageTransmission)
 	.
 
-map_ebea_player_selection_parameters(sp_V1004(A1, A2, A3, A4, A5, A6, A7)) = sp(A1, A2, A3, A4, A5, A6, A7, 0.0, 0.0).
+map_ebea_player_selection_parameters(sp_V1004(A1, A2, A3, A4, A5, A6, A7)) =
+	sp(
+		A1, A2, A3, A4, A5, A6, A7,
+		0.0,                             % offspringOpinionChange_StdDev
+		0.0,                             % offspringUncertaintyChange_StdDev
+		0.0,                             % muStdDev
+		0.0                              % uncertaintyIncreaseFactorStdDev
+	  ).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of private predicates and functions

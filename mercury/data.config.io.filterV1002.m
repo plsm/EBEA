@@ -159,9 +159,11 @@ map_ebea_player_selection_parameters(
 		PayoffThresholdStdDev,
 		UncertaintyIncreaseFactor,
 		MU,
-		0,
-		0.0,
-		0.0
+		0,                               % poolSizePercentageTransmission
+		0.0,                             % offspringOpinionChange_StdDev
+		0.0,                             % offspringUncertaintyChange_StdDev
+		0.0,                             % muStdDev
+		0.0                              % uncertaintyIncreaseFactorStdDev
 	).
 
 
