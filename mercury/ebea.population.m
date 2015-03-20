@@ -350,9 +350,9 @@ createInitialPopulation(Game, PlayerParameters, Configuration, Population, !Rand
 				Geometry,
 				PlayerParameters),
 			SiteIndexes,      InitialSites,
-			Configuration^sites, _,
-			InitialKey,       NextKey,
-			EmptyPlayers,     PopulationPlayers,
+			list.sort(Configuration^sites),  _,
+			InitialKey,                      NextKey,
+			EmptyPlayers,                    PopulationPlayers,
 			!Random),
 		Population0 = pop(array.from_list(InitialSites), PopulationPlayers, NextKey)
 	),
