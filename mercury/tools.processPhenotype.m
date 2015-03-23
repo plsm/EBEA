@@ -118,7 +118,6 @@ processRun_s1(Config, Parameters, Directory, RunIndex, !FeedbackAsList, !IO) :-
 		io.format("Run %d\n", [i(RunIndex)], !IO),
 		ebea.streams.birth.read(Streams, IRAllBirths, !IO),
 		ebea.streams.death.read(Streams, IRAllDeaths, !IO),
-		ebea.streams.phenotype.read(Streams, IRAllPhenotypes, !IO),
 		data.util.gameConfig(Config) = gcex(Game, _, _),
 		processRun_s2(
 			Config,
@@ -128,9 +127,10 @@ processRun_s1(Config, Parameters, Directory, RunIndex, !FeedbackAsList, !IO) :-
 			RunIndex,
 			IRAllBirths,
 			IRAllDeaths,
-			IRAllPhenotypes,
+			Streams^bisPhenotype,
 			!FeedbackAsList,
-			!IO)
+			!IO),
+		ebea.streams.closeInputStreams(Streams, !IO)
 	else
 		IMStreams = ok(_)
 		;
@@ -144,9 +144,9 @@ processRun_s1(Config, Parameters, Directory, RunIndex, !FeedbackAsList, !IO) :-
 	tools.processPhenotype.parameters :: in,
 	string                            :: in,
 	int                               :: in,
-	ioResult(list(iterationBirthRecords(C)))   :: in,
-	ioResult(list(iterationDeathRecords))      :: in,
-	ioResult(list(iterationPhenotypicRecords)) :: in,
+	ioResult(list(iterationBirthRecords(C))) :: in,
+	ioResult(list(iterationDeathRecords))    :: in,
+	io.binary_input_stream                   :: in,
 	list(string) :: in, list(string) :: out,
 	io.state     :: di, io.state     :: uo
 ) is det
@@ -164,14 +164,13 @@ processRun_s2(
 	RunIndex,
 	IRAllBirths,
 	IRAllDeaths,
-	IRAllPhenotypes,
+	PhenotypeStream,
 	!FeedbackAsList,
 	!IO)
 :-
 	(if
 		IRAllBirths = ok(AllBirths),
-		IRAllDeaths = ok(AllDeaths),
-		IRAllPhenotypes = ok(AllPhenotypes)
+		IRAllDeaths = ok(AllDeaths)
 	then
 		tools.utils.openMaybeStream(
 			Parameters^printOpinionDynamics,
@@ -183,22 +182,19 @@ processRun_s2(
 			!FeedbackAsList,
 			!IO
 		),
-		ArrayPhenotypes = array.from_list(AllPhenotypes),
-		format("Number of phenotypes to process: %d\n", [i(list.length(AllPhenotypes))], !IO),
-		int.fold_up2(
-			processRunIteration(
-				Parameters,
-				MStreamOpinion,
-				Directory,
-				RunIndex,
-				AllBirths,
-				AllDeaths,
-				ArrayPhenotypes
-			),
-			0, array.size(ArrayPhenotypes) - 1,
+		loopRunIteration(
+			Parameters,
+			PhenotypeStream,
+			MStreamOpinion,
+			AllBirths,
+			AllDeaths,
+			0,
+			parseable.iou.cacheInit, CachePhenotypes,
 			!FeedbackAsList,
 			!IO
 		),
+		io.print(CachePhenotypes, !IO),
+		io.nl(!IO),
 		tools.utils.closeMaybeStream(MStreamOpinion, !IO)
 	else
 		list.cons("error reading streams birth, death or phenotype", !FeedbackAsList)
@@ -284,7 +280,6 @@ loopRunIteration(
 	printable(C)
 ).
 
-
 processRunIteration(
 	_Parameters,
 	MOpinionStream,
@@ -295,19 +290,19 @@ processRunIteration(
 	!FeedbackAsList,
 	!IO
 ) :-
-	(	%
+	(	% switch
 		MOpinionStream = yes(OpinionStream),
 		PrintOpinionUncertainty =
 		(pred(PPR::in, !.IO::di, !:IO::uo) is det :-
 			(if
 				PPR^selection = opinion(OpinionValue, Uncertainty)
 			then
-			io.print(OpinionStream, IterationIndex, !IO),
-			io.print(OpinionStream, ' ', !IO),
-			io.print(OpinionStream, OpinionValue, !IO),
-			io.print(OpinionStream, ' ', !IO),
-			io.print(OpinionStream, Uncertainty, !IO),
-			io.nl(OpinionStream, !IO)
+				io.print(OpinionStream, IterationIndex, !IO),
+				io.print(OpinionStream, ' ', !IO),
+				io.print(OpinionStream, OpinionValue, !IO),
+				io.print(OpinionStream, ' ', !IO),
+				io.print(OpinionStream, Uncertainty, !IO),
+				io.nl(OpinionStream, !IO)
 			else
 				true
 			)
@@ -317,109 +312,6 @@ processRunIteration(
 		MOpinionStream = no
 	)
 	.
-
-
-
-
-
-
-
-
-% :- pred processRunIteration(
-% 	tools.processPhenotype.parameters :: in,
-% 	maybe(io.output_stream)           :: in,
-% 	string                            :: in,
-% 	int                               :: in,
-% 	list(iterationBirthRecords(C))    :: in,
-% 	list(iterationDeathRecords)       :: in,
-% 	array(iterationPhenotypicRecords) :: in,
-% 	int                               :: in,
-% 	list(string) :: in, list(string) :: out,
-% 	io.state     :: di, io.state     :: uo
-% ) is det
-% <= (
-% %	asymmetricGame(G, C),
-% %	parseable(C),
-% 	printable(C)
-% ).
-
-
-% processRunIteration(
-% 	_Parameters,
-% 	MOpinionStream,
-% 	_Directory,
-% 	_RunIndex,
-% 	_AllBirths,
-% 	_AllDeaths,
-% 	ArrayPhenotypes,
-% 	IterationIndex,
-% 	!FeedbackAsList,
-% 	!IO
-% ) :-
-% 		% io.format("\rIteration %d", [i(IterationIndex)], !IO),
-% 		% io.flush_output(io.stdout_stream, !IO),
-% 	(	%
-% 		MOpinionStream = yes(OpinionStream),
-% 		printOpinionDynamics(OpinionStream, IterationIndex, ArrayPhenotypes, !IO)
-% 	;
-% 		MOpinionStream = no
-% 	)
-% 	.
-
-% /*
-% processOpinionDynamics(Parameters, OpinionStream, AllBirths, MapStrategyIndex, ArrayPhenotypes, IterationIndex, !ArrayColumns, !IO) :-
-% 	array.lookup(ArrayPhenotypes, IterationIndex) = IterationPhenotypicRecords,
-% 	ProcessOpinionUncertainty =
-% 	(pred(PPR::in, !.AC::di, !:AC::uo) is det :-
-% 		(if
-% 			PPR^selection = opinion(OpinionValue, Uncertainty),
-% 			ebea.streams.birth.search(PPR^id, AllBirths, PBR),
-% 			map.lookup(MapStrategyIndex, PBR^chromosome^strategyGenes, SI)
-% 		then
-% 			YIndexOV = SI ,
-% 			io.print(OpinionStream, IterationIndex, !IO),
-% 			io.print(OpinionStream, ' ', !IO),
-% 			io.print(OpinionStream, OpinionValue, !IO),
-% 			io.print(OpinionStream, ' ', !IO),
-% 			io.print(OpinionStream, Uncertainty, !IO),
-% 			io.nl(OpinionStream, !IO)
-% 		else
-% 			true
-% 		)
-% 	),
-% 	list.foldl(ProcessOpinionUncertainty, IterationPhenotypicRecords^phenotypes, !ArrayColumns)
-% */	
-	
-
-% :- pred printOpinionDynamics(io.output_stream, int, array.array(ebea.streams.phenotype.iterationPhenotypicRecords), io.state, io.state).
-% :- mode printOpinionDynamics(in, in, in, di, uo) is det.
-
-% printOpinionDynamics(OpinionStream, IterationIndex, ArrayPhenotypes, !IO) :-
-% 	array.lookup(ArrayPhenotypes, IterationIndex) = IterationPhenotypicRecords,
-% 	(if
-% 		IterationPhenotypicRecords^iteration \= IterationIndex
-% 	then
-% 		throw("printOpinionDynamics/4: problem in phenotype stream")
-% 	else
-% 		true
-% 	),
-% 	PrintOpinionUncertainty =
-% 	(pred(PPR::in, !.IO::di, !:IO::uo) is det :-
-% 		(if
-% 			PPR^selection = opinion(OpinionValue, Uncertainty)
-% 		then
-% 			io.print(OpinionStream, IterationIndex, !IO),
-% 			io.print(OpinionStream, ' ', !IO),
-% 			io.print(OpinionStream, OpinionValue, !IO),
-% 			io.print(OpinionStream, ' ', !IO),
-% 			io.print(OpinionStream, Uncertainty, !IO),
-% 			io.nl(OpinionStream, !IO)
-% 		else
-% 			true
-% 		)
-% 	),
-% 	list.foldl(PrintOpinionUncertainty, IterationPhenotypicRecords^phenotypes, !IO)
-% 	.
 
 /**
  * opinionChromosomes(Configuration)
