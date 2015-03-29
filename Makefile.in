@@ -14,6 +14,11 @@ MFLAGS_JAVA_GRADE = \
 --java-classpath   @lib_mercury_utils@/lib/mercury/lib/java/mercury_utils.jar  \
 --mercury-library  ui_swing
 
+MFLAGS_CONSOLE_JAVA_GRADE = \
+--java-classpath   @lib_mc4ap@/lib/mercury/lib/java/ui_console.jar               \
+--java-classpath   @lib_mercury_utils@/lib/mercury/lib/java/mercury_utils.jar  \
+--mercury-library  ui_console
+
 MFLAGS_OTHER_GRADES = \
 --mercury-library  ui_console
 
@@ -94,6 +99,9 @@ check:
 
 build-console:
 	cd ./mercury/ ; $(MMC) $(MFLAGS_COMMON) $(MFLAGS_OTHER_GRADES) EBEAtk_console
+
+build-console-java:
+	cd ./mercury/ ; $(MMC) $(MFLAGS_COMMON) $(MFLAGS_CONSOLE_JAVA_GRADE) --grade java EBEAtk_console
 
 install-console:
 	cd ./mercury/ ; cp EBEAtk_console $(PREFIX)/bin

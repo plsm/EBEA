@@ -24,7 +24,12 @@
 :- import_module data.config.pretty.
 :- import_module ebea, ebea.core, ebea.population, ebea.player.
 :- import_module ebea.player.selection, ebea.player.energy, ebea.player.selection.pcv.
-:- import_module tools, tools.export_playerProfiles_graphviz, tools.'PCVNetwork'.
+:- import_module tools.
+:- import_module tools.export_playerProfiles_graphviz.
+:- import_module tools.'PCVNetwork'.
+:- import_module tools.populationDynamics.
+:- import_module tools.siteDynamics.
+:- import_module tools.processPhenotype.
 
 :- import_module gl, gl.battlesexes, gl.battlesexes.strategy.
 :- import_module gl, gl.givetake, gl.givetake.strategy.
@@ -40,8 +45,13 @@
 
 :- type data --->
 	data(
-		config   :: data.config.config,
-		filename :: maybe(string)
+		config                   :: data.config.config,
+		parameters_playerProfile :: tools.export_playerProfiles_graphviz.parameters,
+		parameters_PCV           :: tools.'PCVNetwork'.parameters,
+		parameters_PD            :: tools.populationDynamics.parameters,
+		parameters_SD            :: tools.siteDynamics.parameters,
+		parameters_PP            :: tools.processPhenotype.parameters,
+		filename                 :: maybe(string)
 	).
 
 :- type opt --->
@@ -221,12 +231,12 @@ run(gui, MFilename, !IO) :-
 		data.config.io.read(Filename, MConfig, !IO),
 		(
 			MConfig = ok(Config),
-			Data = data(Config, MFilename)
+			Data = initData(Config, Filename)
 			;
 			MConfig = error(Msg),
 			io.print(Msg, !IO),
 			io.nl(!IO),
-			Data = data(data.config.default, MFilename)
+			Data = initData(data.config.default, Filename)
 		)
 	),
 	ui_console.show(menu, Data, _, !IO)
@@ -237,25 +247,90 @@ run(gui, MFilename, !IO) :-
 :- mode menu = out(userInterface).
 
 menu = m(
-	[mi(label("Configuration Editor"), edit('new dialog'(get_config, set_config, data.config.dialog))),
-	 mi(label("Load configuration"),   updateDataIO(loadConfiguration)),
-	 mi(label("Save configuration"),   updateDataIO(saveConfiguration)),
-	 mi(label("Save As"),              updateDataIO(saveAsConfiguration)),
-	 mi(label("Print"),                actionDataIO(printConfiguration)),
+	[mi(label("Configuration"),  submenu(
+		[mi(label("Edit"),     edit('new dialog'(config, set('config :='), data.config.dialog))),
+		 mi(label("Load"),     updateDataIO(loadConfiguration)),
+		 mi(label("Save"),     updateDataIO(saveConfiguration)),
+		 mi(label("Save As"),  updateDataIO(saveAsConfiguration)),
+		 mi(label("Print"),    actionDataIO(printConfiguration))
+		])),
+	 mi(label("Tools"), submenu(
+		[mi(label("Player profiles movie"),   submenu(
+			[mi(label("Run"),       actionDataIO(playerProfilesMovie)),
+			 mi(label("Config"),    edit('new dialog'(parameters_playerProfile, set('parameters_playerProfile :='), tools.export_playerProfiles_graphviz.dialog_parameters)))
+			])),
+		 mi(label("Process players' phenotype"),   submenu(
+			[mi(label("Run"),       actionDataIO(processPhenotype)),
+			 mi(label("Config"),    edit('new dialog'(parameters_PP, set('parameters_PP :='), tools.processPhenotype.dialog_parameters)))
+			])),
+		 mi(label("Probability combination vectors movie"),   submenu(
+			[mi(label("Run"),			actionDataIO('PCVMovie')),
+			 mi(label("Config"),    edit('new dialog'(parameters_PCV, set('parameters_PCV :='), tools.'PCVNetwork'.dialog_parameters)))
+			])),
+		 mi(label("Site dynamics"),   submenu(
+			[mi(label("Run"),			actionDataIO(siteDynamics)),
+			 mi(label("Config"),    edit('new dialog'(parameters_SD, set('parameters_SD :='), tools.siteDynamics.dialog_parameters)))
+			])),
+		 mi(label("Population dynamics"),   submenu(
+			[mi(label("Run"),			actionDataIO(populationDynamics)),
+			 mi(label("Config"),    edit('new dialog'(parameters_PD, set('parameters_PD :='), tools.populationDynamics.dialog_parameters)))
+			]))
+		])),
 	 mi(label("Run background"),       actionDataIO('EBEAtk_console'.runBackground))
 	]).
 
+
 :- func initData = data.
 
-initData = data(data.config.default, no).
+initData = data(
+	data.config.default,
+	tools.export_playerProfiles_graphviz.default_parameters,
+	tools.'PCVNetwork'.default_parameters,
+	tools.populationDynamics.default_parameters,
+	tools.siteDynamics.default_parameters,
+	tools.processPhenotype.default_parameters,
+	no
+).
 
-:- func get_config(data) = data.config.config.
+:- func initData(data.config.config, string) = data.
 
-get_config(D) = D^config.
+initData(Config, Filename) = data(
+	Config,
+	tools.export_playerProfiles_graphviz.default_parameters,
+	tools.'PCVNetwork'.default_parameters,
+	tools.populationDynamics.default_parameters,
+	tools.siteDynamics.default_parameters,
+	tools.processPhenotype.default_parameters,
+	yes(Filename)
+).
 
-:- func set_config(data, data.config.config) = setResult(data).
+:- func config(data) = data.config.config.
+:- func 'config :='(data, data.config.config) = data.
 
-set_config(D, C) = ok('config :='(D, C)).
+:- func parameters_playerProfile(data) = tools.export_playerProfiles_graphviz.parameters.
+:- func 'parameters_playerProfile :='(data, tools.export_playerProfiles_graphviz.parameters) = data.
+
+:- func parameters_PCV(data) = tools.'PCVNetwork'.parameters.
+:- func 'parameters_PCV :='(data, tools.'PCVNetwork'.parameters) = data.
+
+:- func parameters_PD(data) = tools.populationDynamics.parameters.
+:- func 'parameters_PD :='(data, tools.populationDynamics.parameters) = data.
+
+:- func parameters_SD(data) = tools.siteDynamics.parameters.
+:- func 'parameters_SD :='(data, tools.siteDynamics.parameters) = data.
+
+:- func parameters_PP(data) = tools.processPhenotype.parameters.
+:- func 'parameters_PP :='(data, tools.processPhenotype.parameters) = data.
+
+
+
+% :- func get_config(data) = data.config.config.
+
+% get_config(D) = D^config.
+
+% :- func set_config(data, data.config.config) = setResult(data).
+
+% set_config(D, C) = ok('config :='(D, C)).
 
 :- pred loadConfiguration(data, data, io.state, io.state).
 :- mode loadConfiguration(in, out, di, uo) is det.
@@ -271,9 +346,7 @@ loadConfiguration(!Data, !IO) :-
 		data.config.io.read(Filename, MConfig, !IO),
 		(
 			MConfig = ok(Config),
-			NewData^config = Config,
-			NewData^filename = yes(Filename),
-			!:Data = NewData,
+			!:Data = initData(Config, Filename),
 			data.config.pretty.print(io.stdout_stream, plain, Config, !IO)
 			;
 			MConfig = error(Msg),
@@ -343,6 +416,72 @@ runBackground(Data, !IO) :-
 	data.config.runEBEA(background, Data^config, !IO).
 
 
+
+
+/**
+ * Menu option.
+ */
+:- pred playerProfilesMovie(data, io.state, io.state).
+:- mode playerProfilesMovie(in, di, uo) is det.
+
+playerProfilesMovie(Data, !IO) :-
+	createPlayerProfilesNetworks(Data^config, Data^parameters_playerProfile, "./", Feedback, !IO),
+	io.print(Feedback, !IO),
+	io.nl(!IO)
+	.
+
+/**
+ * Menu option.
+ */
+:- pred processPhenotype(data, io.state, io.state).
+:- mode processPhenotype(in, di, uo) is det.
+
+processPhenotype(Data, !IO) :-
+	tools.processPhenotype.run(
+		Data^config,
+		Data^parameters_PP,
+		"./",
+		Feedback,
+		!IO),
+	io.print(Feedback, !IO),
+	io.nl(!IO)
+	.
+
+/**
+ * Menu option.
+ */
+:- pred 'PCVMovie'(data, io.state, io.state).
+:- mode 'PCVMovie'(in, di, uo) is det.
+
+'PCVMovie'(Data, !IO) :-
+	tools.'PCVNetwork'.runTool(Data^config, Data^parameters_PCV, "./", Feedback, !IO),
+	io.print(Feedback, !IO),
+	io.nl(!IO)
+	.
+
+/**
+ * Menu option.
+ */
+:- pred populationDynamics(data, io.state, io.state).
+:- mode populationDynamics(in, di, uo) is det.
+
+populationDynamics(Data, !IO) :-
+	tools.populationDynamics.runTool(Data^config, Data^parameters_PD, "./", Feedback, !IO),
+	io.print(Feedback, !IO),
+	io.nl(!IO)
+	.
+
+/**
+ * Menu option.
+ */
+:- pred siteDynamics(data, io.state, io.state).
+:- mode siteDynamics(in, di, uo) is det.
+
+siteDynamics(Data, !IO) :-
+	tools.siteDynamics.runTool(Data^config, Data^parameters_SD, "./", Feedback, !IO),
+	io.print(Feedback, !IO),
+	io.nl(!IO)
+	.
 
 
 % :- type plotData --->
