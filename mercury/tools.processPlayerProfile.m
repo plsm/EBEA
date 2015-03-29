@@ -146,9 +146,8 @@ processRun_s1(Config, Parameters, Directory, RunIndex, !FeedbackAsList, !IO) :-
 		io.format("Run %d\n", [i(RunIndex)], !IO),
 		ebea.streams.birth.read(Streams, IRAllBirths, !IO),
 		ebea.streams.death.read(Streams, IRAllDeaths, !IO),
-		ebea.streams.playerProfile.read(Streams, Game, IRAllPlayerProfiles, !IO),
 		data.util.gameConfig(Config) = gcex(Game, _, _),
-		processRun_s2(Config, Game, Parameters, Directory, RunIndex, IRAllBirths, IRAllDeaths, IRAllPlayerProfiles, !FeedbackAsList, !IO)
+		processRun_s2(Config, Game, Parameters, Directory, RunIndex, IRAllBirths, IRAllDeaths, Streams^bisPlayerProfile, !FeedbackAsList, !IO)
 	else
 		IMStreams = ok(_)
 		;
@@ -164,7 +163,7 @@ processRun_s1(Config, Parameters, Directory, RunIndex, !FeedbackAsList, !IO) :-
 	int                                   :: in,
 	ioResult(list(iterationBirthRecords(C)))      :: in,
 	ioResult(list(iterationDeathRecords))         :: in,
-	ioResult(list(iterationPlayerProfileRecords)) :: in,
+	io.binary_input_stream                        :: in,
 	list(string) :: in, list(string) :: out,
 	io.state     :: di, io.state     :: uo
 ) is det
@@ -173,20 +172,19 @@ processRun_s1(Config, Parameters, Directory, RunIndex, !FeedbackAsList, !IO) :-
 
 processRun_s2(
 	Config,
-	_Game,
+	Game,
 	Parameters,
 	Directory,
 	RunIndex,
 	IRAllBirths,
 	IRAllDeaths,
-	IRAllPlayerProfiles,
+	StreamPlayerProfiles,
 	!FeedbackAsList,
 	!IO)
 :-
 	(if
 		IRAllBirths = ok(AllBirths),
-		IRAllDeaths = ok(AllDeaths),
-		IRAllPlayerProfiles = ok(AllPlayerProfiles)
+		IRAllDeaths = ok(AllDeaths)
 	then
 		IterationWidth = float.ceiling_to_int(math.unchecked_log10(float(Config^numberIterations + 1))),
 		openAverageNumberPartnersStream(
@@ -197,38 +195,26 @@ processRun_s2(
 			!FeedbackAsList,
 			!IO
 		),
-		ArrayPlayerProfiles = array.from_list(AllPlayerProfiles),
-		intFoldUp3(
-			processRunIteration(
-				IterationWidth,
-				Parameters,
-				MAverageNumberPartnersStream,
-				Directory,
-				RunIndex,
-				AllBirths,
-				AllDeaths,
-				ArrayPlayerProfiles
-			),
+		loopRunIteration(
+			IterationWidth,
+			Parameters,
+			Game,
+			MAverageNumberPartnersStream,
+			Directory,
+			RunIndex,
+			AllBirths,
+			AllDeaths,
+			StreamPlayerProfiles,
+			array.init(Parameters^slidingWindowSize, ippr(-1, [])),
 			0,
-			array.size(ArrayPlayerProfiles) - 1,
+			parseable.iou.cacheInit, CachePlayerProfiles,
 			map.init, StrategyPlayMatrix,
 			!FeedbackAsList,
 			!IO
 		),
+		io.print(CachePlayerProfiles, !IO),
+		io.nl(!IO),
 		writeStrategyPlayMatrix(Parameters, Directory, RunIndex, StrategyPlayMatrix, !FeedbackAsList, !IO),
-		% processRunIteration(
-		% 	IterationWidth,
-		% 	Parameters,
-		% 	MAverageNumberPartnersStream,
-		% 	Directory,
-		% 	RunIndex,
-		% 	0,
-		% 	AllBirths,
-		% 	AllDeaths,
-		% 	AllPlayerProfiles,
-		%	map.init, StrategyPlayMatrix,
-		% 	!FeedbackAsList,
-		% 	!IO),
 		(	%
 			MAverageNumberPartnersStream = yes(ANPS),
 			io.close_output(ANPS, !IO)
@@ -242,6 +228,103 @@ processRun_s2(
 		list.cons("error reading streams birth, death or playerProfile", !FeedbackAsList)
 	)
 	.
+
+:- pred loopRunIteration(
+	int                                   :: in,
+	tools.processPlayerProfile.parameters :: in,
+	G                                     :: in,
+	maybe(io.output_stream)               :: in,
+	string                                :: in,
+	int                                   :: in,
+	list(iterationBirthRecords(C))        :: in,
+	list(iterationDeathRecords)           :: in,
+	io.binary_input_stream                :: in,
+	array(iterationPlayerProfileRecords)  :: array_di,
+	int                                   :: in,
+	parseable.iou.cache   :: in,  parseable.iou.cache   :: out,
+	strategyPlayMatrix(C) :: in,  strategyPlayMatrix(C) :: out,
+	list(string)          :: in,  list(string) :: out,
+	io.state              :: di,  io.state     :: uo
+) is det
+<= (
+	asymmetricGame(G, C),
+	parseable(C),
+	printable(C)
+).
+
+
+loopRunIteration(
+	IterationWidth,
+	Parameters,
+	Game,
+	MAverageNumberPartnersStream,
+	Directory,
+	RunIndex,
+	AllBirths,
+	AllDeaths,
+	StreamPlayerProfiles,
+	WindowPlayerProfiles,
+	IterationIndex,
+	!CachePlayerProfiles,
+	!StrategyPlayMatrix,
+	!FeedbackAsList,
+	!IO
+) :-
+	ebea.streams.playerProfile.read(StreamPlayerProfiles, Game, !CachePlayerProfiles, RIResult, !IO),
+	(	% switch
+		RIResult = parseError,
+		list.cons("parse error while reading player profiles file", !FeedbackAsList)
+	;
+		RIResult = ok(IResult),
+		(	% switch
+			IResult = eof
+		;
+			IResult = error(Error),
+			list.cons(io.error_message(Error), !FeedbackAsList),
+			list.cons("IO error while reading player profiles file:", !FeedbackAsList)
+		;
+			IResult = ok(Result),
+			II = int.rem(IterationIndex, array.size(WindowPlayerProfiles)),
+			NextWindowPlayerProfiles = array.set(WindowPlayerProfiles, II, Result),
+			processRunIteration(
+				IterationWidth,
+				Parameters,
+				MAverageNumberPartnersStream,
+				Directory,
+				RunIndex,
+				AllBirths,
+				AllDeaths,
+				Result,
+				NextWindowPlayerProfiles,
+				IterationIndex,
+				!StrategyPlayMatrix,
+				!FeedbackAsList,
+				!IO
+			),
+			loopRunIteration(
+				IterationWidth,
+				Parameters,
+				Game,
+				MAverageNumberPartnersStream,
+				Directory,
+				RunIndex,
+				AllBirths,
+				AllDeaths,
+				StreamPlayerProfiles,
+				NextWindowPlayerProfiles,
+				IterationIndex + 1,
+				!CachePlayerProfiles,
+				!StrategyPlayMatrix,
+				!FeedbackAsList,
+				!IO
+			)
+		)
+	)
+	.
+
+
+
+
 :- pred processRunIteration(
 	int                                   :: in,
 	tools.processPlayerProfile.parameters :: in,
@@ -250,7 +333,8 @@ processRun_s2(
 	int                                   :: in,
 	list(iterationBirthRecords(C))        :: in,
 	list(iterationDeathRecords)           :: in,
-	array(iterationPlayerProfileRecords)  :: in,
+	iterationPlayerProfileRecords         :: in,
+	array(iterationPlayerProfileRecords)  :: array_ui,
 	int                                   :: in,
 	strategyPlayMatrix(C) :: in, strategyPlayMatrix(C) :: out,
 	list(string)          :: in, list(string) :: out,
@@ -267,7 +351,8 @@ processRunIteration(
 	_RunIndex,
 	AllBirths,
 	_AllDeaths,
-	AllPlayerProfiles,
+	IterationPlayerProfiles,
+	WindowPlayerProfiles,
 	IterationIndex,
 	!StrategyPlayMatrix,
 	!FeedbackAsList,
@@ -282,18 +367,14 @@ processRunIteration(
 	else
 		true
 	),
-	array.lookup(AllPlayerProfiles, IterationIndex) = PlayerProfileRecords,
-	list.foldl(incrementCount(AllBirths), PlayerProfileRecords^profiles, !StrategyPlayMatrix),
+	list.foldl(incrementCount(AllBirths), IterationPlayerProfiles^profiles, !StrategyPlayMatrix),
 	(if
 		MAverageNumberPartnersStream = yes(AverageNumberPartnersStream)
 	then
-		int.fold_up(
-			updatePartners(
-				AllPlayerProfiles
-			),
-			int.max(0, IterationIndex - Parameters^slidingWindowSize),
-			IterationIndex,
-			map.init, PlayerPartners
+		PlayerPartners = array.foldl(
+			updatePartners,
+			WindowPlayerProfiles,
+			map.init
 		),
 		map.foldl2(updateAverageNumberPartners, PlayerPartners, 0, X, 0, Y),
 		io.print(AverageNumberPartnersStream, IterationIndex, !IO),
@@ -426,7 +507,25 @@ work_mapPlayerIDStrategy([ibr(_, ListBirthRecords) | Rest], ID) =
 	).
 
 
+:- func updatePartners(iterationPlayerProfileRecords, playerPartners) = playerPartners.
 
+updatePartners(PlayerProfileRecords, PlayerPartners) = Result :-
+	PredUpdate =
+	(pred(StrategyProfile::in, !.PlayerPartners::in, !:PlayerPartners::out) is det :- 
+		StrategyProfile = [Player | Partners],
+		(if
+			map.search(!.PlayerPartners, Player, OldPartners)
+		then
+			map.det_update(Player, set_bbbtree.union(OldPartners, set_bbbtree.from_list(Partners)), !PlayerPartners)
+		else
+			map.det_insert(Player, set_bbbtree.from_list(Partners), !PlayerPartners)
+		)
+	;	
+		StrategyProfile = [],
+		throw("updatePartners/4: never reached?")
+	),
+	list.foldl(PredUpdate, PlayerProfileRecords^profiles, PlayerPartners, Result)
+	.
 
 /**
  * Given a key value pair from the player profile network update the
