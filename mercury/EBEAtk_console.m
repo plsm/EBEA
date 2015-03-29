@@ -30,6 +30,7 @@
 :- import_module tools.populationDynamics.
 :- import_module tools.siteDynamics.
 :- import_module tools.processPhenotype.
+:- import_module tools.processPlayerProfile.
 
 :- import_module gl, gl.battlesexes, gl.battlesexes.strategy.
 :- import_module gl, gl.givetake, gl.givetake.strategy.
@@ -51,6 +52,7 @@
 		parameters_PD            :: tools.populationDynamics.parameters,
 		parameters_SD            :: tools.siteDynamics.parameters,
 		parameters_PP            :: tools.processPhenotype.parameters,
+		parameters_PPP           :: tools.processPlayerProfile.parameters,
 		filename                 :: maybe(string)
 	).
 
@@ -271,6 +273,10 @@ menu = m(
 			[mi(label("Run"),			actionDataIO(siteDynamics)),
 			 mi(label("Config"),    edit('new dialog'(parameters_SD, set('parameters_SD :='), tools.siteDynamics.dialog_parameters)))
 			])),
+		 mi(label("Player Profiles"),   submenu(
+			[mi(label("Run"),			actionDataIO(processPlayerProfiles)),
+			 mi(label("Config"),    edit('new dialog'(parameters_PPP, set('parameters_PPP :='), tools.processPlayerProfile.dialog_parameters)))
+			])),
 		 mi(label("Population dynamics"),   submenu(
 			[mi(label("Run"),			actionDataIO(populationDynamics)),
 			 mi(label("Config"),    edit('new dialog'(parameters_PD, set('parameters_PD :='), tools.populationDynamics.dialog_parameters)))
@@ -289,6 +295,7 @@ initData = data(
 	tools.populationDynamics.default_parameters,
 	tools.siteDynamics.default_parameters,
 	tools.processPhenotype.default_parameters,
+	tools.processPlayerProfile.default_parameters,
 	no
 ).
 
@@ -301,6 +308,7 @@ initData(Config, Filename) = data(
 	tools.populationDynamics.default_parameters,
 	tools.siteDynamics.default_parameters,
 	tools.processPhenotype.default_parameters,
+	tools.processPlayerProfile.default_parameters,
 	yes(Filename)
 ).
 
@@ -321,6 +329,9 @@ initData(Config, Filename) = data(
 
 :- func parameters_PP(data) = tools.processPhenotype.parameters.
 :- func 'parameters_PP :='(data, tools.processPhenotype.parameters) = data.
+
+:- func parameters_PPP(data) = tools.processPlayerProfile.parameters.
+:- func 'parameters_PPP :='(data, tools.processPlayerProfile.parameters) = data.
 
 
 
@@ -483,6 +494,14 @@ siteDynamics(Data, !IO) :-
 	io.nl(!IO)
 	.
 
+:- pred processPlayerProfiles(data, io.state, io.state).
+:- mode processPlayerProfiles(in, di, uo) is det.
+
+processPlayerProfiles(Data, !IO) :-
+	tools.processPlayerProfile.run(Data^config, Data^parameters_PPP, "./", Feedback, !IO),
+	io.print(Feedback, !IO),
+	io.nl(!IO)
+	.
 
 % :- type plotData --->
 % 	plotData(
