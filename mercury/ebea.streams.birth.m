@@ -15,12 +15,12 @@
 
 :- import_module ebea.player, ebea.player.chromosome, ebea.population, ebea.population.players.
 :- import_module parseable.iou.
-:- import_module foldable.
+:- import_module foldable, printable.
 
 :- type iterationBirthRecords(C) --->
 	ibr(
 		iteration :: int,
-		list(playerBirthRecord(C))
+		pbrs      :: list(playerBirthRecord(C))
 	).
 
 :- type playerBirthRecord(C) --->
@@ -111,6 +111,12 @@
 
 :- pred table_reset_for_search_3(io.state, io.state).
 :- mode table_reset_for_search_3(di, uo) is det.
+
+
+:- pred listRecords(io.output_stream, iterationBirthRecords(C), io.state, io.state)
+	<= printable(C).
+:- mode listRecords(in, in, di, uo) is det.
+
 
 :- implementation.
 
@@ -227,6 +233,9 @@ birthsAtSite([Record | Rest], SiteIndex) =
 		0
 	) + birthsAtSite(Rest, SiteIndex).
 
+listRecords(Stream, Record, !IO) :-
+	list.foldl(listRecord(Stream, Record^iteration), Record^pbrs, !IO).
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementation of private predicates and functions
 
@@ -263,6 +272,22 @@ parse_playerBirthRecord(pbr(ID, SiteIndex, Chromosome)) -->
 	ebea.population.players.parseKey(ID),
 	parseable.int32(SiteIndex),
 	ebea.player.chromosome.parse(Chromosome).
+
+
+:- pred listRecord(io.output_stream, int, playerBirthRecord(C), io.state, io.state)
+	<= printable(C).
+:- mode listRecord(in, in, in, di, uo) is det.
+
+listRecord(Stream, Iteration, Record, !IO) :-
+	io.print(Stream, Iteration, !IO),
+	io.print(Stream, '\t', !IO),
+	io.print(Stream, Record^id, !IO),
+	io.print(Stream, '\t', !IO),
+	io.print(Stream, Record^siteIndex, !IO),
+	io.print(Stream, '\t', !IO),
+	ebea.player.chromosome.print(Stream, Record^chromosome, !IO),
+	io.nl(Stream, !IO)
+	.
 
 :- end_module ebea.streams.birth.
 

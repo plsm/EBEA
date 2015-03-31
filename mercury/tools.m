@@ -18,6 +18,7 @@
 :- include_module processPhenotype.
 :- include_module utils.
 :- include_module siteDynamics.
+:- include_module exportTextFormat.
 
 :- implementation.
 

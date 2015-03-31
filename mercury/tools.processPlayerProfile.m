@@ -33,13 +33,14 @@
 :- import_module data.util.
 :- import_module game.
 :- import_module parseable, parseable.iou, printable.
-:- import_module array, bool, exception, float, int, map, math, maybe, set_bbbtree, string.
+:- import_module array, bool, exception, float, int, map, math, maybe, set, set_bbbtree, string.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Definition of exported types
 
 :- type parameters --->
 	parameters(
+		runs                        :: list(int) ,
 		printPlayerID               :: bool ,
 		printSiteIndex              :: bool ,
 		printSelectionGenes         :: bool ,
@@ -78,7 +79,19 @@ run(Config, Parameters, Directory, Feedback, !IO) :-
 	Level = Config^level,
 	(	%
 		Level = detailedBin,
-		int.fold_up2(processRun_s1(Config, Parameters, Directory), 1, Config^numberRuns, [], FeedbackAsList, !IO),
+		Runs = Parameters^runs,
+		(
+			Runs = [],
+			RunIndexes = set.from_list(1..Config^numberRuns)
+			;
+			Runs = [_ | _],
+			RunIndexes = set.intersect(set.from_list(1..Config^numberRuns), set.from_list(Runs))
+		),
+		set.fold2(
+			processRun_s1(Config, Parameters, Directory),
+			RunIndexes,
+			[], FeedbackAsList,
+			!IO),
 		(	%
 			FeedbackAsList = [],
 			Feedback = "ok"
@@ -97,10 +110,11 @@ run(Config, Parameters, Directory, Feedback, !IO) :-
 		Feedback = "The simulation runs did not produce player profile data"
 	).
 
-default_parameters = parameters(yes, yes, no, yes, yes, 10, no, no, yes, 2000000,
-		yes,
-0,
-										  "player-profiles").
+default_parameters = parameters(
+	[], yes, yes, no, yes, yes, 10, no, no, yes, 2000000,
+	yes,
+	0,
+	"player-profiles").
 
 % default_parameters = parameters(yes, yes, no, yes, yes, 10, no, yes, yes, 200,
 % 		yes,
@@ -110,6 +124,7 @@ default_parameters = parameters(yes, yes, no, yes, yes, 10, no, no, yes, 2000000
 
 dialog_parameters =
 	[
+	di(label("runs to process"),            updateListFieldInt(  runs,                   set_runs)),
 	di(label("print player id"),            updateFieldBool( printPlayerID,           set('printPlayerID :='))),
 	di(label("print site index"),           updateFieldBool( printSiteIndex,          set('printSiteIndex :='))),
 	di(label("print selection genes"),      updateFieldBool( printSelectionGenes,     set('printSelectionGenes :='))),
@@ -284,8 +299,8 @@ loopRunIteration(
 			list.cons("IO error while reading player profiles file:", !FeedbackAsList)
 		;
 			IResult = ok(Result),
-			II = int.rem(IterationIndex, array.size(WindowPlayerProfiles)),
-			NextWindowPlayerProfiles = array.set(WindowPlayerProfiles, II, Result),
+%			II = int.rem(IterationIndex, array.size(WindowPlayerProfiles)),
+%			NextWindowPlayerProfiles = array.set(WindowPlayerProfiles, II, Result),
 			processRunIteration(
 				IterationWidth,
 				Parameters,
@@ -295,7 +310,8 @@ loopRunIteration(
 				AllBirths,
 				AllDeaths,
 				Result,
-				NextWindowPlayerProfiles,
+%				NextWindowPlayerProfiles,
+				WindowPlayerProfiles,
 				IterationIndex,
 				!StrategyPlayMatrix,
 				!FeedbackAsList,
@@ -311,7 +327,8 @@ loopRunIteration(
 				AllBirths,
 				AllDeaths,
 				StreamPlayerProfiles,
-				NextWindowPlayerProfiles,
+%				NextWindowPlayerProfiles,
+				WindowPlayerProfiles,
 				IterationIndex + 1,
 				!CachePlayerProfiles,
 				!StrategyPlayMatrix,
@@ -352,7 +369,7 @@ processRunIteration(
 	AllBirths,
 	_AllDeaths,
 	IterationPlayerProfiles,
-	WindowPlayerProfiles,
+	_WindowPlayerProfiles,
 	IterationIndex,
 	!StrategyPlayMatrix,
 	!FeedbackAsList,
@@ -368,6 +385,7 @@ processRunIteration(
 		true
 	),
 	list.foldl(incrementCount(AllBirths), IterationPlayerProfiles^profiles, !StrategyPlayMatrix),
+  /*
 	(if
 		MAverageNumberPartnersStream = yes(AverageNumberPartnersStream)
 	then
@@ -389,25 +407,8 @@ processRunIteration(
 		io.nl(AverageNumberPartnersStream, !IO)
 	else
 		true
-	)
-	% (if
-	% 	IterationIndex < array.size(AllPlayerProfiles)
-	% then
-	% 	processRunIteration(
-	% 		IterationWidth,
-	% 		Parameters,
-	% 		MAverageNumberPartnersStream,
-	% 		Directory,
-	% 		RunIndex,
-	% 		IterationIndex,
-	% 		AllBirths,
-	% 		AllDeaths,
-	% 		AllPlayerProfiles,
-	% 		!FeedbackAsList,
-	% 		!IO)
-	% else
-	% 	true
-	% )
+	),*/
+	true
 	.
 
 
@@ -655,6 +656,24 @@ openAverageNumberPartnersStream(
 
 :- func minPercentageValue(tools.processPlayerProfile.parameters) = int.
 :- func 'minPercentageValue :='(tools.processPlayerProfile.parameters, int) = tools.processPlayerProfile.parameters.
+
+:- func runs(tools.processPlayerProfile.parameters) = list(int).
+:- func set_runs(tools.processPlayerProfile.parameters, list(int)) = userInterface.setResult(tools.processPlayerProfile.parameters).
+
+set_runs(P, V) = Result :-
+	(if
+		list.append(_, [H | T], V),
+		list.append(_, [H | _], T)
+	then
+		Result = error("Duplicate run number")
+	else if
+		list.member(Run, V),
+		Run =< 0
+	then
+		Result = error("Runs indexes must be positive")
+	else
+		Result = ok('runs :='(P, V))
+	).
 
 
 

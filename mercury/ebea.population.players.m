@@ -139,6 +139,12 @@
 :- pred nextKey(key, key).
 :- mode nextKey(in, out) is det.
 
+:- pred printKey(
+	io.output_stream :: in,
+	key              :: in,
+	io.state :: di,  io.state :: uo
+) is det.
+
 /**
  * update(ID, UpdateFunc, !Players)
   
@@ -178,6 +184,9 @@ int2key(IK) = key(IK).
 
 parseKey(key(Key)) -->
 	parseable.int32(Key).
+
+printKey(Stream, key(Key), !IO) :-
+	io.print(Stream, Key, !IO).
 
 init(map.init, key(0)).
 

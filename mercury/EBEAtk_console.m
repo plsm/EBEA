@@ -25,6 +25,7 @@
 :- import_module ebea, ebea.core, ebea.population, ebea.player.
 :- import_module ebea.player.selection, ebea.player.energy, ebea.player.selection.pcv.
 :- import_module tools.
+:- import_module tools.exportTextFormat.
 :- import_module tools.export_playerProfiles_graphviz.
 :- import_module tools.'PCVNetwork'.
 :- import_module tools.populationDynamics.
@@ -53,6 +54,7 @@
 		parameters_SD            :: tools.siteDynamics.parameters,
 		parameters_PP            :: tools.processPhenotype.parameters,
 		parameters_PPP           :: tools.processPlayerProfile.parameters,
+		parameters_ETF           :: tools.exportTextFormat.parameters,
 		filename                 :: maybe(string)
 	).
 
@@ -257,7 +259,12 @@ menu = m(
 		 mi(label("Print"),    actionDataIO(printConfiguration))
 		])),
 	 mi(label("Tools"), submenu(
-		[mi(label("Player profiles movie"),   submenu(
+		[
+		 mi(label("Export text format"),   submenu(
+			[mi(label("Run"),       actionDataIO(menuOptionExportTextFormat)),
+			 mi(label("Config"),    edit('new dialog'(parameters_ETF, set('parameters_ETF :='), tools.exportTextFormat.dialog_parameters)))
+			])),
+		 mi(label("Player profiles movie"),   submenu(
 			[mi(label("Run"),       actionDataIO(playerProfilesMovie)),
 			 mi(label("Config"),    edit('new dialog'(parameters_playerProfile, set('parameters_playerProfile :='), tools.export_playerProfiles_graphviz.dialog_parameters)))
 			])),
@@ -296,6 +303,7 @@ initData = data(
 	tools.siteDynamics.default_parameters,
 	tools.processPhenotype.default_parameters,
 	tools.processPlayerProfile.default_parameters,
+	tools.exportTextFormat.default_parameters,
 	no
 ).
 
@@ -309,8 +317,11 @@ initData(Config, Filename) = data(
 	tools.siteDynamics.default_parameters,
 	tools.processPhenotype.default_parameters,
 	tools.processPlayerProfile.default_parameters,
+	tools.exportTextFormat.default_parameters,
 	yes(Filename)
 ).
+
+
 
 :- func config(data) = data.config.config.
 :- func 'config :='(data, data.config.config) = data.
@@ -332,6 +343,9 @@ initData(Config, Filename) = data(
 
 :- func parameters_PPP(data) = tools.processPlayerProfile.parameters.
 :- func 'parameters_PPP :='(data, tools.processPlayerProfile.parameters) = data.
+
+:- func parameters_ETF(data) = tools.exportTextFormat.parameters.
+:- func 'parameters_ETF :='(data, tools.exportTextFormat.parameters) = data.
 
 
 
@@ -428,6 +442,20 @@ runBackground(Data, !IO) :-
 
 
 
+
+
+
+/**
+ * Menu option.
+ */
+:- pred menuOptionExportTextFormat(data, io.state, io.state).
+:- mode menuOptionExportTextFormat(in, di, uo) is det.
+
+menuOptionExportTextFormat(Data, !IO) :-
+	tools.exportTextFormat.runTool(Data^config, Data^parameters_ETF, "./", Feedback, !IO),
+	io.print(Feedback, !IO),
+	io.nl(!IO)
+	.
 
 /**
  * Menu option.

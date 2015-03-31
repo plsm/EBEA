@@ -9,8 +9,9 @@
 :- interface.
 
 :- import_module ebea, ebea.population, ebea.population.players, ebea.streams, ebea.streams.birth.
+:- import_module data, data.config.
 :- import_module printable.
-:- import_module bool, io, list, maybe.
+:- import_module bool, io, list, maybe, set.
 
 :- pred printGraphVizHeader(io.output_stream, io.state, io.state).
 :- mode printGraphVizHeader(in, di, uo) is det.
@@ -40,6 +41,19 @@
 
 :- pred closeMaybeStream(maybe(io.output_stream), io.state, io.state).
 :- mode closeMaybeStream(in, di, uo) is det.
+
+:- pred openStream(
+	string :: in,
+	string :: in,
+	string :: in,
+	int    :: in,
+	maybe(io.output_stream) :: out,
+	list(string) :: in, list(string) :: out,
+	io.state     :: di, io.state     :: uo
+) is det.
+
+
+:- func checkRuns(data.config.config, list(int)) = set(int).
 
 :- implementation.
 
@@ -110,6 +124,27 @@ openMaybeStream(yes, Directory, Prefix, BaseName, RunIndex, MStream, !FeedbackAs
 		list.cons(string.format("IO error opening `%s` file: %s", [s(FileName), s(io.error_message(Error))]), !FeedbackAsList),
 		MStream = no
 	)
+	.
+
+openStream(Directory, Prefix, BaseName, RunIndex, MStream, !FeedbackAsList, !IO) :-
+	FileName = string.format("%s%s_%s_R%d.txt", [s(Directory), s(Prefix), s(BaseName), i(RunIndex)]),
+	io.open_output(FileName, IStream, !IO),
+	(	%
+		IStream = ok(Stream),
+		MStream = yes(Stream)
+	;	
+		IStream = error(Error),
+		list.cons(string.format("IO error opening `%s` file: %s", [s(FileName), s(io.error_message(Error))]), !FeedbackAsList),
+		MStream = no
+	)
+	.
+
+checkRuns(Config, Runs) = Result :-
+	Runs = [],
+	Result = set.from_list(1..Config^numberRuns)
+	;
+	Runs = [_ | _],
+	Result = set.intersect(set.from_list(1..Config^numberRuns), set.from_list(Runs))
 	.
 
 
