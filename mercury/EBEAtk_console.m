@@ -443,7 +443,34 @@ runBackground(Data, !IO) :-
 
 
 
+:- func toolMenu(
+	string               :: in,
+	pred(data.config.config, P, string, string, io.state, io.state)
+		:: in(pred(in, in, in, out, di, uo) is det),
+	func(data) = P       :: in,
+	func(data, P) = data :: in,
+	list(dialogItem(P))  :: in
+	) = (list(menuItem(data)) :: out)
+is det.
 
+toolMenu(ToolName, PredRunTool, GetToolParameter, SetToolParameter, DialogParameter) = Result :-
+	Result = [mi(label(ToolName), submenu(
+		[mi(label("Run"), actionDataIO(runToolBridge(PredRunTool, GetToolParameter))),
+		 mi(label("Config"), edit('new dialog'(GetToolParameter, set(SetToolParameter), DialogParameter)))]))].
+
+:- pred runToolBridge(
+	pred(data.config.config, P, string, string, io.state, io.state)
+		:: in(pred(in, in, in, out, di, uo) is det),
+	func(data) = P        :: in,
+	'EBEAtk_console'.data :: in,
+	io.state :: di,  io.state :: uo
+) is det.
+
+runToolBridge(PredRunTool, GetToolParameter, Data, !IO) :-
+	PredRunTool(Data^config, GetToolParameter(Data), "./", Feedback, !IO),
+	io.print(Feedback, !IO),
+	io.nl(!IO)
+	.
 
 /**
  * Menu option.
