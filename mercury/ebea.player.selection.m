@@ -918,7 +918,7 @@ printAccumulator(Stream, AC, !IO) :-
 	(if
 		AC^qty_NPS + AC^qty_WPS = 0
 	then
-		io.print(Stream, "1/0 1/0 1/0 1/0", !IO)
+		io.print(Stream, "1/0 1/0 1/0 1/0 0 0", !IO)
 	else
 		FQty_PS = float(AC^qty_NPS+ AC^qty_WPS),
 		io.format(Stream, "%f %f %f %f %d %d",
@@ -934,7 +934,7 @@ printAccumulator(Stream, AC, !IO) :-
 	(if
 		AC^qty_O = 0
 	then
-		io.print(Stream, "1/0 1/0 1/0", !IO)
+		io.print(Stream, "1/0 1/0 1/0 1/0 1/0", !IO)
 	else
 		FQty_O = float(AC^qty_O),
 		io.print(Stream, AC^sumOffspringOpinionChange / FQty_O, !IO),
