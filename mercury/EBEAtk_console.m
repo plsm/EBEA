@@ -260,6 +260,14 @@ menu = m(
 		])),
 	 mi(label("Tools"), submenu(
 		[
+%		 toolMenu("Export binary to text format",               tools.exportTextFormat.runTool,                                     parameters_ETF,            'parameters_ETF :=',            tools.exportTextFormat.dialog_parameters),
+		 toolMenu("Strategy profiles movie",                    tools.export_playerProfiles_graphviz.createPlayerProfilesNetworks,  parameters_playerProfile,  'parameters_playerProfile :=',  tools.export_playerProfiles_graphviz.dialog_parameters),
+		 toolMenu("Process players' phenotype",                 tools.processPhenotype.run,                                         parameters_PP,             'parameters_PP :=',             tools.processPhenotype.dialog_parameters),
+		 toolMenu("Probability and combination vectors movie",  tools.'PCVNetwork'.runTool,                                         parameters_PCV,            'parameters_PCV :=',            tools.'PCVNetwork'.dialog_parameters),
+		 toolMenu("Process site state",                         tools.siteDynamics.runTool,                                         parameters_SD,             'parameters_SD :=',             tools.siteDynamics.dialog_parameters),
+		 toolMenu("Process strategy profiles",                  tools.processPlayerProfile.run,                                     parameters_PPP,            'parameters_PPP :=',            tools.processPlayerProfile.dialog_parameters),
+		 toolMenu("Population dynamics",                        tools.populationDynamics.runTool,                                   parameters_PD,             'parameters_PD :=',             tools.populationDynamics.dialog_parameters),
+		 
 		 mi(label("Export text format"),   submenu(
 			[mi(label("Run"),       actionDataIO(menuOptionExportTextFormat)),
 			 mi(label("Config"),    edit('new dialog'(parameters_ETF, set('parameters_ETF :='), tools.exportTextFormat.dialog_parameters)))
@@ -450,13 +458,13 @@ runBackground(Data, !IO) :-
 	func(data) = P       :: in,
 	func(data, P) = data :: in,
 	list(dialogItem(P))  :: in
-	) = (list(menuItem(data)) :: out)
+	) = (menuItem(data) :: out)
 is det.
 
 toolMenu(ToolName, PredRunTool, GetToolParameter, SetToolParameter, DialogParameter) = Result :-
-	Result = [mi(label(ToolName), submenu(
+	Result = mi(label(ToolName), submenu(
 		[mi(label("Run"), actionDataIO(runToolBridge(PredRunTool, GetToolParameter))),
-		 mi(label("Config"), edit('new dialog'(GetToolParameter, set(SetToolParameter), DialogParameter)))]))].
+		 mi(label("Config"), edit('new dialog'(GetToolParameter, set(SetToolParameter), DialogParameter)))])).
 
 :- pred runToolBridge(
 	pred(data.config.config, P, string, string, io.state, io.state)
